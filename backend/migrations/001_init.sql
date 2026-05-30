@@ -2,7 +2,7 @@ create extension if not exists "uuid-ossp";
 
 create table users (
     id uuid primary key default uuid_generate_v4(),
-    google_sub text not null unique,
+    google_sub text unique,
     email text not null unique,
     password text,
     full_name text not null,
@@ -84,7 +84,7 @@ create table course_enrollments (
     course_id uuid not null references courses(id) on delete cascade,
     user_id uuid not null references users(id) on delete cascade,
     status text not null default 'pending' 
-        check (status in ('pending', 'approved', 'rejected')),
+        check (status in ('pending', 'approved', 'rejected', 'revoked')),
 
     requested_at timestamptz not null default now(),
     reviewed_at timestamptz,
@@ -110,4 +110,5 @@ create index lessons_section_id_position_idx on lessons(section_id, position);
 create index media_assets_course_id_idx on media_assets(course_id);
 create index media_assets_lesson_id_idx on media_assets(lesson_id);
 create index course_enrollments_user_id_idx on course_enrollments(user_id);
+create index course_enrollments_course_id_status_idx on course_enrollments(course_id, status);
 create index lesson_progress_user_id_idx on lesson_progress(user_id);

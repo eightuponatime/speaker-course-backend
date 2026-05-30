@@ -7,11 +7,11 @@ import (
 )
 
 type Sessions struct {
-	Id        uuid.UUID `db:"id" json:"id"`
-	UserId    uuid.UUID `db:"user_id" json:"user_id"`
-	CreatedAt time.Time `db:"created_at" json:"create_at"`
-	ExpiresAt time.Time `db:"expires_at" json:"expires_at"`
-	RevokedAt time.Time `db:"revoked_at" json:"revoked_at"`
+	Id        uuid.UUID  `db:"id" json:"id"`
+	UserId    uuid.UUID  `db:"user_id" json:"user_id"`
+	CreatedAt time.Time  `db:"created_at" json:"created_at"`
+	ExpiresAt time.Time  `db:"expires_at" json:"expires_at"`
+	RevokedAt *time.Time `db:"revoked_at" json:"revoked_at,omitempty"`
 }
 
 type CreateSessionInput struct {

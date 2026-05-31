@@ -17,12 +17,12 @@ var ErrInvalidSession = errors.New("invalid session")
 
 type SessionsService struct {
 	cfg *config.Config
-	rp  repository.SessionsRepository
+	rp  *repository.SessionsRepository
 }
 
 func NewSessionsService(
 	cfg *config.Config,
-	rp repository.SessionsRepository,
+	rp *repository.SessionsRepository,
 ) *SessionsService {
 	return &SessionsService{
 		cfg: cfg,

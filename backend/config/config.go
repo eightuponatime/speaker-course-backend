@@ -10,24 +10,36 @@ import (
 )
 
 type Config struct {
-	DatabaseURL      string
-	Port             string
-	Env              string
-	BusinessTimezone string
-	SessionTTL       time.Duration
+	DatabaseURL          string
+	Port                 string
+	Env                  string
+	BusinessTimezone     string
+	SessionTTL           time.Duration
+	FrontendURL          string
+	GoogleClientID       string
+	GoogleSecret         string
+	GoogleRedirectURL    string
+	BunnyStreamLibraryID string
+	BunnyStreamAPIKey    string
 }
 
 func Load() (*Config, error) {
-	if err := godotenv.Load(); err != nil {
+	if err := godotenv.Load("../.env"); err != nil {
 		log.Println("no .env file")
 	}
 
 	return &Config{
-		DatabaseURL:      getEnv("DATABASE_URL", ""),
-		Port:             getEnv("PORT", "8080"),
-		Env:              getEnv("ENV", "development"),
-		BusinessTimezone: getEnv("BUSINESS_TIMEZONE", "Asia/Almaty"),
-		SessionTTL:       getDurationEnv("SESSION_TTL", 30*24*time.Hour),
+		DatabaseURL:          getEnv("DATABASE_URL", ""),
+		Port:                 getEnv("PORT", "8080"),
+		Env:                  getEnv("ENV", "development"),
+		BusinessTimezone:     getEnv("BUSINESS_TIMEZONE", "Asia/Almaty"),
+		SessionTTL:           getDurationEnv("SESSION_TTL", 30*24*time.Hour),
+		FrontendURL:          getEnv("FRONTEND_URL", "http://localhost:5173"),
+		GoogleClientID:       getEnv("GOOGLE_CLIENT_ID", ""),
+		GoogleSecret:         getEnv("GOOGLE_CLIENT_SECRET", ""),
+		GoogleRedirectURL:    getEnv("GOOGLE_REDIRECT_URL", "http://localhost:8080/auth/google/callback"),
+		BunnyStreamLibraryID: getEnv("BUNNY_STREAM_LIBRARY_ID", ""),
+		BunnyStreamAPIKey:    getEnv("BUNNY_STREAM_API_KEY", ""),
 	}, nil
 }
 

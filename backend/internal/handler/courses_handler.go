@@ -13,17 +13,23 @@ import (
 )
 
 type CoursesHandler struct {
-	coursesService     *service.CoursesService
-	enrollmentsService *service.EnrollmentsService
+	coursesService       *service.CoursesService
+	enrollmentsService   *service.EnrollmentsService
+	notificationsService *service.NotificationsService
+	quizResponsesService *service.QuizResponsesService
 }
 
 func NewCoursesHandler(
 	coursesService *service.CoursesService,
 	enrollmentsService *service.EnrollmentsService,
+	notificationsService *service.NotificationsService,
+	quizResponsesService *service.QuizResponsesService,
 ) *CoursesHandler {
 	return &CoursesHandler{
-		coursesService:     coursesService,
-		enrollmentsService: enrollmentsService,
+		coursesService:       coursesService,
+		enrollmentsService:   enrollmentsService,
+		notificationsService: notificationsService,
+		quizResponsesService: quizResponsesService,
 	}
 }
 
@@ -33,19 +39,27 @@ func (h *CoursesHandler) RegisterRoutes(r chi.Router, authMiddleware *middleware
 	r.Group(func(r chi.Router) {
 		r.Use(authMiddleware.RequireAuth())
 
+		r.Get("/courses/{courseID}/curriculum", h.GetCurriculum)
+		r.Get("/courses/{courseID}/enrollment/me", h.GetMyEnrollment)
 		r.Post("/courses/{courseID}/enrollments", h.RequestEnrollment)
+		r.Get("/lessons/{lessonID}/quiz-responses", h.ListMyLessonQuizResponses)
+		r.Post("/lessons/{lessonID}/quiz-responses", h.SaveMyLessonQuizResponse)
 
 		r.Route("/admin", func(r chi.Router) {
 			r.Use(authMiddleware.RequireAdmin())
 
 			r.Post("/courses", h.CreateCourse)
 			r.Get("/courses/{courseID}/curriculum", h.GetCurriculum)
+			r.Patch("/courses/{courseID}", h.UpdateCourse)
 			r.Post("/courses/{courseID}/publish", h.PublishCourse)
 			r.Post("/courses/{courseID}/sections", h.CreateSection)
 			r.Post("/courses/{courseID}/sections/{sectionID}/lessons", h.CreateLesson)
+			r.Patch("/courses/{courseID}/lessons/reorder", h.ReorderLessons)
 			r.Get("/courses/{courseID}/enrollments", h.ListEnrollments)
+			r.Patch("/lessons/{lessonID}", h.UpdateLesson)
 			r.Patch("/lessons/{lessonID}/draft", h.SaveLessonDraft)
 			r.Post("/lessons/{lessonID}/publish", h.PublishLesson)
+			r.Get("/lessons/{lessonID}/quiz-responses", h.ListLessonQuizResponses)
 			r.Patch("/enrollments/{enrollmentID}/review", h.ReviewEnrollment)
 		})
 	})
@@ -96,6 +110,38 @@ func (h *CoursesHandler) CreateCourse(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusCreated, course)
+}
+
+func (h *CoursesHandler) UpdateCourse(w http.ResponseWriter, r *http.Request) {
+	courseID, ok := parseUUIDParam(w, r, "courseID")
+	if !ok {
+		return
+	}
+
+	var request struct {
+		Title       string `json:"title"`
+		Description string `json:"description"`
+	}
+	if err := decodeJSON(r, &request); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	course, err := h.coursesService.UpdateCourse(r.Context(), domain.UpdateCourseInput{
+		CourseId:    courseID,
+		Title:       request.Title,
+		Description: request.Description,
+	})
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	if course == nil {
+		writeError(w, http.StatusNotFound, nil)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, course)
 }
 
 func (h *CoursesHandler) PublishCourse(w http.ResponseWriter, r *http.Request) {
@@ -200,6 +246,42 @@ func (h *CoursesHandler) CreateLesson(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, lesson)
 }
 
+func (h *CoursesHandler) ReorderLessons(w http.ResponseWriter, r *http.Request) {
+	courseID, ok := parseUUIDParam(w, r, "courseID")
+	if !ok {
+		return
+	}
+
+	var request struct {
+		Lessons []struct {
+			Id        uuid.UUID `json:"id"`
+			SectionId uuid.UUID `json:"section_id"`
+			Position  int       `json:"position"`
+		} `json:"lessons"`
+	}
+	if err := decodeJSON(r, &request); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	items := make([]domain.ReorderLessonInput, 0, len(request.Lessons))
+	for _, lesson := range request.Lessons {
+		items = append(items, domain.ReorderLessonInput{
+			LessonId:  lesson.Id,
+			SectionId: lesson.SectionId,
+			Position:  lesson.Position,
+		})
+	}
+
+	curriculum, err := h.coursesService.ReorderLessons(r.Context(), courseID, items)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, curriculum)
+}
+
 func (h *CoursesHandler) SaveLessonDraft(w http.ResponseWriter, r *http.Request) {
 	lessonID, ok := parseUUIDParam(w, r, "lessonID")
 	if !ok {
@@ -217,6 +299,38 @@ func (h *CoursesHandler) SaveLessonDraft(w http.ResponseWriter, r *http.Request)
 	lesson, err := h.coursesService.SaveLessonDraft(r.Context(), domain.UpdateLessonDraftContentInput{
 		LessonId: lessonID,
 		Content:  request.Content,
+	})
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	if lesson == nil {
+		writeError(w, http.StatusNotFound, nil)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, lesson)
+}
+
+func (h *CoursesHandler) UpdateLesson(w http.ResponseWriter, r *http.Request) {
+	lessonID, ok := parseUUIDParam(w, r, "lessonID")
+	if !ok {
+		return
+	}
+
+	var request struct {
+		Title string `json:"title"`
+		Slug  string `json:"slug"`
+	}
+	if err := decodeJSON(r, &request); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	lesson, err := h.coursesService.UpdateLesson(r.Context(), domain.UpdateLessonInput{
+		LessonId: lessonID,
+		Title:    request.Title,
+		Slug:     request.Slug,
 	})
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err)
@@ -261,6 +375,12 @@ func (h *CoursesHandler) RequestEnrollment(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	existingEnrollment, err := h.enrollmentsService.GetByCourseAndUser(r.Context(), courseID, userID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
 	enrollment, err := h.enrollmentsService.RequestAccess(r.Context(), domain.CreateCourseEnrollmentInput{
 		CourseId: courseID,
 		UserId:   userID,
@@ -270,7 +390,150 @@ func (h *CoursesHandler) RequestEnrollment(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	course, err := h.coursesService.GetCourseByID(r.Context(), courseID)
+	if existingEnrollment == nil && err == nil && course != nil && course.AuthorId != userID {
+		actorID := userID
+		enrollmentID := enrollment.Id
+		_, _ = h.notificationsService.Create(r.Context(), domain.CreateNotificationInput{
+			UserId:       course.AuthorId,
+			ActorId:      &actorID,
+			CourseId:     &courseID,
+			EnrollmentId: &enrollmentID,
+			Type:         domain.NotificationCourseEnrollmentRequested,
+			Title:        "New course access request",
+			Body:         "A student requested access to " + course.Title + ".",
+		})
+	}
+
 	writeJSON(w, http.StatusCreated, enrollment)
+}
+
+func (h *CoursesHandler) GetMyEnrollment(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middlewarego.UserIDFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, nil)
+		return
+	}
+
+	courseID, ok := parseUUIDParam(w, r, "courseID")
+	if !ok {
+		return
+	}
+
+	enrollment, err := h.enrollmentsService.GetByCourseAndUser(r.Context(), courseID, userID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	if enrollment == nil {
+		writeJSON(w, http.StatusOK, nil)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, enrollment)
+}
+
+func (h *CoursesHandler) ListMyLessonQuizResponses(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middlewarego.UserIDFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, nil)
+		return
+	}
+
+	lessonID, ok := parseUUIDParam(w, r, "lessonID")
+	if !ok {
+		return
+	}
+
+	if !h.ensureLessonAccess(w, r, lessonID, userID) {
+		return
+	}
+
+	responses, err := h.quizResponsesService.ListByLessonAndUser(r.Context(), lessonID, userID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, responses)
+}
+
+func (h *CoursesHandler) SaveMyLessonQuizResponse(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middlewarego.UserIDFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, nil)
+		return
+	}
+
+	lessonID, ok := parseUUIDParam(w, r, "lessonID")
+	if !ok {
+		return
+	}
+
+	if !h.ensureLessonAccess(w, r, lessonID, userID) {
+		return
+	}
+
+	var request struct {
+		QuizId              string `json:"quiz_id"`
+		SelectedOptionIndex int    `json:"selected_option_index"`
+	}
+	if err := decodeJSON(r, &request); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	response, err := h.quizResponsesService.Save(r.Context(), domain.SaveLessonQuizResponseInput{
+		LessonId:            lessonID,
+		UserId:              userID,
+		QuizId:              request.QuizId,
+		SelectedOptionIndex: request.SelectedOptionIndex,
+	})
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, response)
+}
+
+func (h *CoursesHandler) ListLessonQuizResponses(w http.ResponseWriter, r *http.Request) {
+	lessonID, ok := parseUUIDParam(w, r, "lessonID")
+	if !ok {
+		return
+	}
+
+	responses, err := h.quizResponsesService.ListByLesson(r.Context(), lessonID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, responses)
+}
+
+func (h *CoursesHandler) ensureLessonAccess(w http.ResponseWriter, r *http.Request, lessonID uuid.UUID, userID uuid.UUID) bool {
+	lesson, err := h.coursesService.GetLessonByID(r.Context(), lessonID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return false
+	}
+	if lesson == nil {
+		writeError(w, http.StatusNotFound, nil)
+		return false
+	}
+
+	hasAccess, err := h.enrollmentsService.HasApprovedAccess(r.Context(), lesson.CourseId, userID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return false
+	}
+	if !hasAccess {
+		writeError(w, http.StatusForbidden, nil)
+		return false
+	}
+
+	return true
 }
 
 func (h *CoursesHandler) ListEnrollments(w http.ResponseWriter, r *http.Request) {
@@ -314,6 +577,16 @@ func (h *CoursesHandler) ReviewEnrollment(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	currentEnrollment, err := h.enrollmentsService.GetByID(r.Context(), enrollmentID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	if currentEnrollment == nil {
+		writeError(w, http.StatusNotFound, nil)
+		return
+	}
+
 	enrollment, err := h.enrollmentsService.Review(r.Context(), domain.ReviewCourseEnrollmentInput{
 		EnrollmentId: enrollmentID,
 		Status:       request.Status,
@@ -329,7 +602,55 @@ func (h *CoursesHandler) ReviewEnrollment(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	course, err := h.coursesService.GetCourseByID(r.Context(), enrollment.CourseId)
+	if err == nil && course != nil {
+		actorID := adminID
+		courseID := enrollment.CourseId
+		enrollmentID := enrollment.Id
+		notificationType, title, body := reviewNotificationPayload(currentEnrollment.Status, enrollment.Status, course.Title)
+		_, _ = h.notificationsService.Create(r.Context(), domain.CreateNotificationInput{
+			UserId:       enrollment.UserId,
+			ActorId:      &actorID,
+			CourseId:     &courseID,
+			EnrollmentId: &enrollmentID,
+			Type:         notificationType,
+			Title:        title,
+			Body:         body,
+		})
+	}
+
 	writeJSON(w, http.StatusOK, enrollment)
+}
+
+func reviewNotificationPayload(
+	previous domain.CourseEnrollmentStatus,
+	next domain.CourseEnrollmentStatus,
+	courseTitle string,
+) (domain.NotificationType, string, string) {
+	switch next {
+	case domain.CourseEnrollmentStatusApproved:
+		if previous == domain.CourseEnrollmentStatusRejected || previous == domain.CourseEnrollmentStatusRevoked {
+			return domain.NotificationCourseAccessRestored,
+				"Course access restored",
+				"Your access to " + courseTitle + " was restored."
+		}
+
+		return domain.NotificationCourseAccessApproved,
+			"Course access approved",
+			"Your access to " + courseTitle + " was approved."
+	case domain.CourseEnrollmentStatusRejected:
+		return domain.NotificationCourseAccessRejected,
+			"Course access rejected",
+			"Your access request for " + courseTitle + " was rejected."
+	case domain.CourseEnrollmentStatusRevoked:
+		return domain.NotificationCourseAccessRevoked,
+			"Course access revoked",
+			"Your access to " + courseTitle + " was revoked."
+	default:
+		return domain.NotificationCourseAccessRejected,
+			"Course access updated",
+			"Your course access status was updated."
+	}
 }
 
 func parseUUIDParam(w http.ResponseWriter, r *http.Request, name string) (uuid.UUID, bool) {

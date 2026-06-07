@@ -16,11 +16,12 @@ import (
 var ErrInvalidCourse = errors.New("invalid course")
 
 type CoursesService struct {
-	rp *repository.CoursesRepository
+	rp        *repository.CoursesRepository
+	txManager *repository.TransactionManager
 }
 
-func NewCoursesService(rp *repository.CoursesRepository) *CoursesService {
-	return &CoursesService{rp: rp}
+func NewCoursesService(rp *repository.CoursesRepository, txManager *repository.TransactionManager) *CoursesService {
+	return &CoursesService{rp: rp, txManager: txManager}
 }
 
 func (s *CoursesService) CreateCourse(
@@ -59,6 +60,20 @@ func (s *CoursesService) GetCourseBySlug(ctx context.Context, slug string) (*dom
 	}
 
 	return s.rp.GetBySlug(ctx, slug)
+}
+
+func (s *CoursesService) UpdateCourse(ctx context.Context, input domain.UpdateCourseInput) (*domain.Course, error) {
+	if input.CourseId == uuid.Nil {
+		return nil, fmt.Errorf("%w: course_id is empty", ErrInvalidCourse)
+	}
+	if strings.TrimSpace(input.Title) == "" {
+		return nil, fmt.Errorf("%w: title is empty", ErrInvalidCourse)
+	}
+
+	input.Title = strings.TrimSpace(input.Title)
+	input.Description = strings.TrimSpace(input.Description)
+
+	return s.rp.Update(ctx, input)
 }
 
 func (s *CoursesService) PublishCourse(ctx context.Context, id uuid.UUID) (*domain.Course, error) {
@@ -136,6 +151,23 @@ func (s *CoursesService) SaveLessonDraft(
 	return s.rp.UpdateLessonDraftContent(ctx, input)
 }
 
+func (s *CoursesService) UpdateLesson(ctx context.Context, input domain.UpdateLessonInput) (*domain.Lesson, error) {
+	if input.LessonId == uuid.Nil {
+		return nil, fmt.Errorf("%w: lesson_id is empty", ErrInvalidCourse)
+	}
+	if strings.TrimSpace(input.Title) == "" {
+		return nil, fmt.Errorf("%w: lesson title is empty", ErrInvalidCourse)
+	}
+	if strings.TrimSpace(input.Slug) == "" {
+		return nil, fmt.Errorf("%w: lesson slug is empty", ErrInvalidCourse)
+	}
+
+	input.Title = strings.TrimSpace(input.Title)
+	input.Slug = strings.TrimSpace(input.Slug)
+
+	return s.rp.UpdateLesson(ctx, input)
+}
+
 func (s *CoursesService) PublishLesson(ctx context.Context, lessonId uuid.UUID) (*domain.Lesson, error) {
 	if lessonId == uuid.Nil {
 		return nil, fmt.Errorf("%w: lesson_id is empty", ErrInvalidCourse)
@@ -150,6 +182,54 @@ func (s *CoursesService) GetCurriculum(
 ) (*domain.CourseCurriculum, error) {
 	if courseId == uuid.Nil {
 		return nil, fmt.Errorf("%w: course_id is empty", ErrInvalidCourse)
+	}
+
+	return s.rp.GetCurriculum(ctx, courseId)
+}
+
+func (s *CoursesService) ReorderLessons(
+	ctx context.Context,
+	courseId uuid.UUID,
+	items []domain.ReorderLessonInput,
+) (*domain.CourseCurriculum, error) {
+	if courseId == uuid.Nil {
+		return nil, fmt.Errorf("%w: course_id is empty", ErrInvalidCourse)
+	}
+	if len(items) == 0 {
+		return nil, fmt.Errorf("%w: reorder items are empty", ErrInvalidCourse)
+	}
+
+	seenLessons := make(map[uuid.UUID]struct{}, len(items))
+	positionsBySection := make(map[uuid.UUID]map[int]struct{})
+	for _, item := range items {
+		if item.LessonId == uuid.Nil {
+			return nil, fmt.Errorf("%w: lesson_id is empty", ErrInvalidCourse)
+		}
+		if item.SectionId == uuid.Nil {
+			return nil, fmt.Errorf("%w: section_id is empty", ErrInvalidCourse)
+		}
+		if item.Position <= 0 {
+			return nil, fmt.Errorf("%w: lesson position must be positive", ErrInvalidCourse)
+		}
+
+		if _, ok := seenLessons[item.LessonId]; ok {
+			return nil, fmt.Errorf("%w: duplicate lesson_id", ErrInvalidCourse)
+		}
+		seenLessons[item.LessonId] = struct{}{}
+
+		if positionsBySection[item.SectionId] == nil {
+			positionsBySection[item.SectionId] = make(map[int]struct{})
+		}
+		if _, ok := positionsBySection[item.SectionId][item.Position]; ok {
+			return nil, fmt.Errorf("%w: duplicate position in section", ErrInvalidCourse)
+		}
+		positionsBySection[item.SectionId][item.Position] = struct{}{}
+	}
+
+	if err := s.txManager.WithTransaction(ctx, func(ctx context.Context) error {
+		return s.rp.ReorderLessons(ctx, courseId, items)
+	}); err != nil {
+		return nil, err
 	}
 
 	return s.rp.GetCurriculum(ctx, courseId)

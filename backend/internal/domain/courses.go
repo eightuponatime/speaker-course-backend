@@ -42,8 +42,9 @@ type CourseSectionWithLessons struct {
 }
 
 type CourseCurriculum struct {
-	Course   Course                     `json:"course"`
-	Sections []CourseSectionWithLessons `json:"sections"`
+	Course                Course                     `json:"course"`
+	Sections              []CourseSectionWithLessons `json:"sections"`
+	HasUnpublishedChanges bool                       `json:"has_unpublished_changes"`
 }
 
 type CreateCourseInput struct {
@@ -52,6 +53,12 @@ type CreateCourseInput struct {
 	Slug          string
 	Description   string
 	CoverImageURL *string
+}
+
+type UpdateCourseInput struct {
+	CourseId    uuid.UUID
+	Title       string
+	Description string
 }
 
 type CreateCourseSectionInput struct {

@@ -26,6 +26,12 @@ type CourseEnrollment struct {
 	AdminNote   *string                `db:"admin_note" json:"admin_note,omitempty"`
 }
 
+type CourseEnrollmentWithUser struct {
+	CourseEnrollment
+	UserEmail    string  `db:"user_email" json:"user_email"`
+	UserFullName *string `db:"user_full_name" json:"user_full_name,omitempty"`
+}
+
 type CreateCourseEnrollmentInput struct {
 	CourseId uuid.UUID
 	UserId   uuid.UUID

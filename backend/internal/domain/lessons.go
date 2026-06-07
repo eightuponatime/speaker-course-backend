@@ -42,3 +42,15 @@ type UpdateLessonDraftContentInput struct {
 	LessonId uuid.UUID
 	Content  json.RawMessage
 }
+
+type UpdateLessonInput struct {
+	LessonId uuid.UUID
+	Title    string
+	Slug     string
+}
+
+type ReorderLessonInput struct {
+	LessonId  uuid.UUID
+	SectionId uuid.UUID
+	Position  int
+}

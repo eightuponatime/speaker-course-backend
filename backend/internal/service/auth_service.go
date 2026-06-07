@@ -71,6 +71,18 @@ func (s *AuthService) RegisterWithPassword(
 	ctx context.Context,
 	input RegisterWithPasswordInput,
 ) (*AuthResult, error) {
+	existing, err := s.usersService.GetByEmail(ctx, input.Email)
+	if err != nil {
+		return nil, err
+	}
+	if existing != nil {
+		if existing.Password == nil && existing.GoogleSub != nil {
+			return nil, fmt.Errorf("%w: this email uses google sign-in", ErrInvalidAuth)
+		}
+
+		return nil, fmt.Errorf("%w: user with this email already exists", ErrInvalidAuth)
+	}
+
 	if strings.TrimSpace(input.Password) == "" {
 		return nil, fmt.Errorf("%w: password is empty", ErrInvalidAuth)
 	}
@@ -110,7 +122,14 @@ func (s *AuthService) LoginWithPassword(
 	if err != nil {
 		return nil, err
 	}
-	if user == nil || user.Password == nil {
+	if user == nil {
+		return nil, fmt.Errorf("%w: email or password is incorrect", ErrInvalidAuth)
+	}
+	if user.Password == nil {
+		if user.GoogleSub != nil {
+			return nil, fmt.Errorf("%w: this account uses google sign-in", ErrInvalidAuth)
+		}
+
 		return nil, fmt.Errorf("%w: email or password is incorrect", ErrInvalidAuth)
 	}
 

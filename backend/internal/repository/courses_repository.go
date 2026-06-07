@@ -87,11 +87,35 @@ func (r *CoursesRepository) GetBySlug(ctx context.Context, slug string) (*domain
 	return &course, nil
 }
 
+func (r *CoursesRepository) Update(ctx context.Context, input domain.UpdateCourseInput) (*domain.Course, error) {
+	const query = `
+		update courses
+		set title = $2,
+			description = $3,
+			updated_at = now()
+		where id = $1
+		returning id, author_id, title, slug, description, status, cover_image_url,
+			created_at, updated_at, published_at
+	`
+
+	q := extractTransaction(ctx, r.db)
+	var course domain.Course
+	if err := sqlx.GetContext(ctx, q, &course, query, input.CourseId, input.Title, input.Description); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+
+		return nil, err
+	}
+
+	return &course, nil
+}
+
 func (r *CoursesRepository) Publish(ctx context.Context, id uuid.UUID) (*domain.Course, error) {
 	const query = `
 		update courses
 		set status = 'published',
-			published_at = coalesce(published_at, now()),
+			published_at = now(),
 			updated_at = now()
 		where id = $1
 		returning id, author_id, title, slug, description, status, cover_image_url,
@@ -204,6 +228,30 @@ func (r *CoursesRepository) UpdateLessonDraftContent(
 	return &lesson, nil
 }
 
+func (r *CoursesRepository) UpdateLesson(ctx context.Context, input domain.UpdateLessonInput) (*domain.Lesson, error) {
+	const query = `
+		update lessons
+		set title = $2,
+			slug = $3,
+			updated_at = now()
+		where id = $1
+		returning id, course_id, section_id, title, slug, position, status,
+			draft_content, published_content, created_at, updated_at, published_at
+	`
+
+	q := extractTransaction(ctx, r.db)
+	var lesson domain.Lesson
+	if err := sqlx.GetContext(ctx, q, &lesson, query, input.LessonId, input.Title, input.Slug); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+
+		return nil, err
+	}
+
+	return &lesson, nil
+}
+
 func (r *CoursesRepository) PublishLesson(ctx context.Context, lessonId uuid.UUID) (*domain.Lesson, error) {
 	const query = `
 		update lessons
@@ -227,6 +275,59 @@ func (r *CoursesRepository) PublishLesson(ctx context.Context, lessonId uuid.UUI
 	}
 
 	return &lesson, nil
+}
+
+func (r *CoursesRepository) ReorderLessons(
+	ctx context.Context,
+	courseId uuid.UUID,
+	items []domain.ReorderLessonInput,
+) error {
+	q := extractTransaction(ctx, r.db)
+
+	const temporaryQuery = `
+		update lessons
+		set position = $3,
+			updated_at = now()
+		where id = $1 and course_id = $2
+	`
+	for index, item := range items {
+		result, err := q.ExecContext(ctx, temporaryQuery, item.LessonId, courseId, 100000+index)
+		if err != nil {
+			return err
+		}
+
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			return err
+		}
+		if rowsAffected != 1 {
+			return sql.ErrNoRows
+		}
+	}
+
+	const finalQuery = `
+		update lessons
+		set section_id = $2,
+			position = $3,
+			updated_at = now()
+		where id = $1 and course_id = $4
+	`
+	for _, item := range items {
+		result, err := q.ExecContext(ctx, finalQuery, item.LessonId, item.SectionId, item.Position, courseId)
+		if err != nil {
+			return err
+		}
+
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			return err
+		}
+		if rowsAffected != 1 {
+			return sql.ErrNoRows
+		}
+	}
+
+	return nil
 }
 
 func (r *CoursesRepository) GetCurriculum(ctx context.Context, courseId uuid.UUID) (*domain.CourseCurriculum, error) {
@@ -265,19 +366,48 @@ func (r *CoursesRepository) GetCurriculum(ctx context.Context, courseId uuid.UUI
 		return nil, err
 	}
 
+	const unpublishedChangesQuery = `
+		select exists (
+			select 1
+			from courses
+			where id = $1
+				and status = 'published'
+				and published_at is not null
+				and updated_at > published_at
+		) or exists (
+			select 1
+			from lessons
+			where course_id = $1
+				and (
+					published_content is null
+					or draft_content <> published_content
+					or status <> 'published'
+				)
+		)
+	`
+	var hasUnpublishedChanges bool
+	if err := sqlx.GetContext(ctx, q, &hasUnpublishedChanges, unpublishedChangesQuery, courseId); err != nil {
+		return nil, err
+	}
+
 	lessonsBySection := make(map[uuid.UUID][]domain.Lesson, len(sections))
 	for _, lesson := range lessons {
 		lessonsBySection[lesson.SectionId] = append(lessonsBySection[lesson.SectionId], lesson)
 	}
 
 	curriculum := &domain.CourseCurriculum{
-		Course:   *course,
-		Sections: make([]domain.CourseSectionWithLessons, 0, len(sections)),
+		Course:                *course,
+		Sections:              make([]domain.CourseSectionWithLessons, 0, len(sections)),
+		HasUnpublishedChanges: hasUnpublishedChanges,
 	}
 	for _, section := range sections {
+		sectionLessons := lessonsBySection[section.Id]
+		if sectionLessons == nil {
+			sectionLessons = []domain.Lesson{}
+		}
 		curriculum.Sections = append(curriculum.Sections, domain.CourseSectionWithLessons{
 			CourseSection: section,
-			Lessons:       lessonsBySection[section.Id],
+			Lessons:       sectionLessons,
 		})
 	}
 

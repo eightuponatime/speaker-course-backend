@@ -103,6 +103,39 @@ create table lesson_progress (
     unique (lesson_id, user_id)
 );
 
+create table lesson_quiz_responses (
+    id uuid primary key default uuid_generate_v4(),
+    lesson_id uuid not null references lessons(id) on delete cascade,
+    user_id uuid not null references users(id) on delete cascade,
+    quiz_id text not null,
+    selected_option_index integer not null check (selected_option_index >= 0),
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+    unique (lesson_id, user_id, quiz_id)
+);
+
+create table notifications (
+    id uuid primary key default uuid_generate_v4(),
+    user_id uuid not null references users(id) on delete cascade,
+    actor_id uuid references users(id) on delete set null,
+    course_id uuid references courses(id) on delete cascade,
+    enrollment_id uuid references course_enrollments(id) on delete cascade,
+    type text not null check (
+        type in (
+            'course_enrollment_requested',
+            'course_access_approved',
+            'course_access_rejected',
+            'course_access_revoked',
+            'course_access_restored'
+        )
+    ),
+    title text not null,
+    body text not null default '',
+    read_at timestamptz,
+    deleted_at timestamptz,
+    created_at timestamptz not null default now()
+);
+
 create index sessions_user_id_idx on sessions(user_id);
 create index course_sections_course_id_position_idx on course_sections(course_id, position);
 create index lessons_course_id_idx on lessons(course_id);
@@ -112,3 +145,8 @@ create index media_assets_lesson_id_idx on media_assets(lesson_id);
 create index course_enrollments_user_id_idx on course_enrollments(user_id);
 create index course_enrollments_course_id_status_idx on course_enrollments(course_id, status);
 create index lesson_progress_user_id_idx on lesson_progress(user_id);
+create index lesson_quiz_responses_user_id_idx on lesson_quiz_responses(user_id);
+create index notifications_user_id_created_at_idx on notifications(user_id, created_at desc)
+    where deleted_at is null;
+create index notifications_user_id_unread_idx on notifications(user_id)
+    where read_at is null and deleted_at is null;

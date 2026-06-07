@@ -21,19 +21,12 @@ func (r *MediaAssetsRepository) Create(
 ) (*domain.MediaAsset, error) {
 	const query = `
 		insert into media_assets (
-			owner_id,
-			course_id,
-			lesson_id,
-			kind,
-			original_name,
-			mime_type,
-			size_bytes,
-			storage_key,
-			public_url
+			owner_id, course_id, lesson_id, kind, original_name, mime_type,
+			size_bytes, storage_key, public_url
 		)
 		values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-		returning id, owner_id, course_id, lesson_id, kind, original_name, mime_type,
-			size_bytes, storage_key, public_url, created_at
+		returning id, owner_id, course_id, lesson_id, kind, original_name,
+			mime_type, size_bytes, storage_key, public_url, created_at
 	`
 
 	q := extractTransaction(ctx, r.db)

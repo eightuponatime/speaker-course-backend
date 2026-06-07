@@ -44,19 +44,25 @@ func main() {
 	coursesRepository := repository.NewCoursesRepository(db)
 	enrollmentsRepository := repository.NewEnrollmentsRepository(db)
 	mediaAssetsRepository := repository.NewMediaAssetsRepository(db)
+	notificationsRepository := repository.NewNotificationsRepository(db)
+	quizResponsesRepository := repository.NewQuizResponsesRepository(db)
+	txManager := repository.NewTransactionManager(db)
 
 	// ==== service ====
 	usersService := service.NewUsersService(usersRepository)
 	sessionsService := service.NewSessionsService(cfg, sessionsRepository)
 	authService := service.NewAuthService(cfg, usersService, sessionsService)
-	coursesService := service.NewCoursesService(coursesRepository)
+	coursesService := service.NewCoursesService(coursesRepository, txManager)
 	enrollmentsService := service.NewEnrollmentsService(enrollmentsRepository)
 	mediaService := service.NewMediaService(cfg, mediaAssetsRepository)
+	notificationsService := service.NewNotificationsService(notificationsRepository)
+	quizResponsesService := service.NewQuizResponsesService(quizResponsesRepository)
 
 	// ==== handler ====
 	authHandler := handler.NewAuthHandler(cfg, authService, sessionsService, usersService)
-	coursesHandler := handler.NewCoursesHandler(coursesService, enrollmentsService)
+	coursesHandler := handler.NewCoursesHandler(coursesService, enrollmentsService, notificationsService, quizResponsesService)
 	mediaHandler := handler.NewMediaHandler(mediaService)
+	notificationsHandler := handler.NewNotificationsHandler(notificationsService)
 
 	// ==== middleware ====
 	authMiddleware := middlewarego.NewAuthMiddleware(sessionsService, usersService)
@@ -65,7 +71,7 @@ func main() {
 	router := chi.NewRouter()
 	router.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:3000", "http://localhost:5173"},
-		AllowedMethods:   []string{"GET", "POST", "PATCH", "OPTIONS"},
+		AllowedMethods:   []string{"GET", "POST", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
 		AllowCredentials: true,
 	}))
@@ -77,6 +83,7 @@ func main() {
 	authHandler.RegisterRoutes(router, authMiddleware)
 	coursesHandler.RegisterRoutes(router, authMiddleware)
 	mediaHandler.RegisterRoutes(router, authMiddleware)
+	notificationsHandler.RegisterRoutes(router, authMiddleware)
 
 	log.Infof("server listening on :%s", cfg.Port)
 	if err := http.ListenAndServe(":"+cfg.Port, router); err != nil {

@@ -58,11 +58,22 @@ func (s *EnrollmentsService) GetByCourseAndUser(
 	return s.rp.GetByCourseAndUser(ctx, courseId, userId)
 }
 
+func (s *EnrollmentsService) GetByID(
+	ctx context.Context,
+	id uuid.UUID,
+) (*domain.CourseEnrollment, error) {
+	if id == uuid.Nil {
+		return nil, fmt.Errorf("%w: enrollment_id is empty", ErrInvalidEnrollment)
+	}
+
+	return s.rp.GetByID(ctx, id)
+}
+
 func (s *EnrollmentsService) ListByCourseAndStatus(
 	ctx context.Context,
 	courseId uuid.UUID,
 	status domain.CourseEnrollmentStatus,
-) ([]domain.CourseEnrollment, error) {
+) ([]domain.CourseEnrollmentWithUser, error) {
 	if courseId == uuid.Nil {
 		return nil, fmt.Errorf("%w: course_id is empty", ErrInvalidEnrollment)
 	}

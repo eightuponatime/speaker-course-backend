@@ -66,7 +66,7 @@ export function LandingPage({
   const [submitting, setSubmitting] = useState(false);
   const [forgotStatus, setForgotStatus] = useState("");
   const [forgotSubmitting, setForgotSubmitting] = useState(false);
-  const [programSections, setProgramSections] = useState<CourseProgramSection[]>(fallbackProgramSections);
+  const [programSections, setProgramSections] = useState<CourseProgramSection[]>([]);
 
   useEffect(() => {
     getCourseBySlug(courseSlug)
@@ -116,15 +116,11 @@ export function LandingPage({
       try {
         const program = await getCourseProgramBySlug(courseSlug);
         if (!cancelled) {
-          setProgramSections(
-            program.sections.length > 0
-              ? [...program.sections].sort((a, b) => a.position - b.position)
-              : fallbackProgramSections
-          );
+          setProgramSections([...program.sections].sort((a, b) => a.position - b.position));
         }
       } catch {
         if (!cancelled) {
-          setProgramSections(fallbackProgramSections);
+          setProgramSections([]);
         }
       }
     }
@@ -521,12 +517,16 @@ export function LandingPage({
               : "Программа курса"}
           </h2>
           <div>
-            {programSections.map((section, index) => (
-              <button key={section.id} type="button">
-                <span>{String(index + 1).padStart(2, "0")}</span>
-                {section.title}
-              </button>
-            ))}
+            {programSections.length > 0 ? (
+              programSections.map((section, index) => (
+                <button key={section.id} type="button">
+                  <span>{String(index + 1).padStart(2, "0")}</span>
+                  {section.title}
+                </button>
+              ))
+            ) : (
+              <p className="landing-program-empty">Программа скоро появится.</p>
+            )}
           </div>
         </div>
       </section>
@@ -579,17 +579,6 @@ const benefits = [
     text: "Ораторское мастерство откроет новые возможности в карьере и бизнесе.",
     icon: Sparkles
   }
-];
-
-const fallbackProgramSections: CourseProgramSection[] = [
-  { id: "fallback-01", title: "Основы ораторского искусства", position: 1 },
-  { id: "fallback-02", title: "Голос. Дыхание. Дикция", position: 2 },
-  { id: "fallback-03", title: "Структура и логика речи", position: 3 },
-  { id: "fallback-04", title: "Убеждение и аргументация", position: 4 },
-  { id: "fallback-05", title: "Работа с аудиторией", position: 5 },
-  { id: "fallback-06", title: "Сторителлинг и эмоции", position: 6 },
-  { id: "fallback-07", title: "Язык тела и невербалика", position: 7 },
-  { id: "fallback-08", title: "Итоговое выступление и разбор", position: 8 }
 ];
 
 function enrollmentLabel(status: CourseEnrollment["status"], t: (key: TranslationKey) => string): string {

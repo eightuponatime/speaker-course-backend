@@ -33,7 +33,7 @@ type LandingPageProps = {
   error: string;
   t: (key: TranslationKey) => string;
   onLogin: (email: string, password: string) => Promise<void>;
-  onRegister: (input: { email: string; password: string; fullName: string }) => Promise<void>;
+  onRegister: (input: { email: string; password: string; fullName: string }) => Promise<User>;
   currentUser?: User | null;
   onAdminOpen?: () => void;
   onLogout?: () => void;
@@ -140,7 +140,14 @@ export function LandingPage({
         await onLogin(email, password);
       } else {
         await onRegister({ email, password, fullName });
+        if (course) {
+          setAccessError("");
+          const nextEnrollment = await requestCourseEnrollment(course.id);
+          setEnrollment(nextEnrollment);
+        }
       }
+    } catch (err) {
+      setAccessError(formatError(err));
     } finally {
       setSubmitting(false);
     }

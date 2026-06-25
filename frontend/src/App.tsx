@@ -614,8 +614,10 @@ export default function App() {
       if (user.role === "admin") {
         loadCurriculum(undefined, true);
       }
+      return user;
     } catch (err) {
       setError(formatError(err));
+      throw err;
     }
   }
 

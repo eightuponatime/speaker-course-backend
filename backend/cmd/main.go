@@ -62,7 +62,7 @@ func main() {
 	emailService := service.NewEmailService(cfg)
 
 	// ==== handler ====
-	authHandler := handler.NewAuthHandler(cfg, authService, sessionsService, usersService)
+	authHandler := handler.NewAuthHandler(cfg, authService, sessionsService, usersService, emailService)
 	coursesHandler := handler.NewCoursesHandler(coursesService, enrollmentsService, notificationsService, quizResponsesService, activityService, usersService, emailService)
 	mediaHandler := handler.NewMediaHandler(mediaService)
 	notificationsHandler := handler.NewNotificationsHandler(notificationsService)

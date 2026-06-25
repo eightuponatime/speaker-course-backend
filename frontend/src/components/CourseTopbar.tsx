@@ -17,6 +17,7 @@ type CourseTopbarProps = {
   onLandingOpen: () => void;
   onPreview: () => void;
   onPublish: () => void;
+  onProfileOpen: () => void;
 };
 
 export function CourseTopbar({
@@ -31,7 +32,8 @@ export function CourseTopbar({
   onLogout,
   onLandingOpen,
   onPreview,
-  onPublish
+  onPublish,
+  onProfileOpen
 }: CourseTopbarProps) {
   const statusText = activeTab === "curriculum" ? publishStatus || t("saved") : t("saved");
 
@@ -87,6 +89,9 @@ export function CourseTopbar({
           <button className="preview-button" type="button" onClick={onPreview}>
             <Eye size={18} />
             {t("preview")}
+          </button>
+          <button className="preview-button" type="button" onClick={onProfileOpen}>
+            Профиль
           </button>
           <button
             className="publish-button"

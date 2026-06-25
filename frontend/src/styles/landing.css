@@ -337,7 +337,7 @@
   box-shadow: 0 0 0 3px rgba(169, 150, 130, 0.16);
 }
 
-.landing-auth > button:not(.landing-auth-dialog-close):not(.landing-auth-switch) {
+.landing-auth > button:not(.landing-auth-dialog-close):not(.landing-auth-switch):not(.landing-forgot-button) {
   height: 48px;
   border: 0;
   border-radius: 4px;
@@ -347,12 +347,13 @@
   cursor: pointer;
 }
 
-.landing-auth > button:not(.landing-auth-dialog-close):not(.landing-auth-switch):disabled {
+.landing-auth > button:not(.landing-auth-dialog-close):not(.landing-auth-switch):not(.landing-forgot-button):disabled {
   opacity: 0.65;
   cursor: default;
 }
 
-.landing-auth-switch {
+.landing-auth-switch,
+.landing-forgot-button {
   border: 0;
   padding: 0;
   color: #5d554d;
@@ -363,6 +364,11 @@
   text-decoration: underline;
   text-underline-offset: 3px;
   cursor: pointer;
+}
+
+.landing-forgot-button {
+  justify-self: center;
+  margin-top: -4px;
 }
 
 .landing-google {

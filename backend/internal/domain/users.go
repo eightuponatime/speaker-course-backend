@@ -30,3 +30,8 @@ type CreateUserInput struct {
 	FullName  string
 	Role      UserRole
 }
+
+type UpdateUserProfileInput struct {
+	Email    string
+	FullName string
+}

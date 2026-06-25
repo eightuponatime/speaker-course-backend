@@ -30,6 +30,7 @@ import { CurriculumSidebar } from "./components/CurriculumSidebar";
 import { EnrollmentRequestsPanel } from "./components/EnrollmentRequestsPanel";
 import { LessonWorkspace } from "./components/LessonWorkspace";
 import { LandingPage } from "./components/LandingPage";
+import { ProfileSettingsModal } from "./components/ProfileSettingsModal";
 import { StudentActivityPanel } from "./components/StudentActivityPanel";
 import type { BlockType } from "./components/BlockToolbar";
 import type { CourseCurriculum, EditorContent, Lesson, User } from "./entities/course/course";
@@ -55,6 +56,7 @@ export default function App() {
   const [isPublishing, setIsPublishing] = useState(false);
   const [activeTab, setActiveTab] = useState<"curriculum" | "activity" | "requests">("curriculum");
   const [isPreviewing, setIsPreviewing] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const editorRef = useRef<EditorJS | null>(null);
   const autosaveTimerRef = useRef<number | null>(null);
@@ -628,6 +630,28 @@ export default function App() {
     }
   }
 
+  function handleAccountDeleted() {
+    setIsProfileOpen(false);
+    setCurrentUser(null);
+    setCurriculum(null);
+    setIsPreviewing(false);
+    setError("");
+    navigate("/");
+  }
+
+  function renderProfileModal() {
+    if (!currentUser || !isProfileOpen) return null;
+
+    return (
+      <ProfileSettingsModal
+        user={currentUser}
+        onClose={() => setIsProfileOpen(false)}
+        onUserChange={setCurrentUser}
+        onAccountDeleted={handleAccountDeleted}
+      />
+    );
+  }
+
   async function handlePublish() {
     if (!curriculum) return;
 
@@ -733,29 +757,37 @@ export default function App() {
 
   if (!isAdminRoute && !isCourseRoute) {
     return (
-      <LandingPage
-        courseSlug={defaultCourseSlug}
-        error={error}
-        t={t}
-        onLogin={handleLandingLogin}
-        onRegister={handleLandingRegister}
-        currentUser={authenticatedUser}
-        onAdminOpen={authenticatedUser.role === "admin" ? () => navigate("/admin") : undefined}
-        onLogout={handleLogout}
-        onOpenCourse={() => navigate("/course")}
-      />
+      <>
+        <LandingPage
+          courseSlug={defaultCourseSlug}
+          error={error}
+          t={t}
+          onLogin={handleLandingLogin}
+          onRegister={handleLandingRegister}
+          currentUser={authenticatedUser}
+          onAdminOpen={authenticatedUser.role === "admin" ? () => navigate("/admin") : undefined}
+          onLogout={handleLogout}
+          onOpenCourse={() => navigate("/course")}
+          onProfileOpen={() => setIsProfileOpen(true)}
+        />
+        {renderProfileModal()}
+      </>
     );
   }
 
   if (authenticatedUser.role !== "admin" && isCourseRoute) {
     return (
-      <CourseAccessPage
-        courseSlug={defaultCourseSlug}
-        currentUser={authenticatedUser}
-        t={t}
-        onLogout={handleLogout}
-        onLandingOpen={() => navigate("/")}
-      />
+      <>
+        <CourseAccessPage
+          courseSlug={defaultCourseSlug}
+          currentUser={authenticatedUser}
+          t={t}
+          onLogout={handleLogout}
+          onLandingOpen={() => navigate("/")}
+          onProfileOpen={() => setIsProfileOpen(true)}
+        />
+        {renderProfileModal()}
+      </>
     );
   }
 
@@ -788,83 +820,91 @@ export default function App() {
 
   if (!isAdminMode || isPreviewing) {
     return (
-      <CoursePreviewPage
-        curriculum={curriculum}
-        initialLessonId={activeLessonId}
-        t={t}
-        onLogout={handleLogout}
-        onAdminOpen={
-          !isAdminRoute && currentUser?.role === "admin"
-            ? () => navigate("/admin")
-            : undefined
-        }
-        onLandingOpen={() => navigate("/")}
-        onBack={isPreviewing ? () => setIsPreviewing(false) : undefined}
-        enableQuizStats={currentUser?.role === "admin"}
-        storageScope={currentUser?.id || "admin-preview"}
-        isPreviewMode={isPreviewing}
-      />
+      <>
+        <CoursePreviewPage
+          curriculum={curriculum}
+          initialLessonId={activeLessonId}
+          t={t}
+          onLogout={handleLogout}
+          onAdminOpen={
+            !isAdminRoute && currentUser?.role === "admin"
+              ? () => navigate("/admin")
+              : undefined
+          }
+          onLandingOpen={() => navigate("/")}
+          onBack={isPreviewing ? () => setIsPreviewing(false) : undefined}
+          onProfileOpen={() => setIsProfileOpen(true)}
+          enableQuizStats={currentUser?.role === "admin"}
+          storageScope={currentUser?.id || "admin-preview"}
+          isPreviewMode={isPreviewing}
+        />
+        {renderProfileModal()}
+      </>
     );
   }
 
   return (
-    <main className="admin-screen">
-      <CourseTopbar
-        course={curriculum.course}
-        activeTab={activeTab}
-        hasUnpublishedChanges={curriculum.has_unpublished_changes}
-        pendingRequestsCount={pendingRequestsCount}
-        publishStatus={publishStatus}
-        isPublishing={isPublishing}
-        onTabChange={setActiveTab}
-        t={t}
-        onLogout={handleLogout}
-        onLandingOpen={() => navigate("/")}
-        onPreview={() => setIsPreviewing(true)}
-        onPublish={handlePublish}
-      />
-      {activeTab === "curriculum" ? (
-        <div className="page">
-          <CurriculumSidebar
-            curriculum={curriculum}
-            activeLessonId={activeLessonId}
-            onSelectLesson={setActiveLessonId}
-            onAddSection={handleAddSection}
-            onAddLesson={handleAddLesson}
-            onMoveLesson={handleMoveLesson}
-            onRenameSection={handleRenameSection}
-            t={t}
-          />
+    <>
+      <main className="admin-screen">
+        <CourseTopbar
+          course={curriculum.course}
+          activeTab={activeTab}
+          hasUnpublishedChanges={curriculum.has_unpublished_changes}
+          pendingRequestsCount={pendingRequestsCount}
+          publishStatus={publishStatus}
+          isPublishing={isPublishing}
+          onTabChange={setActiveTab}
+          t={t}
+          onLogout={handleLogout}
+          onLandingOpen={() => navigate("/")}
+          onPreview={() => setIsPreviewing(true)}
+          onPublish={handlePublish}
+          onProfileOpen={() => setIsProfileOpen(true)}
+        />
+        {activeTab === "curriculum" ? (
+          <div className="page">
+            <CurriculumSidebar
+              curriculum={curriculum}
+              activeLessonId={activeLessonId}
+              onSelectLesson={setActiveLessonId}
+              onAddSection={handleAddSection}
+              onAddLesson={handleAddLesson}
+              onMoveLesson={handleMoveLesson}
+              onRenameSection={handleRenameSection}
+              t={t}
+            />
 
-          <LessonWorkspace
-            lesson={activeLesson}
-            onEditorReady={handleEditorReady}
-            onDebug={addDebug}
-            onUploadImage={handleInlineImageUpload}
-            onUploadPdf={handleInlinePdfUpload}
-            onUploadVideo={handleInlineVideoUpload}
-            onEditorChange={scheduleAutosave}
-            onRenameLesson={handleRenameLesson}
-            onInsertBlock={handleInsertBlock}
+            <LessonWorkspace
+              lesson={activeLesson}
+              onEditorReady={handleEditorReady}
+              onDebug={addDebug}
+              onUploadImage={handleInlineImageUpload}
+              onUploadPdf={handleInlinePdfUpload}
+              onUploadVideo={handleInlineVideoUpload}
+              onEditorChange={scheduleAutosave}
+              onRenameLesson={handleRenameLesson}
+              onInsertBlock={handleInsertBlock}
+              t={t}
+            />
+          </div>
+        ) : null}
+        {activeTab === "activity" ? (
+          <StudentActivityPanel
+            courseId={curriculum.course.id}
+            totalLessons={curriculum.sections.reduce((count, section) => count + safeLessons(section.lessons).length, 0)}
             t={t}
           />
-        </div>
-      ) : null}
-      {activeTab === "activity" ? (
-        <StudentActivityPanel
-          courseId={curriculum.course.id}
-          totalLessons={curriculum.sections.reduce((count, section) => count + safeLessons(section.lessons).length, 0)}
-          t={t}
-        />
-      ) : null}
-      {activeTab === "requests" ? (
-        <EnrollmentRequestsPanel
-          courseId={curriculum.course.id}
-          onPendingCountChange={setPendingRequestsCount}
-          t={t}
-        />
-      ) : null}
-    </main>
+        ) : null}
+        {activeTab === "requests" ? (
+          <EnrollmentRequestsPanel
+            courseId={curriculum.course.id}
+            onPendingCountChange={setPendingRequestsCount}
+            t={t}
+          />
+        ) : null}
+      </main>
+      {renderProfileModal()}
+    </>
   );
 }
 

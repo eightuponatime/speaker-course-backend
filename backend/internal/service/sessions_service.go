@@ -57,3 +57,11 @@ func (s *SessionsService) Revoke(ctx context.Context, id uuid.UUID) error {
 
 	return s.rp.Revoke(ctx, id)
 }
+
+func (s *SessionsService) RevokeByUser(ctx context.Context, userID uuid.UUID) error {
+	if userID == uuid.Nil {
+		return fmt.Errorf("%w: user_id is empty", ErrInvalidSession)
+	}
+
+	return s.rp.RevokeByUser(ctx, userID)
+}

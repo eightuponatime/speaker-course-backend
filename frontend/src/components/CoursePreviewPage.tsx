@@ -20,6 +20,7 @@ type CoursePreviewPageProps = {
   onLogout: () => void;
   onAdminOpen?: () => void;
   onLandingOpen?: () => void;
+  onProfileOpen?: () => void;
   onBack?: () => void;
   backLabel?: string;
   enableQuizResponses?: boolean;
@@ -36,6 +37,7 @@ export function CoursePreviewPage({
   onLogout,
   onAdminOpen,
   onLandingOpen,
+  onProfileOpen,
   onBack,
   backLabel,
   enableQuizResponses = false,
@@ -308,6 +310,7 @@ export function CoursePreviewPage({
               {backLabel || t("backToEditor")}
             </button>
           ) : null}
+          {onProfileOpen ? <button type="button" onClick={onProfileOpen}>Профиль</button> : null}
           <button type="button" onClick={handleLogoutClick}>{t("logout")}</button>
         </div>
       </header>

@@ -993,14 +993,7 @@ func (h *CoursesHandler) emailCourseAccessRequested(ctx context.Context, userID 
 		return
 	}
 
-	_ = h.emailService.Send(ctx, service.SendEmailInput{
-		To:      user.Email,
-		Subject: "Заявка на курс получена",
-		Text: "Здравствуйте, " + user.FullName + "!\n\n" +
-			"Мы получили вашу заявку на курс \"" + courseTitle + "\". " +
-			"Администратор проверит заявку и откроет доступ, если все в порядке.\n\n" +
-			"Logos Voice",
-	})
+	_ = h.emailService.Send(ctx, service.EnrollmentRequestedEmail(user.Email, user.FullName, courseTitle))
 }
 
 func (h *CoursesHandler) emailCourseAccessReviewed(
@@ -1014,25 +1007,7 @@ func (h *CoursesHandler) emailCourseAccessReviewed(
 		return
 	}
 
-	subject := "Статус доступа к курсу обновлен"
-	message := "Статус вашей заявки на курс \"" + courseTitle + "\" обновлен."
-	switch status {
-	case domain.CourseEnrollmentStatusApproved:
-		subject = "Доступ к курсу открыт"
-		message = "Администратор открыл вам доступ к курсу \"" + courseTitle + "\". Можно заходить в кабинет и начинать обучение."
-	case domain.CourseEnrollmentStatusRejected:
-		subject = "Заявка на курс отклонена"
-		message = "К сожалению, заявка на курс \"" + courseTitle + "\" была отклонена."
-	case domain.CourseEnrollmentStatusRevoked:
-		subject = "Доступ к курсу закрыт"
-		message = "Доступ к курсу \"" + courseTitle + "\" был закрыт администратором."
-	}
-
-	_ = h.emailService.Send(ctx, service.SendEmailInput{
-		To:      user.Email,
-		Subject: subject,
-		Text:    "Здравствуйте, " + user.FullName + "!\n\n" + message + "\n\nLogos Voice",
-	})
+	_ = h.emailService.Send(ctx, service.EnrollmentReviewedEmail(user.Email, user.FullName, courseTitle, string(status)))
 }
 
 func (h *CoursesHandler) emailCourseAccessExtended(
@@ -1046,13 +1021,7 @@ func (h *CoursesHandler) emailCourseAccessExtended(
 		return
 	}
 
-	_ = h.emailService.Send(ctx, service.SendEmailInput{
-		To:      user.Email,
-		Subject: "Доступ к курсу продлен",
-		Text: "Здравствуйте, " + user.FullName + "!\n\n" +
-			"Доступ к курсу \"" + courseTitle + "\" продлен до " +
-			accessExpiresAt.Format("02.01.2006") + ".\n\nLogos Voice",
-	})
+	_ = h.emailService.Send(ctx, service.CourseAccessExtendedEmail(user.Email, user.FullName, courseTitle, *accessExpiresAt))
 }
 
 func parseUUIDParam(w http.ResponseWriter, r *http.Request, name string) (uuid.UUID, bool) {

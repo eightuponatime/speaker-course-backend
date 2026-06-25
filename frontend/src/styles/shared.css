@@ -128,3 +128,185 @@
   background: rgba(43, 43, 43, 0.06);
 }
 
+.profile-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(30, 27, 24, 0.48);
+}
+
+.profile-modal {
+  position: relative;
+  width: min(520px, 100%);
+  display: grid;
+  gap: 18px;
+  border: 1px solid #d8d0c7;
+  border-radius: 12px;
+  padding: 22px;
+  background: #fffaf4;
+  box-shadow: 0 28px 90px rgba(25, 22, 18, 0.28);
+}
+
+.profile-modal-header,
+.profile-nested-dialog header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.profile-modal-header span {
+  display: block;
+  margin-bottom: 6px;
+  color: #867a6f;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.profile-modal-header h2,
+.profile-nested-dialog h3 {
+  margin: 0;
+  color: #2d2924;
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 500;
+  line-height: 1.12;
+}
+
+.profile-modal-header h2 {
+  font-size: 30px;
+}
+
+.profile-nested-dialog h3 {
+  font-size: 24px;
+}
+
+.profile-modal-header button,
+.profile-nested-dialog header button {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d8d0c7;
+  border-radius: 8px;
+  color: #3e3933;
+  background: #fffdf9;
+  cursor: pointer;
+}
+
+.profile-form,
+.profile-nested-dialog {
+  display: grid;
+  gap: 13px;
+}
+
+.profile-form label,
+.profile-nested-dialog label {
+  display: grid;
+  gap: 7px;
+  color: #5c554e;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.profile-form input,
+.profile-nested-dialog input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #d8cbbd;
+  border-radius: 7px;
+  padding: 0 12px;
+  color: #2d2924;
+  background: #fffdf9;
+  font: inherit;
+}
+
+.profile-actions-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.profile-actions-row button,
+.profile-nested-dialog > button,
+.profile-secondary-actions button {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid #24201d;
+  border-radius: 8px;
+  padding: 0 16px;
+  color: #fffaf4;
+  background: #24201d;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.profile-actions-row button:disabled,
+.profile-nested-dialog > button:disabled,
+.profile-secondary-actions button:disabled {
+  opacity: 0.58;
+  cursor: default;
+}
+
+.profile-actions-row p,
+.profile-nested-dialog p {
+  margin: 0;
+  color: #716960;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.profile-secondary-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  border-top: 1px solid #e3d8cb;
+  padding-top: 16px;
+}
+
+.profile-secondary-actions button {
+  border-color: #d8d0c7;
+  color: #3e3933;
+  background: #fffdf9;
+}
+
+.profile-secondary-actions button.danger,
+.profile-nested-dialog > button.danger {
+  border-color: #8f3328;
+  color: #ffffff;
+  background: #8f3328;
+}
+
+.profile-nested-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(30, 27, 24, 0.42);
+}
+
+.profile-nested-dialog {
+  width: min(430px, 100%);
+  border: 1px solid #d8d0c7;
+  border-radius: 12px;
+  padding: 20px;
+  background: #fffaf4;
+  box-shadow: 0 24px 80px rgba(25, 22, 18, 0.24);
+}
+
+@media (max-width: 560px) {
+  .profile-secondary-actions {
+    grid-template-columns: 1fr;
+  }
+}

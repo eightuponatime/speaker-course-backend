@@ -20,6 +20,7 @@ import {
   getMyCourseEnrollment,
   requestCourseEnrollment
 } from "../api/courseDatasource";
+import { forgotPassword } from "../api/authDatasource";
 import { apiBaseUrl } from "../api/http";
 import logosVoiceLogo from "../../assets/images/transparent_logo.png";
 import type { CourseProgramSection } from "../api/courseDatasource";
@@ -37,6 +38,7 @@ type LandingPageProps = {
   onAdminOpen?: () => void;
   onLogout?: () => void;
   onOpenCourse?: () => void;
+  onProfileOpen?: () => void;
 };
 
 export function LandingPage({
@@ -48,7 +50,8 @@ export function LandingPage({
   currentUser,
   onAdminOpen,
   onLogout,
-  onOpenCourse
+  onOpenCourse,
+  onProfileOpen
 }: LandingPageProps) {
   const [course, setCourse] = useState<Course | null>(null);
   const [enrollment, setEnrollment] = useState<CourseEnrollment | null>(null);
@@ -61,6 +64,8 @@ export function LandingPage({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [forgotStatus, setForgotStatus] = useState("");
+  const [forgotSubmitting, setForgotSubmitting] = useState(false);
   const [programSections, setProgramSections] = useState<CourseProgramSection[]>(fallbackProgramSections);
 
   useEffect(() => {
@@ -172,6 +177,25 @@ export function LandingPage({
     }
   }
 
+  async function handleForgotPassword() {
+    if (!email.trim()) {
+      setForgotStatus("Введите email, чтобы получить временный пароль");
+      return;
+    }
+
+    setForgotSubmitting(true);
+    setForgotStatus("");
+
+    try {
+      await forgotPassword(email);
+      setForgotStatus("Если аккаунт найден, временный пароль придет на email");
+    } catch (err) {
+      setForgotStatus(formatError(err));
+    } finally {
+      setForgotSubmitting(false);
+    }
+  }
+
   function highlightSection(sectionId: string) {
     const section = document.getElementById(sectionId);
     if (!section) return;
@@ -248,10 +272,16 @@ export function LandingPage({
       <button type="submit" disabled={submitting}>
         {submitting ? t("wait") : mode === "login" ? t("enterCourse") : "Оставить заявку"}
       </button>
+      {mode === "login" ? (
+        <button className="landing-forgot-button" type="button" disabled={forgotSubmitting} onClick={handleForgotPassword}>
+          {forgotSubmitting ? t("wait") : "Забыли пароль?"}
+        </button>
+      ) : null}
       <a className="landing-google" href={`${apiBaseUrl}/auth/google/start`}>
         <GoogleIcon />
         {mode === "register" ? "Записаться через Google" : t("continueWithGoogle")}
       </a>
+      {forgotStatus ? <p>{forgotStatus}</p> : null}
       {error ? <p>{error}</p> : null}
     </>
   );
@@ -282,6 +312,9 @@ export function LandingPage({
       <button type="submit" disabled={submitting}>
         {submitting ? t("wait") : t("enterCourse")}
       </button>
+      <button className="landing-forgot-button" type="button" disabled={forgotSubmitting} onClick={handleForgotPassword}>
+        {forgotSubmitting ? t("wait") : "Забыли пароль?"}
+      </button>
       <a className="landing-google" href={`${apiBaseUrl}/auth/google/start`}>
         <GoogleIcon />
         {t("continueWithGoogle")}
@@ -289,6 +322,7 @@ export function LandingPage({
       <button className="landing-auth-switch" type="button" onClick={scrollToRegistration}>
         Нет аккаунта? Запишитесь на курс
       </button>
+      {forgotStatus ? <p>{forgotStatus}</p> : null}
       {error ? <p>{error}</p> : null}
     </>
   );
@@ -320,6 +354,11 @@ export function LandingPage({
               {onAdminOpen ? (
                 <button className="landing-nav-button" type="button" onClick={onAdminOpen}>
                   {t("adminPanel")}
+                </button>
+              ) : null}
+              {onProfileOpen ? (
+                <button className="landing-nav-button" type="button" onClick={onProfileOpen}>
+                  Профиль
                 </button>
               ) : null}
             </>

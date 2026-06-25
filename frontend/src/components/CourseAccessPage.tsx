@@ -16,6 +16,7 @@ type CourseAccessPageProps = {
   t: (key: TranslationKey) => string;
   onLogout: () => void;
   onLandingOpen: () => void;
+  onProfileOpen: () => void;
 };
 
 export function CourseAccessPage({
@@ -23,7 +24,8 @@ export function CourseAccessPage({
   currentUser,
   t,
   onLogout,
-  onLandingOpen
+  onLandingOpen,
+  onProfileOpen
 }: CourseAccessPageProps) {
   const [course, setCourse] = useState<Course | null>(null);
   const [curriculum, setCurriculum] = useState<CourseCurriculum | null>(null);
@@ -94,7 +96,7 @@ export function CourseAccessPage({
   if (loading) {
     return (
       <main className="course-access-page">
-        <AccessHeader t={t} onLogout={onLogout} onLandingOpen={onLandingOpen} />
+        <AccessHeader t={t} onLogout={onLogout} onLandingOpen={onLandingOpen} onProfileOpen={onProfileOpen} />
         <section className="course-access-card">
           <span>{t("loadingCourse")}</span>
         </section>
@@ -110,6 +112,7 @@ export function CourseAccessPage({
         t={t}
         onLogout={onLogout}
         onLandingOpen={onLandingOpen}
+        onProfileOpen={onProfileOpen}
         onBack={onLandingOpen}
         backLabel={t("backToLanding")}
         enableQuizResponses
@@ -143,7 +146,7 @@ export function CourseAccessPage({
 
   return (
     <main className="course-access-page">
-      <AccessHeader t={t} onLogout={onLogout} onLandingOpen={onLandingOpen} />
+      <AccessHeader t={t} onLogout={onLogout} onLandingOpen={onLandingOpen} onProfileOpen={onProfileOpen} />
       <section className="course-access-card">
         <div>
           <span>{course?.title || "Logos Voice"}</span>
@@ -167,16 +170,21 @@ export function CourseAccessPage({
 function AccessHeader({
   t,
   onLogout,
-  onLandingOpen
+  onLandingOpen,
+  onProfileOpen
 }: {
   t: (key: TranslationKey) => string;
   onLogout: () => void;
   onLandingOpen: () => void;
+  onProfileOpen: () => void;
 }) {
   return (
     <header className="course-access-nav">
       <button type="button" onClick={onLandingOpen}>
         {t("backToLanding")}
+      </button>
+      <button type="button" onClick={onProfileOpen}>
+        Профиль
       </button>
       <button type="button" onClick={onLogout}>
         {t("logout")}

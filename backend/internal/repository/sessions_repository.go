@@ -75,3 +75,16 @@ func (r *SessionsRepository) Revoke(ctx context.Context, id uuid.UUID) error {
 	_, err := q.ExecContext(ctx, query, id)
 	return err
 }
+
+func (r *SessionsRepository) RevokeByUser(ctx context.Context, userID uuid.UUID) error {
+	const query = `
+		update sessions
+		set revoked_at = now()
+		where user_id = $1
+			and revoked_at is null
+	`
+
+	q := extractTransaction(ctx, r.db)
+	_, err := q.ExecContext(ctx, query, userID)
+	return err
+}

@@ -128,3 +128,62 @@ func (r *UsersRepository) UpdateGoogleSub(
 
 	return &user, nil
 }
+
+func (r *UsersRepository) UpdateProfile(
+	ctx context.Context,
+	userID uuid.UUID,
+	input domain.UpdateUserProfileInput,
+) (*domain.User, error) {
+	const query = `
+		update users
+		set email = $2,
+			full_name = $3
+		where id = $1
+		returning id, google_sub, email, password, full_name, role, created_at
+	`
+
+	q := extractTransaction(ctx, r.db)
+	var user domain.User
+	if err := sqlx.GetContext(ctx, q, &user, query, userID, input.Email, input.FullName); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+func (r *UsersRepository) UpdatePassword(
+	ctx context.Context,
+	userID uuid.UUID,
+	passwordHash string,
+) (*domain.User, error) {
+	const query = `
+		update users
+		set password = $2
+		where id = $1
+		returning id, google_sub, email, password, full_name, role, created_at
+	`
+
+	q := extractTransaction(ctx, r.db)
+	var user domain.User
+	if err := sqlx.GetContext(ctx, q, &user, query, userID, passwordHash); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+func (r *UsersRepository) Delete(ctx context.Context, userID uuid.UUID) error {
+	const query = `delete from users where id = $1`
+
+	q := extractTransaction(ctx, r.db)
+	_, err := q.ExecContext(ctx, query, userID)
+	return err
+}

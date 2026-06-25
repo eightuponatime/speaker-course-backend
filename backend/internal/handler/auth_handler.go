@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"speaker_course/config"
+	"speaker_course/internal/domain"
 	middlewarego "speaker_course/internal/middleware.go"
 	"speaker_course/internal/service"
 
@@ -20,6 +21,7 @@ type AuthHandler struct {
 	authService     *service.AuthService
 	sessionsService *service.SessionsService
 	usersService    *service.UsersService
+	emailService    *service.EmailService
 }
 
 func NewAuthHandler(
@@ -27,18 +29,21 @@ func NewAuthHandler(
 	authService *service.AuthService,
 	sessionsService *service.SessionsService,
 	usersService *service.UsersService,
+	emailService *service.EmailService,
 ) *AuthHandler {
 	return &AuthHandler{
 		cfg:             cfg,
 		authService:     authService,
 		sessionsService: sessionsService,
 		usersService:    usersService,
+		emailService:    emailService,
 	}
 }
 
 func (h *AuthHandler) RegisterRoutes(r chi.Router, authMiddleware *middlewarego.AuthMiddleware) {
 	r.Post("/auth/register", h.Register)
 	r.Post("/auth/login", h.Login)
+	r.Post("/auth/forgot-password", h.ForgotPassword)
 	r.Get("/auth/google/start", h.GoogleStart)
 	r.Get("/auth/google/callback", h.GoogleCallback)
 
@@ -46,6 +51,9 @@ func (h *AuthHandler) RegisterRoutes(r chi.Router, authMiddleware *middlewarego.
 		r.Use(authMiddleware.RequireAuth())
 
 		r.Get("/auth/me", h.Me)
+		r.Patch("/auth/me", h.UpdateMe)
+		r.Patch("/auth/me/password", h.ChangePassword)
+		r.Delete("/auth/me", h.DeleteMe)
 		r.Post("/auth/logout", h.Logout)
 	})
 }
@@ -98,6 +106,30 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, result.User)
 }
 
+func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
+	var request struct {
+		Email string `json:"email"`
+	}
+	if err := decodeJSON(r, &request); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	temporaryPassword, err := randomTemporaryPassword()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	user, err := h.usersService.SetTemporaryPassword(r.Context(), request.Email, temporaryPassword)
+	if err == nil && user != nil {
+		_ = h.sessionsService.RevokeByUser(r.Context(), user.Id)
+		_ = h.emailService.Send(r.Context(), service.TemporaryPasswordEmail(user.Email, user.FullName, temporaryPassword))
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	sessionID, ok := middlewarego.SessionIDFromContext(r.Context())
 	if ok {
@@ -126,6 +158,84 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, user)
+}
+
+func (h *AuthHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middlewarego.UserIDFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, nil)
+		return
+	}
+
+	var request struct {
+		Email    string `json:"email"`
+		FullName string `json:"full_name"`
+	}
+	if err := decodeJSON(r, &request); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	user, err := h.usersService.UpdateProfile(r.Context(), userID, domain.UpdateUserProfileInput{
+		Email:    request.Email,
+		FullName: request.FullName,
+	})
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	if user == nil {
+		writeError(w, http.StatusNotFound, nil)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, user)
+}
+
+func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middlewarego.UserIDFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, nil)
+		return
+	}
+
+	var request struct {
+		CurrentPassword string `json:"current_password"`
+		NewPassword     string `json:"new_password"`
+		RepeatPassword  string `json:"repeat_password"`
+	}
+	if err := decodeJSON(r, &request); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	if request.NewPassword != request.RepeatPassword {
+		writeError(w, http.StatusBadRequest, service.ErrInvalidUser)
+		return
+	}
+
+	if err := h.usersService.ChangePassword(r.Context(), userID, request.CurrentPassword, request.NewPassword); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *AuthHandler) DeleteMe(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middlewarego.UserIDFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, nil)
+		return
+	}
+
+	if err := h.usersService.Delete(r.Context(), userID); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	_ = h.sessionsService.RevokeByUser(r.Context(), userID)
+	h.clearSessionCookie(w)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *AuthHandler) GoogleStart(w http.ResponseWriter, r *http.Request) {
@@ -214,6 +324,15 @@ func (h *AuthHandler) clearOAuthStateCookie(w http.ResponseWriter) {
 
 func randomState() (string, error) {
 	bytes := make([]byte, 32)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+
+	return base64.RawURLEncoding.EncodeToString(bytes), nil
+}
+
+func randomTemporaryPassword() (string, error) {
+	bytes := make([]byte, 15)
 	if _, err := rand.Read(bytes); err != nil {
 		return "", err
 	}

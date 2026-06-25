@@ -43,6 +43,7 @@ func main() {
 	sessionsRepository := repository.NewSessionsRepository(db)
 	coursesRepository := repository.NewCoursesRepository(db)
 	enrollmentsRepository := repository.NewEnrollmentsRepository(db)
+	activityRepository := repository.NewActivityRepository(db)
 	mediaAssetsRepository := repository.NewMediaAssetsRepository(db)
 	notificationsRepository := repository.NewNotificationsRepository(db)
 	quizResponsesRepository := repository.NewQuizResponsesRepository(db)
@@ -54,13 +55,15 @@ func main() {
 	authService := service.NewAuthService(cfg, usersService, sessionsService)
 	coursesService := service.NewCoursesService(coursesRepository, txManager)
 	enrollmentsService := service.NewEnrollmentsService(enrollmentsRepository)
+	activityService := service.NewActivityService(activityRepository)
 	mediaService := service.NewMediaService(cfg, mediaAssetsRepository)
 	notificationsService := service.NewNotificationsService(notificationsRepository)
 	quizResponsesService := service.NewQuizResponsesService(quizResponsesRepository)
+	emailService := service.NewEmailService(cfg)
 
 	// ==== handler ====
 	authHandler := handler.NewAuthHandler(cfg, authService, sessionsService, usersService)
-	coursesHandler := handler.NewCoursesHandler(coursesService, enrollmentsService, notificationsService, quizResponsesService)
+	coursesHandler := handler.NewCoursesHandler(coursesService, enrollmentsService, notificationsService, quizResponsesService, activityService, usersService, emailService)
 	mediaHandler := handler.NewMediaHandler(mediaService)
 	notificationsHandler := handler.NewNotificationsHandler(notificationsService)
 
@@ -70,7 +73,7 @@ func main() {
 	// ==== router ====
 	router := chi.NewRouter()
 	router.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:3000", "http://localhost:5173"},
+		AllowedOrigins:   []string{"http://localhost:3000", "http://localhost:5173", cfg.FrontendURL},
 		AllowedMethods:   []string{"GET", "POST", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
 		AllowCredentials: true,

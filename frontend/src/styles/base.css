@@ -1,0 +1,51 @@
+@font-face {
+  font-family: "Montserrat";
+  src: url("../../assets/fonts/Montserrat.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  color: #303846;
+  background: #f6f7fb;
+  font-family:
+    Montserrat, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  overflow-x: hidden;
+  scrollbar-color: rgba(169, 150, 130, 0.72) rgba(247, 243, 237, 0.9);
+  scrollbar-width: thin;
+}
+
+button {
+  font: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(247, 243, 237, 0.9);
+}
+
+::-webkit-scrollbar-thumb {
+  border: 3px solid rgba(247, 243, 237, 0.9);
+  border-radius: 999px;
+  background: rgba(169, 150, 130, 0.72);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(134, 122, 111, 0.82);
+}

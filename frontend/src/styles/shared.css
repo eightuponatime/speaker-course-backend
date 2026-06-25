@@ -1,0 +1,130 @@
+.language-switcher {
+  height: 34px;
+  border: 1px solid rgba(43, 43, 43, 0.24);
+  border-radius: 999px;
+  padding: 0 30px 0 12px;
+  color: #6f6a63;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+  appearance: auto;
+}
+
+.notification-root {
+  position: relative;
+  display: inline-flex;
+}
+
+.notification-trigger {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(43, 43, 43, 0.22);
+  border-radius: 999px;
+  color: #2b2b2b;
+  background: rgba(250, 247, 242, 0.58);
+  cursor: pointer;
+}
+
+.notification-trigger span {
+  position: absolute;
+  top: -6px;
+  right: -7px;
+  min-width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #f3eee7;
+  border-radius: 999px;
+  padding: 0 5px;
+  color: #ffffff;
+  background: #8f3328;
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.notification-panel {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  z-index: 50;
+  width: min(390px, calc(100vw - 30px));
+  max-height: min(520px, calc(100vh - 96px));
+  overflow-y: auto;
+  border: 1px solid #d8d0c7;
+  background: #faf7f2;
+  box-shadow: 0 24px 70px rgba(43, 43, 43, 0.13);
+}
+
+.notification-empty {
+  padding: 22px;
+  color: #6f6a63;
+  font-weight: 750;
+}
+
+.notification-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  border-bottom: 1px solid rgba(43, 43, 43, 0.1);
+  padding: 15px 16px;
+  cursor: pointer;
+}
+
+.notification-item:last-child {
+  border-bottom: 0;
+}
+
+.notification-item.unread {
+  background: rgba(184, 169, 153, 0.13);
+}
+
+.notification-item strong,
+.notification-item p,
+.notification-item span {
+  display: block;
+  min-width: 0;
+}
+
+.notification-item strong {
+  color: #2b2b2b;
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.notification-item p {
+  margin: 6px 0 8px;
+  color: #5f5a53;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.notification-item span {
+  color: #827b72;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.notification-item > button {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  color: #6f6a63;
+  background: transparent;
+  cursor: pointer;
+}
+
+.notification-item > button:hover {
+  background: rgba(43, 43, 43, 0.06);
+}
+

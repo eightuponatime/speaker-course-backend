@@ -35,6 +35,15 @@ export type CourseCurriculum = {
   course: Course;
   sections: CourseSection[];
   has_unpublished_changes: boolean;
+  access?: CourseAccessWindow;
+};
+
+export type CourseAccessWindow = {
+  course_id: string;
+  user_id: string;
+  first_access_at?: string;
+  access_expires_at?: string;
+  is_expired: boolean;
 };
 
 export type EnrollmentStatus = "pending" | "approved" | "rejected" | "revoked";
@@ -50,6 +59,39 @@ export type CourseEnrollment = {
   admin_note?: string;
   user_email?: string;
   user_full_name?: string;
+};
+
+export type CourseStudentActivity = {
+  course_id: string;
+  user_id: string;
+  current_lesson_id?: string;
+  last_seen_at?: string;
+  online_until?: string;
+  is_online: boolean;
+  first_access_at?: string;
+  access_expires_at?: string;
+  is_access_expired: boolean;
+  created_at: string;
+  updated_at: string;
+  user_email: string;
+  user_full_name?: string;
+  current_lesson_title?: string;
+  current_section_id?: string;
+  current_section_title?: string;
+  last_login_at?: string;
+  viewed_lessons: number;
+  total_lessons: number;
+};
+
+export type LessonProgressHistoryItem = {
+  lesson_id: string;
+  lesson_title: string;
+  lesson_position: number;
+  section_id: string;
+  section_title: string;
+  section_position: number;
+  first_viewed_at?: string;
+  last_attention_at?: string;
 };
 
 export type LessonQuizResponse = {

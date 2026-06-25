@@ -7,16 +7,13 @@ import {
   requestCourseEnrollment
 } from "../api/courseDatasource";
 import type { Course, CourseCurriculum, CourseEnrollment, User } from "../entities/course/course";
-import type { Language, TranslationKey } from "../i18n";
+import type { TranslationKey } from "../i18n";
 import { CoursePreviewPage } from "./CoursePreviewPage";
-import { LanguageSwitcher } from "./LanguageSwitcher";
 
 type CourseAccessPageProps = {
   courseSlug: string;
   currentUser: User;
-  language: Language;
   t: (key: TranslationKey) => string;
-  onLanguageChange: (language: Language) => void;
   onLogout: () => void;
   onLandingOpen: () => void;
 };
@@ -24,9 +21,7 @@ type CourseAccessPageProps = {
 export function CourseAccessPage({
   courseSlug,
   currentUser,
-  language,
   t,
-  onLanguageChange,
   onLogout,
   onLandingOpen
 }: CourseAccessPageProps) {
@@ -99,13 +94,7 @@ export function CourseAccessPage({
   if (loading) {
     return (
       <main className="course-access-page">
-        <AccessHeader
-          language={language}
-          t={t}
-          onLanguageChange={onLanguageChange}
-          onLogout={onLogout}
-          onLandingOpen={onLandingOpen}
-        />
+        <AccessHeader t={t} onLogout={onLogout} onLandingOpen={onLandingOpen} />
         <section className="course-access-card">
           <span>{t("loadingCourse")}</span>
         </section>
@@ -118,14 +107,14 @@ export function CourseAccessPage({
       <CoursePreviewPage
         curriculum={curriculum}
         initialLessonId=""
-        language={language}
         t={t}
-        onLanguageChange={onLanguageChange}
         onLogout={onLogout}
         onLandingOpen={onLandingOpen}
         onBack={onLandingOpen}
         backLabel={t("backToLanding")}
         enableQuizResponses
+        enableActivityTracking
+        storageScope={currentUser.id}
       />
     );
   }
@@ -134,6 +123,8 @@ export function CourseAccessPage({
   const title =
     status === "pending"
       ? t("accessPendingTitle")
+      : status === "approved" && error
+        ? "Срок доступа истек"
       : status === "rejected"
         ? t("accessRejectedTitle")
         : status === "revoked"
@@ -142,6 +133,8 @@ export function CourseAccessPage({
   const text =
     status === "pending"
       ? t("accessPendingText")
+      : status === "approved" && error
+        ? "Доступ к материалам курса открыт на 1 месяц с первого входа в курс."
       : status === "rejected"
         ? t("accessRejectedText")
         : status === "revoked"
@@ -150,13 +143,7 @@ export function CourseAccessPage({
 
   return (
     <main className="course-access-page">
-      <AccessHeader
-        language={language}
-        t={t}
-        onLanguageChange={onLanguageChange}
-        onLogout={onLogout}
-        onLandingOpen={onLandingOpen}
-      />
+      <AccessHeader t={t} onLogout={onLogout} onLandingOpen={onLandingOpen} />
       <section className="course-access-card">
         <div>
           <span>{course?.title || "Logos Voice"}</span>
@@ -178,15 +165,11 @@ export function CourseAccessPage({
 }
 
 function AccessHeader({
-  language,
   t,
-  onLanguageChange,
   onLogout,
   onLandingOpen
 }: {
-  language: Language;
   t: (key: TranslationKey) => string;
-  onLanguageChange: (language: Language) => void;
   onLogout: () => void;
   onLandingOpen: () => void;
 }) {
@@ -195,7 +178,6 @@ function AccessHeader({
       <button type="button" onClick={onLandingOpen}>
         {t("backToLanding")}
       </button>
-      <LanguageSwitcher language={language} onChange={onLanguageChange} />
       <button type="button" onClick={onLogout}>
         {t("logout")}
       </button>

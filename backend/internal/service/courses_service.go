@@ -103,6 +103,22 @@ func (s *CoursesService) CreateSection(
 	return s.rp.CreateSection(ctx, input)
 }
 
+func (s *CoursesService) UpdateSection(
+	ctx context.Context,
+	input domain.UpdateCourseSectionInput,
+) (*domain.CourseSection, error) {
+	if input.SectionId == uuid.Nil {
+		return nil, fmt.Errorf("%w: section_id is empty", ErrInvalidCourse)
+	}
+	if strings.TrimSpace(input.Title) == "" {
+		return nil, fmt.Errorf("%w: section title is empty", ErrInvalidCourse)
+	}
+
+	input.Title = strings.TrimSpace(input.Title)
+
+	return s.rp.UpdateSection(ctx, input)
+}
+
 func (s *CoursesService) CreateLesson(
 	ctx context.Context,
 	input domain.CreateLessonInput,

@@ -1,0 +1,94 @@
+.course-access-page {
+  min-height: 100vh;
+  color: #2b2b2b;
+  background:
+    radial-gradient(circle at 15% 82%, rgba(250, 247, 242, 0.94), transparent 24rem),
+    #f3eee7;
+}
+
+.course-access-nav {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  border-bottom: 1px solid rgba(43, 43, 43, 0.12);
+  padding: 0 clamp(18px, 4vw, 56px);
+}
+
+.course-access-nav button,
+.course-access-card > button {
+  height: 42px;
+  border: 1px solid #2b2b2b;
+  border-radius: 999px;
+  padding: 0 18px;
+  color: #faf7f2;
+  background: #2b2b2b;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.course-access-card {
+  width: min(760px, calc(100% - 44px));
+  min-height: 360px;
+  display: grid;
+  align-content: center;
+  gap: 24px;
+  border: 1px solid #d8d0c7;
+  margin: clamp(70px, 13vh, 150px) auto 0;
+  padding: clamp(28px, 6vw, 64px);
+  background: rgba(250, 247, 242, 0.78);
+  box-shadow: 0 22px 70px rgba(43, 43, 43, 0.055);
+}
+
+.course-access-card span {
+  display: inline-block;
+  margin-bottom: 16px;
+  color: #6f6a63;
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.course-access-card h1 {
+  margin: 0;
+  color: #262626;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(44px, 6vw, 74px);
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+.course-access-card p {
+  max-width: 560px;
+  margin: 20px 0 0;
+  color: #5f5a53;
+  font-size: clamp(17px, 2vw, 21px);
+  line-height: 1.65;
+}
+
+.course-access-card small {
+  display: inline-block;
+  margin-top: 22px;
+  color: #6f6a63;
+  font-weight: 700;
+}
+
+.course-access-card > button {
+  width: fit-content;
+  min-width: 180px;
+  height: 52px;
+}
+
+.course-access-card > button:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.course-access-error {
+  color: #8f3328 !important;
+  font-size: 14px !important;
+  font-weight: 750;
+}

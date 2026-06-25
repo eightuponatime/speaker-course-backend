@@ -45,6 +45,7 @@ type CourseCurriculum struct {
 	Course                Course                     `json:"course"`
 	Sections              []CourseSectionWithLessons `json:"sections"`
 	HasUnpublishedChanges bool                       `json:"has_unpublished_changes"`
+	Access                *CourseAccessWindow        `json:"access,omitempty"`
 }
 
 type CreateCourseInput struct {
@@ -65,4 +66,9 @@ type CreateCourseSectionInput struct {
 	CourseId uuid.UUID
 	Title    string
 	Position int
+}
+
+type UpdateCourseSectionInput struct {
+	SectionId uuid.UUID
+	Title     string
 }

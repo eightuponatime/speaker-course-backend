@@ -9,11 +9,11 @@ import {
   getAuthenticatedCourseCurriculum,
   getCourseCurriculum,
   listCourseEnrollments,
-  updateCourse,
   publishCourse,
   publishLesson,
   reorderLessons,
   saveLessonDraft,
+  updateSection,
   updateLesson
 } from "./api/courseDatasource";
 import { apiBaseUrl } from "./api/http";
@@ -27,14 +27,14 @@ import { CourseTopbar } from "./components/CourseTopbar";
 import { CourseAccessPage } from "./components/CourseAccessPage";
 import { CoursePreviewPage } from "./components/CoursePreviewPage";
 import { CurriculumSidebar } from "./components/CurriculumSidebar";
-import { CourseSettingsPanel } from "./components/CourseSettingsPanel";
 import { EnrollmentRequestsPanel } from "./components/EnrollmentRequestsPanel";
 import { LessonWorkspace } from "./components/LessonWorkspace";
 import { LandingPage } from "./components/LandingPage";
+import { StudentActivityPanel } from "./components/StudentActivityPanel";
 import type { BlockType } from "./components/BlockToolbar";
 import type { CourseCurriculum, EditorContent, Lesson, User } from "./entities/course/course";
 import type { StreamVideoStatus } from "./entities/media/media";
-import { translate, type Language } from "./i18n";
+import { translate } from "./i18n";
 
 const defaultCourseId = import.meta.env.VITE_COURSE_ID ?? "10000000-0000-0000-0000-000000000001";
 const defaultCourseSlug = import.meta.env.VITE_COURSE_SLUG ?? "homemade-bagels-for-beginners";
@@ -43,10 +43,6 @@ export default function App() {
   const [path, setPath] = useState(window.location.pathname);
   const isAdminRoute = path.startsWith("/admin");
   const isCourseRoute = path.startsWith("/course");
-  const [language, setLanguage] = useState<Language>(() => {
-    const stored = window.localStorage.getItem("logos_voice_language");
-    return stored === "ru" || stored === "kk" || stored === "en" ? stored : "ru";
-  });
   const [curriculum, setCurriculum] = useState<CourseCurriculum | null>(null);
   const [activeLessonId, setActiveLessonId] = useState("");
   const [error, setError] = useState("");
@@ -57,7 +53,7 @@ export default function App() {
   const [password, setPassword] = useState("");
   const [publishStatus, setPublishStatus] = useState("");
   const [isPublishing, setIsPublishing] = useState(false);
-  const [activeTab, setActiveTab] = useState<"curriculum" | "settings" | "requests">("curriculum");
+  const [activeTab, setActiveTab] = useState<"curriculum" | "activity" | "requests">("curriculum");
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const editorRef = useRef<EditorJS | null>(null);
@@ -66,17 +62,12 @@ export default function App() {
   const addDebug = useCallback((message: string) => {
     console.log(`[course-builder] ${message}`);
   }, []);
-  const t = useCallback((key: Parameters<typeof translate>[1]) => translate(language, key), [language]);
+  const t = useCallback((key: Parameters<typeof translate>[1]) => translate("ru", key), []);
 
   const navigate = useCallback((nextPath: string) => {
     window.history.pushState(null, "", nextPath);
     setPath(nextPath);
   }, []);
-
-  function handleLanguageChange(nextLanguage: Language) {
-    setLanguage(nextLanguage);
-    window.localStorage.setItem("logos_voice_language", nextLanguage);
-  }
 
   function loadCurriculum(preferredLessonId?: string, forceAdminAccess = currentUser?.role === "admin") {
     const shouldUseAdminAccess = isAdminRoute || forceAdminAccess;
@@ -269,6 +260,40 @@ export default function App() {
       });
       markUnpublishedChanges();
       setPublishStatus("Lesson title saved");
+    } catch (err) {
+      setPublishStatus(formatError(err));
+    }
+  }
+
+  async function handleRenameSection(sectionId: string, title: string) {
+    if (!curriculum) return;
+    const section = curriculum.sections.find((item) => item.id === sectionId);
+    if (!section || section.title === title) return;
+
+    try {
+      const updatedSection = await updateSection({
+        courseId: curriculum.course.id,
+        sectionId,
+        title
+      });
+
+      setCurriculum((current) => {
+        if (!current) return current;
+
+        return {
+          ...current,
+          sections: current.sections.map((item) =>
+            item.id === sectionId
+              ? {
+                  ...item,
+                  ...updatedSection
+                }
+              : item
+          )
+        };
+      });
+      markUnpublishedChanges();
+      setPublishStatus("Section title saved");
     } catch (err) {
       setPublishStatus(formatError(err));
     }
@@ -645,32 +670,6 @@ export default function App() {
     }
   }
 
-  async function handleSaveCourseSettings(input: { title: string; description: string }) {
-    if (!curriculum) return;
-
-    try {
-      const updated = await updateCourse({
-        courseId: curriculum.course.id,
-        title: input.title,
-        description: input.description
-      });
-
-      setCurriculum((current) =>
-        current
-          ? {
-              ...current,
-              course: updated,
-              has_unpublished_changes: true
-            }
-          : current
-      );
-      setPublishStatus("Course settings saved");
-    } catch (err) {
-      setPublishStatus(formatError(err));
-      throw err;
-    }
-  }
-
   function markUnpublishedChanges() {
     setCurriculum((current) => {
       if (!current || current.has_unpublished_changes) return current;
@@ -695,9 +694,7 @@ export default function App() {
       <LandingPage
         courseSlug={defaultCourseSlug}
         error={error}
-        language={language}
         t={t}
-        onLanguageChange={handleLanguageChange}
         onLogin={handleLandingLogin}
         onRegister={handleLandingRegister}
       />
@@ -739,9 +736,7 @@ export default function App() {
       <LandingPage
         courseSlug={defaultCourseSlug}
         error={error}
-        language={language}
         t={t}
-        onLanguageChange={handleLanguageChange}
         onLogin={handleLandingLogin}
         onRegister={handleLandingRegister}
         currentUser={authenticatedUser}
@@ -757,9 +752,7 @@ export default function App() {
       <CourseAccessPage
         courseSlug={defaultCourseSlug}
         currentUser={authenticatedUser}
-        language={language}
         t={t}
-        onLanguageChange={handleLanguageChange}
         onLogout={handleLogout}
         onLandingOpen={() => navigate("/")}
       />
@@ -798,9 +791,7 @@ export default function App() {
       <CoursePreviewPage
         curriculum={curriculum}
         initialLessonId={activeLessonId}
-        language={language}
         t={t}
-        onLanguageChange={handleLanguageChange}
         onLogout={handleLogout}
         onAdminOpen={
           !isAdminRoute && currentUser?.role === "admin"
@@ -810,6 +801,8 @@ export default function App() {
         onLandingOpen={() => navigate("/")}
         onBack={isPreviewing ? () => setIsPreviewing(false) : undefined}
         enableQuizStats={currentUser?.role === "admin"}
+        storageScope={currentUser?.id || "admin-preview"}
+        isPreviewMode={isPreviewing}
       />
     );
   }
@@ -824,9 +817,7 @@ export default function App() {
         publishStatus={publishStatus}
         isPublishing={isPublishing}
         onTabChange={setActiveTab}
-        language={language}
         t={t}
-        onLanguageChange={handleLanguageChange}
         onLogout={handleLogout}
         onLandingOpen={() => navigate("/")}
         onPreview={() => setIsPreviewing(true)}
@@ -841,6 +832,7 @@ export default function App() {
             onAddSection={handleAddSection}
             onAddLesson={handleAddLesson}
             onMoveLesson={handleMoveLesson}
+            onRenameSection={handleRenameSection}
             t={t}
           />
 
@@ -858,12 +850,11 @@ export default function App() {
           />
         </div>
       ) : null}
-      {activeTab === "settings" ? (
-        <CourseSettingsPanel
-          course={curriculum.course}
-          status={publishStatus === "Course settings saved" ? publishStatus : ""}
+      {activeTab === "activity" ? (
+        <StudentActivityPanel
+          courseId={curriculum.course.id}
+          totalLessons={curriculum.sections.reduce((count, section) => count + safeLessons(section.lessons).length, 0)}
           t={t}
-          onSave={handleSaveCourseSettings}
         />
       ) : null}
       {activeTab === "requests" ? (

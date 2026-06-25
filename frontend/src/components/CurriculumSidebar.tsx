@@ -12,6 +12,7 @@ type CurriculumSidebarProps = {
   onAddSection: () => void;
   onAddLesson: (sectionId: string) => void;
   onMoveLesson: (lessonId: string, toSectionId: string, beforeLessonId: string | null) => void;
+  onRenameSection: (sectionId: string, title: string) => Promise<void>;
   t: (key: TranslationKey) => string;
 };
 
@@ -22,11 +23,14 @@ export function CurriculumSidebar({
   onAddSection,
   onAddLesson,
   onMoveLesson,
+  onRenameSection,
   t
 }: CurriculumSidebarProps) {
   const [draggedLessonId, setDraggedLessonId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
   const [collapsedSectionIds, setCollapsedSectionIds] = useState<Set<string>>(() => new Set());
+  const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
+  const [sectionTitleDraft, setSectionTitleDraft] = useState("");
 
   function handleDrop(toSectionId: string, beforeLessonId: string | null) {
     if (!draggedLessonId) return;
@@ -49,6 +53,19 @@ export function CurriculumSidebar({
     });
   }
 
+  async function saveSectionTitle(sectionId: string, fallbackTitle: string) {
+    const nextTitle = sectionTitleDraft.trim();
+    setEditingSectionId(null);
+
+    if (!nextTitle || nextTitle === fallbackTitle) {
+      setSectionTitleDraft("");
+      return;
+    }
+
+    await onRenameSection(sectionId, nextTitle);
+    setSectionTitleDraft("");
+  }
+
   return (
     <aside className="curriculum-sidebar">
       {curriculum.sections.map((section) => {
@@ -59,7 +76,36 @@ export function CurriculumSidebar({
         <section className="section-card" key={section.id}>
           <header className="section-header">
             <DragHandle />
-            <strong>{section.title}</strong>
+            {editingSectionId === section.id ? (
+              <input
+                className="section-title-input"
+                autoFocus
+                value={sectionTitleDraft}
+                onBlur={() => void saveSectionTitle(section.id, section.title)}
+                onChange={(event) => setSectionTitleDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    void saveSectionTitle(section.id, section.title);
+                  }
+                  if (event.key === "Escape") {
+                    setEditingSectionId(null);
+                    setSectionTitleDraft("");
+                  }
+                }}
+              />
+            ) : (
+              <button
+                className="section-title-button"
+                type="button"
+                onClick={() => {
+                  setEditingSectionId(section.id);
+                  setSectionTitleDraft(section.title);
+                }}
+              >
+                {section.title}
+              </button>
+            )}
             <button className="section-toggle" onClick={() => toggleSection(section.id)} type="button">
               <ChevronUp className={isCollapsed ? "section-chevron collapsed" : "section-chevron"} size={18} strokeWidth={1.8} />
             </button>

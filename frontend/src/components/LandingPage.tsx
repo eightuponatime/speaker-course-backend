@@ -1,19 +1,36 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
+import {
+  CheckCircle2,
+  Flame,
+  Instagram,
+  MessageCircle,
+  Mic2,
+  ShieldCheck,
+  Sparkles,
+  Target,
+  Users,
+  Volume2,
+  X
+} from "lucide-react";
 
-import { getCourseBySlug, getMyCourseEnrollment, requestCourseEnrollment } from "../api/courseDatasource";
+import {
+  getCourseBySlug,
+  getCourseProgramBySlug,
+  getMyCourseEnrollment,
+  requestCourseEnrollment
+} from "../api/courseDatasource";
 import { apiBaseUrl } from "../api/http";
+import logosVoiceLogo from "../../assets/images/transparent_logo.png";
+import type { CourseProgramSection } from "../api/courseDatasource";
 import type { Course, CourseEnrollment, User } from "../entities/course/course";
-import type { Language, TranslationKey } from "../i18n";
-import { LanguageSwitcher } from "./LanguageSwitcher";
+import type { TranslationKey } from "../i18n";
 import { NotificationBell } from "./NotificationBell";
 
 type LandingPageProps = {
   courseSlug: string;
   error: string;
-  language: Language;
   t: (key: TranslationKey) => string;
-  onLanguageChange: (language: Language) => void;
   onLogin: (email: string, password: string) => Promise<void>;
   onRegister: (input: { email: string; password: string; fullName: string }) => Promise<void>;
   currentUser?: User | null;
@@ -25,9 +42,7 @@ type LandingPageProps = {
 export function LandingPage({
   courseSlug,
   error,
-  language,
   t,
-  onLanguageChange,
   onLogin,
   onRegister,
   currentUser,
@@ -41,10 +56,12 @@ export function LandingPage({
   const [accessSubmitting, setAccessSubmitting] = useState(false);
   const [accessError, setAccessError] = useState("");
   const [mode, setMode] = useState<"login" | "register">("login");
+  const [loginDialogOpen, setLoginDialogOpen] = useState(false);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [programSections, setProgramSections] = useState<CourseProgramSection[]>(fallbackProgramSections);
 
   useEffect(() => {
     getCourseBySlug(courseSlug)
@@ -87,6 +104,33 @@ export function LandingPage({
     };
   }, [course, currentUser]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadProgramSections() {
+      try {
+        const program = await getCourseProgramBySlug(courseSlug);
+        if (!cancelled) {
+          setProgramSections(
+            program.sections.length > 0
+              ? [...program.sections].sort((a, b) => a.position - b.position)
+              : fallbackProgramSections
+          );
+        }
+      } catch {
+        if (!cancelled) {
+          setProgramSections(fallbackProgramSections);
+        }
+      }
+    }
+
+    void loadProgramSections();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [courseSlug]);
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setSubmitting(true);
@@ -96,6 +140,17 @@ export function LandingPage({
       } else {
         await onRegister({ email, password, fullName });
       }
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleLoginDialogSubmit(event: FormEvent) {
+    event.preventDefault();
+    setSubmitting(true);
+    try {
+      await onLogin(email, password);
+      setLoginDialogOpen(false);
     } finally {
       setSubmitting(false);
     }
@@ -117,13 +172,147 @@ export function LandingPage({
     }
   }
 
+  function highlightSection(sectionId: string) {
+    const section = document.getElementById(sectionId);
+    if (!section) return;
+    const target = section.querySelector<HTMLElement>("[data-section-heading]") || section;
+
+    section.scrollIntoView({ behavior: "smooth", block: "center" });
+    target.classList.remove("landing-heading-highlight");
+    window.setTimeout(() => {
+      target.classList.add("landing-heading-highlight");
+    }, 80);
+    window.setTimeout(() => {
+      target.classList.remove("landing-heading-highlight");
+    }, 1500);
+  }
+
+  function scrollToRegistration() {
+    setMode("register");
+    setLoginDialogOpen(false);
+    window.setTimeout(() => {
+      document.getElementById("landing-application")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 0);
+  }
+
+  const courseTitle = "Курсы ораторского мастерства";
+  const courseDescription = "Риторика • Влияние • Публичная речь";
+  const currentYear = new Date().getFullYear();
+  const authForm = (
+    <>
+      <div className="landing-auth-header">
+        <strong>{mode === "login" ? "Войти в кабинет" : "Начните обучение сегодня"}</strong>
+        <span>
+          {mode === "login"
+            ? "Введите данные, чтобы вернуться к материалам"
+            : "Оставьте заявку - мы свяжемся с вами для уточнения деталей"}
+        </span>
+      </div>
+
+      <div className="landing-auth-tabs">
+        <button className={mode === "login" ? "active" : ""} type="button" onClick={() => setMode("login")}>
+          {t("signIn")}
+        </button>
+        <button className={mode === "register" ? "active" : ""} type="button" onClick={() => setMode("register")}>
+          {t("requestAccess")}
+        </button>
+      </div>
+
+      <div className="landing-field-stack">
+        <label>
+          <span>{t("email")}</span>
+          <input autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} type="email" />
+        </label>
+
+        <label>
+          <span>{t("password")}</span>
+          <input
+            autoComplete={mode === "login" ? "current-password" : "new-password"}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            type="password"
+          />
+        </label>
+
+        <label className="landing-name-field">
+          <span>{t("name")}</span>
+          <input
+            autoComplete="name"
+            tabIndex={mode === "register" ? 0 : -1}
+            value={fullName}
+            onChange={(event) => setFullName(event.target.value)}
+          />
+        </label>
+      </div>
+
+      <button type="submit" disabled={submitting}>
+        {submitting ? t("wait") : mode === "login" ? t("enterCourse") : "Оставить заявку"}
+      </button>
+      <a className="landing-google" href={`${apiBaseUrl}/auth/google/start`}>
+        <GoogleIcon />
+        {mode === "register" ? "Записаться через Google" : t("continueWithGoogle")}
+      </a>
+      {error ? <p>{error}</p> : null}
+    </>
+  );
+  const loginDialogForm = (
+    <>
+      <div className="landing-auth-header">
+        <strong>Войти в кабинет</strong>
+        <span>Введите данные, чтобы вернуться к материалам</span>
+      </div>
+
+      <div className="landing-field-stack">
+        <label>
+          <span>{t("email")}</span>
+          <input autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} type="email" />
+        </label>
+
+        <label>
+          <span>{t("password")}</span>
+          <input
+            autoComplete="current-password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            type="password"
+          />
+        </label>
+      </div>
+
+      <button type="submit" disabled={submitting}>
+        {submitting ? t("wait") : t("enterCourse")}
+      </button>
+      <a className="landing-google" href={`${apiBaseUrl}/auth/google/start`}>
+        <GoogleIcon />
+        {t("continueWithGoogle")}
+      </a>
+      <button className="landing-auth-switch" type="button" onClick={scrollToRegistration}>
+        Нет аккаунта? Запишитесь на курс
+      </button>
+      {error ? <p>{error}</p> : null}
+    </>
+  );
+
   return (
     <main className="landing-page">
       <header className="landing-nav">
-        <div className="landing-brand" aria-label="Logos Voice">
-          <strong>LOGOS</strong>
-          <span>VOICE</span>
-        </div>
+        <a className="landing-brand" href="#top" aria-label="Logos Voice">
+          <img src={logosVoiceLogo} alt="" />
+          <span>
+            <strong>LOGOS</strong>
+            <small>VOICE</small>
+          </span>
+        </a>
+
+        <nav className="landing-menu" aria-label="Разделы лендинга">
+          <button type="button" onClick={() => highlightSection("about")}>
+            О курсе
+          </button>
+          <button type="button" onClick={() => highlightSection("program")}>
+            Программа
+          </button>
+        </nav>
+
         <div className="landing-nav-actions">
           {currentUser ? (
             <>
@@ -135,7 +324,17 @@ export function LandingPage({
               ) : null}
             </>
           ) : null}
-          <LanguageSwitcher language={language} onChange={onLanguageChange} />
+          {!currentUser ? (
+            <button
+              className="landing-nav-button"
+              type="button"
+              onClick={() => {
+                setLoginDialogOpen(true);
+              }}
+            >
+              {t("signIn")}
+            </button>
+          ) : null}
           {currentUser && onLogout ? (
             <button className="landing-nav-button dark" type="button" onClick={onLogout}>
               {t("logout")}
@@ -144,20 +343,34 @@ export function LandingPage({
         </div>
       </header>
 
-      <section className="landing-hero">
+      <section className="landing-hero" id="top">
         <div className="landing-copy">
-          <h1>{course?.title || "Logos Voice"}</h1>
+          <span className="landing-kicker">Онлайн-курс</span>
+          <h1>{courseTitle}</h1>
+          <p>{courseDescription}</p>
+
+          <div className="landing-hero-metrics">
+            {heroMetrics.map((item) => (
+              <div key={item.title}>
+                <item.icon size={24} strokeWidth={1.6} />
+                <span>{item.title}</span>
+              </div>
+            ))}
+          </div>
         </div>
+
+        <div className="landing-hero-art" aria-hidden="true">
+          <img src={logosVoiceLogo} alt="" />
+        </div>
+
         {currentUser ? (
-          <section className="landing-auth landing-status-card">
+          <section className="landing-auth landing-status-card" id="landing-application">
             {currentUser.role === "admin" ? (
               <>
                 <div className="landing-auth-header">
                   <span>{currentUser.email}</span>
                   <strong>{t("adminPanel")}</strong>
                 </div>
-
-                <p>{course?.description || t("accessApprovedText")}</p>
 
                 <div className="landing-status-actions">
                   <button type="button" onClick={onAdminOpen}>
@@ -200,76 +413,160 @@ export function LandingPage({
             {accessError ? <p>{accessError}</p> : null}
           </section>
         ) : (
-          <form className={`landing-auth ${mode === "register" ? "register" : "login"}`} onSubmit={handleSubmit}>
-            <div className="landing-auth-header">
-              <strong>{mode === "login" ? t("enterCourse") : t("requestAccess")}</strong>
-            </div>
-
-            <div className="landing-auth-tabs">
-              <button className={mode === "login" ? "active" : ""} type="button" onClick={() => setMode("login")}>
-                {t("signIn")}
-              </button>
-              <button
-                className={mode === "register" ? "active" : ""}
-                type="button"
-                onClick={() => setMode("register")}
-              >
-                {t("requestAccess")}
-              </button>
-            </div>
-
-            <div className="landing-field-stack">
-              <label>
-                <span>{t("email")}</span>
-                <input
-                  autoComplete="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  type="email"
-                />
-              </label>
-
-              <label>
-                <span>{t("password")}</span>
-                <input
-                  autoComplete={mode === "login" ? "current-password" : "new-password"}
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  type="password"
-                />
-              </label>
-
-              <label className="landing-name-field">
-                <span>{t("name")}</span>
-                <input
-                  autoComplete="name"
-                  tabIndex={mode === "register" ? 0 : -1}
-                  value={fullName}
-                  onChange={(event) => setFullName(event.target.value)}
-                />
-              </label>
-            </div>
-
-            <button type="submit" disabled={submitting}>
-              {submitting ? t("wait") : mode === "login" ? t("enterCourse") : t("createAccount")}
-            </button>
-            <a className="landing-google" href={`${apiBaseUrl}/auth/google/start`}>
-              <GoogleIcon />
-              {t("continueWithGoogle")}
-            </a>
-            {error ? <p>{error}</p> : null}
+          <form
+            className={`landing-auth ${mode === "register" ? "register" : "login"}`}
+            id="landing-application"
+            onSubmit={handleSubmit}
+          >
+            {authForm}
           </form>
         )}
       </section>
+
+      {!currentUser && loginDialogOpen ? (
+        <div className="landing-auth-dialog-backdrop" onMouseDown={() => setLoginDialogOpen(false)}>
+          <form
+            className="landing-auth landing-auth-dialog login"
+            onSubmit={handleLoginDialogSubmit}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <button
+              className="landing-auth-dialog-close"
+              type="button"
+              aria-label="Закрыть"
+              onClick={() => setLoginDialogOpen(false)}
+            >
+              <X size={20} strokeWidth={1.8} />
+            </button>
+            {loginDialogForm}
+          </form>
+        </div>
+      ) : null}
+
+      <section className="landing-benefits" aria-label="Преимущества курса">
+        {benefits.map((item) => (
+          <article key={item.title}>
+            <item.icon size={31} strokeWidth={1.5} />
+            <div>
+              <h2>{item.title}</h2>
+              <p>{item.text}</p>
+            </div>
+          </article>
+        ))}
+      </section>
+
+      <section className="landing-split-section" id="about">
+        <div>
+          <span className="landing-kicker">О курсе</span>
+          <h2 data-section-heading>Практика. Обратная связь. Реальный результат.</h2>
+          <p>
+            Курс построен на практиках: каждую неделю вы будете выступать, получать обратную связь и улучшать навыки.
+            Формат сочетает живые вебинары, разборы и домашние задания.
+          </p>
+          <ul className="landing-check-list">
+            {["Индивидуальные занятия", "Разбор выступлений и обратная связь", "Поддержка куратора и сообщества"].map(
+              (item) => (
+                <li key={item}>
+                  <CheckCircle2 size={17} strokeWidth={1.8} />
+                  {item}
+                </li>
+              )
+            )}
+          </ul>
+        </div>
+        <div className="landing-program" id="program">
+          <span className="landing-kicker">Программа курса</span>
+          <h2 data-section-heading>
+            {programSections.length > 0
+              ? `${programSections.length} ${formatSectionCount(programSections.length)} в программе – от базы до мастерства`
+              : "Программа курса"}
+          </h2>
+          <div>
+            {programSections.map((section, index) => (
+              <button key={section.id} type="button">
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                {section.title}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <footer className="landing-contact">
+        <div>
+          <span className="landing-kicker">Связь</span>
+          <h2>Напишите нам, если остались вопросы</h2>
+          <p>Logos Voice, {currentYear}. Обучение голосу, речи и уверенным выступлениям.</p>
+        </div>
+        <div className="landing-contact-links">
+          <a href="https://www.instagram.com/logosvoice.kz/" target="_blank" rel="noreferrer">
+            <Instagram size={18} strokeWidth={1.8} />
+            Instagram
+          </a>
+          <a href="https://wa.me/77080088807" target="_blank" rel="noreferrer">
+            <MessageCircle size={18} strokeWidth={1.8} />
+            WhatsApp
+          </a>
+        </div>
+      </footer>
     </main>
   );
 }
+
+const heroMetrics = [
+  { title: "4 недели практики", icon: ShieldCheck },
+  { title: "Подходит для новичков и профи", icon: Flame },
+  { title: "Живые занятия и обратная связь", icon: Users }
+];
+
+const benefits = [
+  {
+    title: "Уверенность в каждом выступлении",
+    text: "Избавитесь от страха сцены и научитесь чувствовать себя свободно в любой ситуации.",
+    icon: Mic2
+  },
+  {
+    title: "Влияние на аудиторию",
+    text: "Научитесь убеждать, вдохновлять и удерживать внимание слушателей с первых секунд.",
+    icon: Target
+  },
+  {
+    title: "Чистая и сильная речь",
+    text: "Поставите голос, улучшите дикцию и научитесь выражать мысли точно и понятно.",
+    icon: Volume2
+  },
+  {
+    title: "Профессиональный рост",
+    text: "Ораторское мастерство откроет новые возможности в карьере и бизнесе.",
+    icon: Sparkles
+  }
+];
+
+const fallbackProgramSections: CourseProgramSection[] = [
+  { id: "fallback-01", title: "Основы ораторского искусства", position: 1 },
+  { id: "fallback-02", title: "Голос. Дыхание. Дикция", position: 2 },
+  { id: "fallback-03", title: "Структура и логика речи", position: 3 },
+  { id: "fallback-04", title: "Убеждение и аргументация", position: 4 },
+  { id: "fallback-05", title: "Работа с аудиторией", position: 5 },
+  { id: "fallback-06", title: "Сторителлинг и эмоции", position: 6 },
+  { id: "fallback-07", title: "Язык тела и невербалика", position: 7 },
+  { id: "fallback-08", title: "Итоговое выступление и разбор", position: 8 }
+];
 
 function enrollmentLabel(status: CourseEnrollment["status"], t: (key: TranslationKey) => string): string {
   if (status === "approved") return t("approvedStatus");
   if (status === "pending") return t("pendingStatus");
   if (status === "rejected") return t("rejectedStatus");
   return t("revokedStatus");
+}
+
+function formatSectionCount(count: number): string {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+
+  if (mod10 === 1 && mod100 !== 11) return "раздел";
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "раздела";
+  return "разделов";
 }
 
 function enrollmentText(status: CourseEnrollment["status"], t: (key: TranslationKey) => string): string {

@@ -1,15 +1,18 @@
 import type {
   Course,
+  CourseAccessWindow,
   CourseCurriculum,
   CourseEnrollment,
+  CourseStudentActivity,
   CourseSection,
   EditorContent,
   EnrollmentStatus,
+  LessonProgressHistoryItem,
   LessonQuizResponse,
   LessonQuizResponseWithUser,
   Lesson
 } from "../entities/course/course";
-import { request } from "./http";
+import { apiBaseUrl, request } from "./http";
 
 export function getCourseCurriculum(courseId: string): Promise<CourseCurriculum> {
   return request<CourseCurriculum>(`/admin/courses/${courseId}/curriculum`);
@@ -27,6 +30,32 @@ export function requestCourseEnrollment(courseId: string): Promise<CourseEnrollm
   return request<CourseEnrollment>(`/courses/${courseId}/enrollments`, {
     method: "POST"
   });
+}
+
+export function trackCourseActivity(input: { courseId: string; lessonId: string }): Promise<CourseStudentActivity> {
+  return request<CourseStudentActivity>(`/courses/${input.courseId}/activity`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      lesson_id: input.lessonId
+    })
+  });
+}
+
+export function markCourseActivityOffline(courseId: string): Promise<void> {
+  return request<void>(`/courses/${courseId}/activity/offline`, {
+    method: "POST"
+  });
+}
+
+export function markCourseActivityOfflineKeepalive(courseId: string): void {
+  void fetch(`${apiBaseUrl}/courses/${courseId}/activity/offline`, {
+    method: "POST",
+    credentials: "include",
+    keepalive: true
+  }).catch(() => undefined);
 }
 
 export function listMyLessonQuizResponses(lessonId: string): Promise<LessonQuizResponse[]> {
@@ -56,6 +85,25 @@ export function listLessonQuizResponses(lessonId: string): Promise<LessonQuizRes
 
 export function getCourseBySlug(slug: string): Promise<Course> {
   return request<Course>(`/courses/${slug}`);
+}
+
+export type CourseProgramSection = {
+  id: string;
+  title: string;
+  position: number;
+};
+
+export type CourseProgram = {
+  course_id: string;
+  title: string;
+  slug: string;
+  sections: CourseProgramSection[];
+  lessons: number;
+  published: boolean;
+};
+
+export function getCourseProgramBySlug(slug: string): Promise<CourseProgram> {
+  return request<CourseProgram>(`/courses/${slug}/program`);
 }
 
 export function updateCourse(input: { courseId: string; title: string; description: string }): Promise<Course> {
@@ -107,6 +155,18 @@ export function createSection(input: { courseId: string; title: string; position
   });
 }
 
+export function updateSection(input: { courseId: string; sectionId: string; title: string }): Promise<CourseSection> {
+  return request<CourseSection>(`/admin/courses/${input.courseId}/sections/${input.sectionId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      title: input.title
+    })
+  });
+}
+
 export function createLesson(input: {
   courseId: string;
   sectionId: string;
@@ -154,6 +214,35 @@ export function publishCourse(courseId: string): Promise<Course> {
 
 export function listCourseEnrollments(courseId: string, status: EnrollmentStatus): Promise<CourseEnrollment[]> {
   return request<CourseEnrollment[]>(`/admin/courses/${courseId}/enrollments?status=${status}`);
+}
+
+export function listCourseStudentActivity(courseId: string): Promise<CourseStudentActivity[]> {
+  return request<CourseStudentActivity[]>(`/admin/courses/${courseId}/student-activity`);
+}
+
+export function listStudentLessonHistory(input: {
+  courseId: string;
+  userId: string;
+}): Promise<LessonProgressHistoryItem[]> {
+  return request<LessonProgressHistoryItem[]>(
+    `/admin/courses/${input.courseId}/students/${input.userId}/lesson-history`
+  );
+}
+
+export function extendStudentCourseAccess(input: {
+  courseId: string;
+  userId: string;
+  accessExpiresAt: string;
+}): Promise<CourseAccessWindow> {
+  return request<CourseAccessWindow>(`/admin/courses/${input.courseId}/students/${input.userId}/access`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      access_expires_at: input.accessExpiresAt
+    })
+  });
 }
 
 export function reviewEnrollment(input: {

@@ -1,11 +1,5 @@
 export type Language = "ru" | "kk" | "en";
 
-export const languages: Array<{ code: Language; label: string }> = [
-  { code: "ru", label: "RU" },
-  { code: "kk", label: "KZ" },
-  { code: "en", label: "EN" }
-];
-
 const dictionary = {
   ru: {
     adminPanel: "Админ панель",

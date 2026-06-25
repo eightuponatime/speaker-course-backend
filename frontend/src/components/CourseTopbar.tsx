@@ -1,21 +1,18 @@
 import { CheckCircle2, Eye } from "lucide-react";
 
 import type { Course } from "../entities/course/course";
-import type { Language, TranslationKey } from "../i18n";
-import { LanguageSwitcher } from "./LanguageSwitcher";
+import type { TranslationKey } from "../i18n";
 import { NotificationBell } from "./NotificationBell";
 
 type CourseTopbarProps = {
   course: Course;
-  activeTab: "curriculum" | "settings" | "requests";
+  activeTab: "curriculum" | "activity" | "requests";
   hasUnpublishedChanges: boolean;
   pendingRequestsCount: number;
   publishStatus: string;
   isPublishing: boolean;
-  onTabChange: (tab: "curriculum" | "settings" | "requests") => void;
-  language: Language;
+  onTabChange: (tab: "curriculum" | "activity" | "requests") => void;
   t: (key: TranslationKey) => string;
-  onLanguageChange: (language: Language) => void;
   onLogout: () => void;
   onLandingOpen: () => void;
   onPreview: () => void;
@@ -30,9 +27,7 @@ export function CourseTopbar({
   publishStatus,
   isPublishing,
   onTabChange,
-  language,
   t,
-  onLanguageChange,
   onLogout,
   onLandingOpen,
   onPreview,
@@ -62,11 +57,11 @@ export function CourseTopbar({
             {t("curriculum")}
           </button>
           <button
-            className={activeTab === "settings" ? "active" : ""}
+            className={activeTab === "activity" ? "active" : ""}
             type="button"
-            onClick={() => onTabChange("settings")}
+            onClick={() => onTabChange("activity")}
           >
-            {t("settings")}
+            Активность
           </button>
           <button
             className={activeTab === "requests" ? "active" : ""}
@@ -93,10 +88,14 @@ export function CourseTopbar({
             <Eye size={18} />
             {t("preview")}
           </button>
-          <button className="publish-button" type="button" disabled={isPublishing} onClick={onPublish}>
+          <button
+            className="publish-button"
+            type="button"
+            disabled={isPublishing || !hasUnpublishedChanges}
+            onClick={onPublish}
+          >
             {isPublishing ? t("publishing") : t("publish")}
           </button>
-          <LanguageSwitcher language={language} onChange={onLanguageChange} />
           <button className="preview-button" type="button" onClick={onLogout}>
             {t("logout")}
           </button>

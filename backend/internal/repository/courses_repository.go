@@ -154,6 +154,39 @@ func (r *CoursesRepository) CreateSection(
 	return &section, nil
 }
 
+func (r *CoursesRepository) UpdateSection(ctx context.Context, input domain.UpdateCourseSectionInput) (*domain.CourseSection, error) {
+	const query = `
+		with updated_section as (
+			update course_sections
+			set title = $2,
+				updated_at = now()
+			where id = $1
+			returning id, course_id, title, position, created_at, updated_at
+		),
+		touched_course as (
+			update courses
+			set updated_at = now()
+			from updated_section
+			where courses.id = updated_section.course_id
+			returning courses.id
+		)
+		select id, course_id, title, position, created_at, updated_at
+		from updated_section
+	`
+
+	q := extractTransaction(ctx, r.db)
+	var section domain.CourseSection
+	if err := sqlx.GetContext(ctx, q, &section, query, input.SectionId, input.Title); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+
+		return nil, err
+	}
+
+	return &section, nil
+}
+
 func (r *CoursesRepository) CreateLesson(ctx context.Context, input domain.CreateLessonInput) (*domain.Lesson, error) {
 	const query = `
 		insert into lessons (course_id, section_id, title, slug, position)

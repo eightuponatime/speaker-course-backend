@@ -1,4 +1,6 @@
-export const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || "http://localhost:8080";
+const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+
+export const apiBaseUrl = configuredApiBaseUrl === undefined ? "http://localhost:8080" : configuredApiBaseUrl.trim();
 
 export async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${apiBaseUrl}${url}`, {

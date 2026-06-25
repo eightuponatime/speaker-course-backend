@@ -26,6 +26,8 @@ type Config struct {
 	BunnyStreamID     string
 	BunnyStreamKey    string
 	BunnyStreamEmbed  string
+	ResendAPIKey      string
+	EmailFrom         string
 }
 
 func Load() (*Config, error) {
@@ -50,6 +52,8 @@ func Load() (*Config, error) {
 		BunnyStreamID:     getEnv("BUNNY_STREAM_LIBRARY_ID", ""),
 		BunnyStreamKey:    getEnv("BUNNY_STREAM_API_KEY", ""),
 		BunnyStreamEmbed:  getEnv("BUNNY_STREAM_EMBED_BASE_URL", "https://iframe.mediadelivery.net/embed"),
+		ResendAPIKey:      getEnv("RESEND_API_KEY", ""),
+		EmailFrom:         getEnv("EMAIL_FROM", ""),
 	}, nil
 }
 

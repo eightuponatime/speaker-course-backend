@@ -98,9 +98,23 @@ create table lesson_progress (
     id uuid primary key default uuid_generate_v4(),
     lesson_id uuid not null references lessons(id) on delete cascade,
     user_id uuid not null references users(id) on delete cascade,
+    first_viewed_at timestamptz not null default now(),
     completed_at timestamptz,
     updated_at timestamptz not null default now(),
     unique (lesson_id, user_id)
+);
+
+create table course_student_activity (
+    course_id uuid not null references courses(id) on delete cascade,
+    user_id uuid not null references users(id) on delete cascade,
+    current_lesson_id uuid references lessons(id) on delete set null,
+    last_seen_at timestamptz not null default now(),
+    online_until timestamptz,
+    first_access_at timestamptz,
+    access_expires_at timestamptz,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+    primary key (course_id, user_id)
 );
 
 create table lesson_quiz_responses (
@@ -145,6 +159,8 @@ create index media_assets_lesson_id_idx on media_assets(lesson_id);
 create index course_enrollments_user_id_idx on course_enrollments(user_id);
 create index course_enrollments_course_id_status_idx on course_enrollments(course_id, status);
 create index lesson_progress_user_id_idx on lesson_progress(user_id);
+create index course_student_activity_course_seen_idx on course_student_activity(course_id, last_seen_at desc);
+create index course_student_activity_user_id_idx on course_student_activity(user_id);
 create index lesson_quiz_responses_user_id_idx on lesson_quiz_responses(user_id);
 create index notifications_user_id_created_at_idx on notifications(user_id, created_at desc)
     where deleted_at is null;

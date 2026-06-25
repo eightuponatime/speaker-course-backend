@@ -18,16 +18,34 @@ export function getCourseCurriculum(courseId: string): Promise<CourseCurriculum>
   return request<CourseCurriculum>(`/admin/courses/${courseId}/curriculum`);
 }
 
+export function getAdminPrimaryCourseCurriculum(): Promise<CourseCurriculum> {
+  return request<CourseCurriculum>("/admin/course/curriculum");
+}
+
 export function getAuthenticatedCourseCurriculum(courseId: string): Promise<CourseCurriculum> {
   return request<CourseCurriculum>(`/courses/${courseId}/curriculum`);
+}
+
+export function getPrimaryCourseCurriculum(): Promise<CourseCurriculum> {
+  return request<CourseCurriculum>("/course/curriculum");
 }
 
 export function getMyCourseEnrollment(courseId: string): Promise<CourseEnrollment | null> {
   return request<CourseEnrollment | null>(`/courses/${courseId}/enrollment/me`);
 }
 
+export function getMyPrimaryCourseEnrollment(): Promise<CourseEnrollment | null> {
+  return request<CourseEnrollment | null>("/course/enrollment/me");
+}
+
 export function requestCourseEnrollment(courseId: string): Promise<CourseEnrollment> {
   return request<CourseEnrollment>(`/courses/${courseId}/enrollments`, {
+    method: "POST"
+  });
+}
+
+export function requestPrimaryCourseEnrollment(): Promise<CourseEnrollment> {
+  return request<CourseEnrollment>("/course/enrollments", {
     method: "POST"
   });
 }
@@ -87,6 +105,10 @@ export function getCourseBySlug(slug: string): Promise<Course> {
   return request<Course>(`/courses/${slug}`);
 }
 
+export function getPrimaryCourse(): Promise<Course> {
+  return request<Course>("/course");
+}
+
 export type CourseProgramSection = {
   id: string;
   title: string;
@@ -104,6 +126,10 @@ export type CourseProgram = {
 
 export function getCourseProgramBySlug(slug: string): Promise<CourseProgram> {
   return request<CourseProgram>(`/courses/${slug}/program`);
+}
+
+export function getPrimaryCourseProgram(): Promise<CourseProgram> {
+  return request<CourseProgram>("/course/program");
 }
 
 export function updateCourse(input: { courseId: string; title: string; description: string }): Promise<Course> {

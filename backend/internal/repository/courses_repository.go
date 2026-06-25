@@ -87,6 +87,31 @@ func (r *CoursesRepository) GetBySlug(ctx context.Context, slug string) (*domain
 	return &course, nil
 }
 
+func (r *CoursesRepository) GetPrimary(ctx context.Context) (*domain.Course, error) {
+	const query = `
+		select id, author_id, title, slug, description, status, cover_image_url,
+			created_at, updated_at, published_at
+		from courses
+		where status <> 'archived'
+		order by
+			case when status = 'published' then 0 else 1 end,
+			created_at asc
+		limit 1
+	`
+
+	q := extractTransaction(ctx, r.db)
+	var course domain.Course
+	if err := sqlx.GetContext(ctx, q, &course, query); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+
+		return nil, err
+	}
+
+	return &course, nil
+}
+
 func (r *CoursesRepository) Update(ctx context.Context, input domain.UpdateCourseInput) (*domain.Course, error) {
 	const query = `
 		update courses

@@ -46,12 +46,17 @@ func NewCoursesHandler(
 }
 
 func (h *CoursesHandler) RegisterRoutes(r chi.Router, authMiddleware *middlewarego.AuthMiddleware) {
+	r.Get("/course", h.GetPrimaryCourse)
+	r.Get("/course/program", h.GetPrimaryCourseProgram)
 	r.Get("/courses/{slug}", h.GetCourseBySlug)
 	r.Get("/courses/{slug}/program", h.GetCourseProgramBySlug)
 
 	r.Group(func(r chi.Router) {
 		r.Use(authMiddleware.RequireAuth())
 
+		r.Get("/course/curriculum", h.GetPrimaryCourseCurriculum)
+		r.Get("/course/enrollment/me", h.GetMyPrimaryCourseEnrollment)
+		r.Post("/course/enrollments", h.RequestPrimaryCourseEnrollment)
 		r.Get("/courses/{courseID}/curriculum", h.GetCurriculum)
 		r.Get("/courses/{courseID}/enrollment/me", h.GetMyEnrollment)
 		r.Post("/courses/{courseID}/enrollments", h.RequestEnrollment)
@@ -64,6 +69,7 @@ func (h *CoursesHandler) RegisterRoutes(r chi.Router, authMiddleware *middleware
 			r.Use(authMiddleware.RequireAdmin())
 
 			r.Post("/courses", h.CreateCourse)
+			r.Get("/course/curriculum", h.GetPrimaryCourseCurriculum)
 			r.Get("/courses/{courseID}/curriculum", h.GetCurriculum)
 			r.Patch("/courses/{courseID}", h.UpdateCourse)
 			r.Post("/courses/{courseID}/publish", h.PublishCourse)
@@ -84,6 +90,51 @@ func (h *CoursesHandler) RegisterRoutes(r chi.Router, authMiddleware *middleware
 	})
 }
 
+func (h *CoursesHandler) GetPrimaryCourse(w http.ResponseWriter, r *http.Request) {
+	course, ok := h.primaryCourse(w, r)
+	if !ok {
+		return
+	}
+
+	writeJSON(w, http.StatusOK, course)
+}
+
+func (h *CoursesHandler) GetPrimaryCourseProgram(w http.ResponseWriter, r *http.Request) {
+	course, ok := h.primaryCourse(w, r)
+	if !ok {
+		return
+	}
+
+	h.writeCourseProgram(w, r, course)
+}
+
+func (h *CoursesHandler) RequestPrimaryCourseEnrollment(w http.ResponseWriter, r *http.Request) {
+	course, ok := h.primaryCourse(w, r)
+	if !ok {
+		return
+	}
+
+	h.requestEnrollmentForCourse(w, r, course.Id)
+}
+
+func (h *CoursesHandler) GetMyPrimaryCourseEnrollment(w http.ResponseWriter, r *http.Request) {
+	course, ok := h.primaryCourse(w, r)
+	if !ok {
+		return
+	}
+
+	h.getMyEnrollmentForCourse(w, r, course.Id)
+}
+
+func (h *CoursesHandler) GetPrimaryCourseCurriculum(w http.ResponseWriter, r *http.Request) {
+	course, ok := h.primaryCourse(w, r)
+	if !ok {
+		return
+	}
+
+	h.getCurriculumForCourse(w, r, course.Id)
+}
+
 func (h *CoursesHandler) GetCourseProgramBySlug(w http.ResponseWriter, r *http.Request) {
 	course, err := h.coursesService.GetCourseBySlug(r.Context(), chi.URLParam(r, "slug"))
 	if err != nil {
@@ -95,6 +146,10 @@ func (h *CoursesHandler) GetCourseProgramBySlug(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	h.writeCourseProgram(w, r, course)
+}
+
+func (h *CoursesHandler) writeCourseProgram(w http.ResponseWriter, r *http.Request, course *domain.Course) {
 	curriculum, err := h.coursesService.GetCurriculum(r.Context(), course.Id)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err)
@@ -241,6 +296,10 @@ func (h *CoursesHandler) GetCurriculum(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.getCurriculumForCourse(w, r, courseID)
+}
+
+func (h *CoursesHandler) getCurriculumForCourse(w http.ResponseWriter, r *http.Request, courseID uuid.UUID) {
 	var access *domain.CourseAccessWindow
 	if !strings.HasPrefix(r.URL.Path, "/admin/") {
 		userID, ok := middlewarego.UserIDFromContext(r.Context())
@@ -502,14 +561,18 @@ func (h *CoursesHandler) PublishLesson(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *CoursesHandler) RequestEnrollment(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middlewarego.UserIDFromContext(r.Context())
+	courseID, ok := parseUUIDParam(w, r, "courseID")
 	if !ok {
-		writeError(w, http.StatusUnauthorized, nil)
 		return
 	}
 
-	courseID, ok := parseUUIDParam(w, r, "courseID")
+	h.requestEnrollmentForCourse(w, r, courseID)
+}
+
+func (h *CoursesHandler) requestEnrollmentForCourse(w http.ResponseWriter, r *http.Request, courseID uuid.UUID) {
+	userID, ok := middlewarego.UserIDFromContext(r.Context())
 	if !ok {
+		writeError(w, http.StatusUnauthorized, nil)
 		return
 	}
 
@@ -550,14 +613,18 @@ func (h *CoursesHandler) RequestEnrollment(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *CoursesHandler) GetMyEnrollment(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middlewarego.UserIDFromContext(r.Context())
+	courseID, ok := parseUUIDParam(w, r, "courseID")
 	if !ok {
-		writeError(w, http.StatusUnauthorized, nil)
 		return
 	}
 
-	courseID, ok := parseUUIDParam(w, r, "courseID")
+	h.getMyEnrollmentForCourse(w, r, courseID)
+}
+
+func (h *CoursesHandler) getMyEnrollmentForCourse(w http.ResponseWriter, r *http.Request, courseID uuid.UUID) {
+	userID, ok := middlewarego.UserIDFromContext(r.Context())
 	if !ok {
+		writeError(w, http.StatusUnauthorized, nil)
 		return
 	}
 
@@ -1022,6 +1089,20 @@ func (h *CoursesHandler) emailCourseAccessExtended(
 	}
 
 	_ = h.emailService.Send(ctx, service.CourseAccessExtendedEmail(user.Email, user.FullName, courseTitle, *accessExpiresAt))
+}
+
+func (h *CoursesHandler) primaryCourse(w http.ResponseWriter, r *http.Request) (*domain.Course, bool) {
+	course, err := h.coursesService.GetPrimaryCourse(r.Context())
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return nil, false
+	}
+	if course == nil {
+		writeError(w, http.StatusNotFound, nil)
+		return nil, false
+	}
+
+	return course, true
 }
 
 func parseUUIDParam(w http.ResponseWriter, r *http.Request, name string) (uuid.UUID, bool) {

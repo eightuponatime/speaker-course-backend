@@ -1,17 +1,16 @@
 import { useEffect, useState } from "react";
 
 import {
-  getAuthenticatedCourseCurriculum,
-  getCourseBySlug,
-  getMyCourseEnrollment,
-  requestCourseEnrollment
+  getMyPrimaryCourseEnrollment,
+  getPrimaryCourse,
+  getPrimaryCourseCurriculum,
+  requestPrimaryCourseEnrollment
 } from "../api/courseDatasource";
 import type { Course, CourseCurriculum, CourseEnrollment, User } from "../entities/course/course";
 import type { TranslationKey } from "../i18n";
 import { CoursePreviewPage } from "./CoursePreviewPage";
 
 type CourseAccessPageProps = {
-  courseSlug: string;
   currentUser: User;
   t: (key: TranslationKey) => string;
   onLogout: () => void;
@@ -20,7 +19,6 @@ type CourseAccessPageProps = {
 };
 
 export function CourseAccessPage({
-  courseSlug,
   currentUser,
   t,
   onLogout,
@@ -42,18 +40,18 @@ export function CourseAccessPage({
       setError("");
 
       try {
-        const nextCourse = await getCourseBySlug(courseSlug);
+        const nextCourse = await getPrimaryCourse();
         if (cancelled) return;
 
         setCourse(nextCourse);
 
-        const nextEnrollment = await getMyCourseEnrollment(nextCourse.id);
+        const nextEnrollment = await getMyPrimaryCourseEnrollment();
         if (cancelled) return;
 
         setEnrollment(nextEnrollment);
 
         if (nextEnrollment?.status === "approved") {
-          const nextCurriculum = await getAuthenticatedCourseCurriculum(nextCourse.id);
+          const nextCurriculum = await getPrimaryCourseCurriculum();
           if (cancelled) return;
           setCurriculum(nextCurriculum);
         } else {
@@ -75,7 +73,7 @@ export function CourseAccessPage({
     return () => {
       cancelled = true;
     };
-  }, [courseSlug]);
+  }, []);
 
   async function handleRequestAccess() {
     if (!course) return;
@@ -84,7 +82,7 @@ export function CourseAccessPage({
     setError("");
 
     try {
-      const nextEnrollment = await requestCourseEnrollment(course.id);
+      const nextEnrollment = await requestPrimaryCourseEnrollment();
       setEnrollment(nextEnrollment);
     } catch (err) {
       setError(formatError(err));

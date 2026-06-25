@@ -62,6 +62,10 @@ func (s *CoursesService) GetCourseBySlug(ctx context.Context, slug string) (*dom
 	return s.rp.GetBySlug(ctx, slug)
 }
 
+func (s *CoursesService) GetPrimaryCourse(ctx context.Context) (*domain.Course, error) {
+	return s.rp.GetPrimary(ctx)
+}
+
 func (s *CoursesService) UpdateCourse(ctx context.Context, input domain.UpdateCourseInput) (*domain.Course, error) {
 	if input.CourseId == uuid.Nil {
 		return nil, fmt.Errorf("%w: course_id is empty", ErrInvalidCourse)

@@ -15,10 +15,10 @@ import {
 } from "lucide-react";
 
 import {
-  getCourseBySlug,
-  getCourseProgramBySlug,
-  getMyCourseEnrollment,
-  requestCourseEnrollment
+  getMyPrimaryCourseEnrollment,
+  getPrimaryCourse,
+  getPrimaryCourseProgram,
+  requestPrimaryCourseEnrollment
 } from "../api/courseDatasource";
 import { forgotPassword } from "../api/authDatasource";
 import { apiBaseUrl } from "../api/http";
@@ -29,7 +29,6 @@ import type { TranslationKey } from "../i18n";
 import { NotificationBell } from "./NotificationBell";
 
 type LandingPageProps = {
-  courseSlug: string;
   error: string;
   t: (key: TranslationKey) => string;
   onLogin: (email: string, password: string) => Promise<void>;
@@ -42,7 +41,6 @@ type LandingPageProps = {
 };
 
 export function LandingPage({
-  courseSlug,
   error,
   t,
   onLogin,
@@ -67,18 +65,17 @@ export function LandingPage({
   const [forgotStatus, setForgotStatus] = useState("");
   const [forgotSubmitting, setForgotSubmitting] = useState(false);
   const [programSections, setProgramSections] = useState<CourseProgramSection[]>([]);
-
   useEffect(() => {
-    getCourseBySlug(courseSlug)
+    getPrimaryCourse()
       .then(setCourse)
       .catch(() => undefined);
-  }, [courseSlug]);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadEnrollment() {
-      if (!currentUser || currentUser.role === "admin" || !course) {
+      if (!currentUser || currentUser.role === "admin") {
         setEnrollment(null);
         return;
       }
@@ -87,7 +84,7 @@ export function LandingPage({
       setAccessError("");
 
       try {
-        const nextEnrollment = await getMyCourseEnrollment(course.id);
+        const nextEnrollment = await getMyPrimaryCourseEnrollment();
         if (!cancelled) {
           setEnrollment(nextEnrollment);
         }
@@ -107,14 +104,14 @@ export function LandingPage({
     return () => {
       cancelled = true;
     };
-  }, [course, currentUser]);
+  }, [currentUser]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadProgramSections() {
       try {
-        const program = await getCourseProgramBySlug(courseSlug);
+        const program = await getPrimaryCourseProgram();
         if (!cancelled) {
           setProgramSections([...program.sections].sort((a, b) => a.position - b.position));
         }
@@ -130,7 +127,7 @@ export function LandingPage({
     return () => {
       cancelled = true;
     };
-  }, [courseSlug]);
+  }, []);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -140,11 +137,9 @@ export function LandingPage({
         await onLogin(email, password);
       } else {
         await onRegister({ email, password, fullName });
-        if (course) {
-          setAccessError("");
-          const nextEnrollment = await requestCourseEnrollment(course.id);
-          setEnrollment(nextEnrollment);
-        }
+        setAccessError("");
+        const nextEnrollment = await requestPrimaryCourseEnrollment();
+        setEnrollment(nextEnrollment);
       }
     } catch (err) {
       setAccessError(formatError(err));
@@ -165,13 +160,11 @@ export function LandingPage({
   }
 
   async function handleRequestAccess() {
-    if (!course) return;
-
     setAccessSubmitting(true);
     setAccessError("");
 
     try {
-      const nextEnrollment = await requestCourseEnrollment(course.id);
+      const nextEnrollment = await requestPrimaryCourseEnrollment();
       setEnrollment(nextEnrollment);
     } catch (err) {
       setAccessError(formatError(err));

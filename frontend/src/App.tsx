@@ -6,8 +6,7 @@ import { getMe, login, logout as logoutUser, register } from "./api/authDatasour
 import {
   createLesson,
   createSection,
-  getAuthenticatedCourseCurriculum,
-  getCourseCurriculum,
+  getAdminPrimaryCourseCurriculum,
   listCourseEnrollments,
   publishCourse,
   publishLesson,
@@ -37,9 +36,6 @@ import type { CourseCurriculum, EditorContent, Lesson, User } from "./entities/c
 import type { StreamVideoStatus } from "./entities/media/media";
 import { translate } from "./i18n";
 
-const defaultCourseId = import.meta.env.VITE_COURSE_ID ?? "10000000-0000-0000-0000-000000000001";
-const defaultCourseSlug = import.meta.env.VITE_COURSE_SLUG ?? "homemade-bagels-for-beginners";
-
 export default function App() {
   const [path, setPath] = useState(window.location.pathname);
   const isAdminRoute = path.startsWith("/admin");
@@ -49,7 +45,6 @@ export default function App() {
   const [error, setError] = useState("");
   const [authChecked, setAuthChecked] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [courseId, setCourseId] = useState(defaultCourseId);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [publishStatus, setPublishStatus] = useState("");
@@ -73,9 +68,8 @@ export default function App() {
 
   function loadCurriculum(preferredLessonId?: string, forceAdminAccess = currentUser?.role === "admin") {
     const shouldUseAdminAccess = isAdminRoute || forceAdminAccess;
-    const loader = shouldUseAdminAccess ? getCourseCurriculum : getAuthenticatedCourseCurriculum;
 
-    loader(courseId.trim())
+    getAdminPrimaryCourseCurriculum()
       .then((data) => {
         const normalizedData = normalizeCurriculum(data);
         setCurriculum(normalizedData);
@@ -718,7 +712,6 @@ export default function App() {
   if (!currentUser && !isAdminRoute) {
     return (
       <LandingPage
-        courseSlug={defaultCourseSlug}
         error={error}
         t={t}
         onLogin={handleLandingLogin}
@@ -732,10 +725,6 @@ export default function App() {
       <main className="page">
         <form className="login-box" onSubmit={handleLogin}>
           <strong>Admin login</strong>
-          <label>
-            Course ID
-            <input value={courseId} onChange={(event) => setCourseId(event.target.value)} />
-          </label>
           <input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Email" />
           <input
             value={password}
@@ -761,7 +750,6 @@ export default function App() {
     return (
       <>
         <LandingPage
-          courseSlug={defaultCourseSlug}
           error={error}
           t={t}
           onLogin={handleLandingLogin}
@@ -781,7 +769,6 @@ export default function App() {
     return (
       <>
         <CourseAccessPage
-          courseSlug={defaultCourseSlug}
           currentUser={authenticatedUser}
           t={t}
           onLogout={handleLogout}

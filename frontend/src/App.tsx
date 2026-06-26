@@ -120,15 +120,9 @@ export default function App() {
       } else {
         setCurriculum(null);
         setIsPreviewing(false);
-        if (window.location.pathname.startsWith("/admin")) {
-          navigate("/");
-        }
       }
     } catch {
       resetAuthenticatedState({ preserveError: true });
-      if (window.location.pathname.startsWith("/admin")) {
-        navigate("/");
-      }
     } finally {
       setAuthChecked(true);
     }
@@ -750,10 +744,12 @@ export default function App() {
 
   if (!currentUser && isAdminRoute) {
     return (
-      <main className="page">
-        <form className="login-box" onSubmit={handleLogin}>
-          <strong>Admin login</strong>
-          <input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Email" />
+      <main className="admin-auth-page">
+        <form className="admin-auth-card" onSubmit={handleLogin}>
+          <span>Админ панель</span>
+          <h1>Войдите как администратор</h1>
+          <p>Для просмотра заявок и управления курсом нужен аккаунт с правами администратора.</p>
+          <input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Email" type="email" />
           <input
             value={password}
             onChange={(event) => setPassword(event.target.value)}
@@ -762,7 +758,7 @@ export default function App() {
           />
           <button type="submit">{t("loginAndLoad")}</button>
           <a href={`${apiBaseUrl}/auth/google/start`}>{t("continueWithGoogle")}</a>
-          <p>{error}</p>
+          {error ? <p>{error}</p> : null}
         </form>
       </main>
     );
@@ -810,16 +806,21 @@ export default function App() {
 
   if (authenticatedUser.role !== "admin" && isAdminRoute) {
     return (
-      <main className="course-access-page">
-        <section className="course-access-card">
+      <main className="admin-auth-page">
+        <section className="admin-auth-card">
           <div>
-            <span>{t("adminPanel")}</span>
-            <h1>Access denied</h1>
-            <p>{t("accessRejectedText")}</p>
+            <span>{authenticatedUser.email}</span>
+            <h1>Нет доступа к админ панели</h1>
+            <p>Вы вошли в аккаунт без прав администратора. Выйдите и войдите под админским аккаунтом.</p>
           </div>
-          <button type="button" onClick={handleLogout}>
-            {t("logout")}
-          </button>
+          <div className="admin-auth-actions">
+            <button type="button" onClick={handleLogout}>
+              {t("logout")}
+            </button>
+            <button className="secondary" type="button" onClick={() => navigate("/")}>
+              На лендинг
+            </button>
+          </div>
         </section>
       </main>
     );

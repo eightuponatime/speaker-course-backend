@@ -212,6 +212,36 @@ func (r *CoursesRepository) UpdateSection(ctx context.Context, input domain.Upda
 	return &section, nil
 }
 
+func (r *CoursesRepository) DeleteSection(ctx context.Context, courseId uuid.UUID, sectionId uuid.UUID) error {
+	const query = `
+		with deleted_section as (
+			delete from course_sections
+			where id = $1 and course_id = $2
+			returning course_id
+		)
+		update courses
+		set updated_at = now()
+		from deleted_section
+		where courses.id = deleted_section.course_id
+	`
+
+	q := extractTransaction(ctx, r.db)
+	result, err := q.ExecContext(ctx, query, sectionId, courseId)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected != 1 {
+		return sql.ErrNoRows
+	}
+
+	return nil
+}
+
 func (r *CoursesRepository) CreateLesson(ctx context.Context, input domain.CreateLessonInput) (*domain.Lesson, error) {
 	const query = `
 		insert into lessons (course_id, section_id, title, slug, position)
@@ -237,6 +267,36 @@ func (r *CoursesRepository) CreateLesson(ctx context.Context, input domain.Creat
 	}
 
 	return &lesson, nil
+}
+
+func (r *CoursesRepository) DeleteLesson(ctx context.Context, lessonId uuid.UUID) error {
+	const query = `
+		with deleted_lesson as (
+			delete from lessons
+			where id = $1
+			returning course_id
+		)
+		update courses
+		set updated_at = now()
+		from deleted_lesson
+		where courses.id = deleted_lesson.course_id
+	`
+
+	q := extractTransaction(ctx, r.db)
+	result, err := q.ExecContext(ctx, query, lessonId)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected != 1 {
+		return sql.ErrNoRows
+	}
+
+	return nil
 }
 
 func (r *CoursesRepository) GetLessonByID(ctx context.Context, id uuid.UUID) (*domain.Lesson, error) {

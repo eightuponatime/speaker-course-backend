@@ -77,6 +77,7 @@ func (h *CoursesHandler) RegisterRoutes(r chi.Router, authMiddleware *middleware
 		admin.Post("/admin/courses/{courseID}/publish", h.PublishCourse)
 		admin.Post("/admin/courses/{courseID}/sections", h.CreateSection)
 		admin.Patch("/admin/courses/{courseID}/sections/{sectionID}", h.UpdateSection)
+		admin.Delete("/admin/courses/{courseID}/sections/{sectionID}", h.DeleteSection)
 		admin.Post("/admin/courses/{courseID}/sections/{sectionID}/lessons", h.CreateLesson)
 		admin.Patch("/admin/courses/{courseID}/lessons/reorder", h.ReorderLessons)
 		admin.Get("/admin/courses/{courseID}/enrollments", h.ListEnrollments)
@@ -86,6 +87,7 @@ func (h *CoursesHandler) RegisterRoutes(r chi.Router, authMiddleware *middleware
 		admin.Get("/admin/courses/{courseID}/users", h.ListCourseUsers)
 		admin.Patch("/admin/courses/{courseID}/users/{userID}/role", h.UpdateCourseUserRole)
 		admin.Patch("/admin/lessons/{lessonID}", h.UpdateLesson)
+		admin.Delete("/admin/lessons/{lessonID}", h.DeleteLesson)
 		admin.Patch("/admin/lessons/{lessonID}/draft", h.SaveLessonDraft)
 		admin.Post("/admin/lessons/{lessonID}/publish", h.PublishLesson)
 		admin.Get("/admin/lessons/{lessonID}/quiz-responses", h.ListLessonQuizResponses)
@@ -410,6 +412,24 @@ func (h *CoursesHandler) UpdateSection(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, section)
 }
 
+func (h *CoursesHandler) DeleteSection(w http.ResponseWriter, r *http.Request) {
+	courseID, ok := parseUUIDParam(w, r, "courseID")
+	if !ok {
+		return
+	}
+	sectionID, ok := parseUUIDParam(w, r, "sectionID")
+	if !ok {
+		return
+	}
+
+	if err := h.coursesService.DeleteSection(r.Context(), courseID, sectionID); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (h *CoursesHandler) CreateLesson(w http.ResponseWriter, r *http.Request) {
 	courseID, ok := parseUUIDParam(w, r, "courseID")
 	if !ok {
@@ -444,6 +464,20 @@ func (h *CoursesHandler) CreateLesson(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusCreated, lesson)
+}
+
+func (h *CoursesHandler) DeleteLesson(w http.ResponseWriter, r *http.Request) {
+	lessonID, ok := parseUUIDParam(w, r, "lessonID")
+	if !ok {
+		return
+	}
+
+	if err := h.coursesService.DeleteLesson(r.Context(), lessonID); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *CoursesHandler) ReorderLessons(w http.ResponseWriter, r *http.Request) {

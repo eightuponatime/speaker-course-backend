@@ -863,9 +863,9 @@
 .section-header {
   height: 48px;
   display: grid;
-  grid-template-columns: 18px minmax(0, 1fr) 18px;
+  grid-template-columns: 18px minmax(0, 1fr) 28px 28px;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   padding: 0 12px;
   border-bottom: 1px solid #d8dde4;
   background: #ffffff;
@@ -925,6 +925,25 @@
   cursor: pointer;
 }
 
+.section-delete,
+.lesson-delete {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  color: #8b95a3;
+  background: transparent;
+  cursor: pointer;
+}
+
+.section-delete:hover,
+.lesson-delete:hover {
+  color: #a1342a;
+  background: #feecea;
+}
+
 .lesson-list {
   min-height: 42px;
   background: #ffffff;
@@ -938,9 +957,9 @@
   width: 100%;
   height: 42px;
   display: grid;
-  grid-template-columns: 18px minmax(0, 1fr);
+  grid-template-columns: 18px minmax(0, 1fr) 28px;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   border: 0;
   border-bottom: 1px solid #dfe3e8;
   padding: 0 18px 0 26px;

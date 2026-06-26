@@ -123,6 +123,17 @@ func (s *CoursesService) UpdateSection(
 	return s.rp.UpdateSection(ctx, input)
 }
 
+func (s *CoursesService) DeleteSection(ctx context.Context, courseId uuid.UUID, sectionId uuid.UUID) error {
+	if courseId == uuid.Nil {
+		return fmt.Errorf("%w: course_id is empty", ErrInvalidCourse)
+	}
+	if sectionId == uuid.Nil {
+		return fmt.Errorf("%w: section_id is empty", ErrInvalidCourse)
+	}
+
+	return s.rp.DeleteSection(ctx, courseId, sectionId)
+}
+
 func (s *CoursesService) CreateLesson(
 	ctx context.Context,
 	input domain.CreateLessonInput,
@@ -147,6 +158,14 @@ func (s *CoursesService) CreateLesson(
 	input.Slug = strings.TrimSpace(input.Slug)
 
 	return s.rp.CreateLesson(ctx, input)
+}
+
+func (s *CoursesService) DeleteLesson(ctx context.Context, lessonId uuid.UUID) error {
+	if lessonId == uuid.Nil {
+		return fmt.Errorf("%w: lesson_id is empty", ErrInvalidCourse)
+	}
+
+	return s.rp.DeleteLesson(ctx, lessonId)
 }
 
 func (s *CoursesService) GetLessonByID(ctx context.Context, id uuid.UUID) (*domain.Lesson, error) {

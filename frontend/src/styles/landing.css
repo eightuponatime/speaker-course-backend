@@ -20,7 +20,7 @@
   z-index: 60;
   min-height: 74px;
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) auto minmax(180px, 1fr);
+  grid-template-columns: minmax(210px, 1fr) auto minmax(360px, 1fr);
   align-items: center;
   gap: 28px;
   border-bottom: 1px solid rgba(46, 42, 37, 0.12);
@@ -100,7 +100,7 @@
 .preview-nav-actions {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: flex-end;
   gap: 10px;
 }

@@ -195,6 +195,12 @@ export function updateSection(input: { courseId: string; sectionId: string; titl
   });
 }
 
+export function deleteSection(input: { courseId: string; sectionId: string }): Promise<void> {
+  return request<void>(`/admin/courses/${input.courseId}/sections/${input.sectionId}`, {
+    method: "DELETE"
+  });
+}
+
 export function createLesson(input: {
   courseId: string;
   sectionId: string;
@@ -212,6 +218,12 @@ export function createLesson(input: {
       slug: input.slug,
       position: input.position
     })
+  });
+}
+
+export function deleteLesson(lessonId: string): Promise<void> {
+  return request<void>(`/admin/lessons/${lessonId}`, {
+    method: "DELETE"
   });
 }
 

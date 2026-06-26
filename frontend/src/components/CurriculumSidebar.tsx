@@ -1,4 +1,4 @@
-import { ChevronUp, Plus } from "lucide-react";
+import { ChevronUp, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import type { CourseCurriculum } from "../entities/course/course";
@@ -13,6 +13,8 @@ type CurriculumSidebarProps = {
   onAddLesson: (sectionId: string) => void;
   onMoveLesson: (lessonId: string, toSectionId: string, beforeLessonId: string | null) => void;
   onRenameSection: (sectionId: string, title: string) => Promise<void>;
+  onDeleteSection: (sectionId: string) => void;
+  onDeleteLesson: (lessonId: string) => void;
   t: (key: TranslationKey) => string;
 };
 
@@ -24,6 +26,8 @@ export function CurriculumSidebar({
   onAddLesson,
   onMoveLesson,
   onRenameSection,
+  onDeleteSection,
+  onDeleteLesson,
   t
 }: CurriculumSidebarProps) {
   const [draggedLessonId, setDraggedLessonId] = useState<string | null>(null);
@@ -109,6 +113,14 @@ export function CurriculumSidebar({
             <button className="section-toggle" onClick={() => toggleSection(section.id)} type="button">
               <ChevronUp className={isCollapsed ? "section-chevron collapsed" : "section-chevron"} size={18} strokeWidth={1.8} />
             </button>
+            <button
+              className="section-delete"
+              onClick={() => onDeleteSection(section.id)}
+              type="button"
+              aria-label={`Удалить раздел ${section.title}`}
+            >
+              <Trash2 size={16} strokeWidth={1.9} />
+            </button>
           </header>
 
           {!isCollapsed && <div
@@ -128,7 +140,7 @@ export function CurriculumSidebar({
             }}
           >
             {lessons.map((lesson) => (
-              <button
+              <div
                 className={[
                   "lesson-item",
                   lesson.id === activeLessonId ? "active" : "",
@@ -160,11 +172,29 @@ export function CurriculumSidebar({
                   handleDrop(section.id, lesson.id);
                 }}
                 onClick={() => onSelectLesson(lesson.id)}
-                type="button"
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onSelectLesson(lesson.id);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
               >
                 <DragHandle />
                 <span>{lesson.title}</span>
-              </button>
+                <button
+                  className="lesson-delete"
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onDeleteLesson(lesson.id);
+                  }}
+                  aria-label={`Удалить урок ${lesson.title}`}
+                >
+                  <Trash2 size={15} strokeWidth={1.9} />
+                </button>
+              </div>
             ))}
           </div>}
 

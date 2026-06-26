@@ -6,6 +6,8 @@ import { getMe, login, logout as logoutUser, register } from "./api/authDatasour
 import {
   createLesson,
   createSection,
+  deleteLesson,
+  deleteSection,
   getAdminPrimaryCourseCurriculum,
   listCourseEnrollments,
   publishCourse,
@@ -231,6 +233,55 @@ export default function App() {
 
       markUnpublishedChanges();
       loadCurriculum(activeLessonId);
+    } catch (err) {
+      setPublishStatus(formatError(err));
+    }
+  }
+
+  async function handleDeleteLesson(lessonId: string) {
+    if (!curriculum) return;
+
+    const lesson = curriculum.sections.flatMap((section) => safeLessons(section.lessons)).find((item) => item.id === lessonId);
+    if (!lesson) return;
+    if (!window.confirm(`Удалить урок "${lesson.title}"? Материалы и ответы внутри урока будут удалены.`)) return;
+
+    const remainingLessons = curriculum.sections.flatMap((section) => safeLessons(section.lessons)).filter((item) => item.id !== lessonId);
+    const nextActiveLessonId =
+      activeLessonId === lessonId ? remainingLessons[0]?.id ?? "" : activeLessonId;
+
+    try {
+      await deleteLesson(lessonId);
+      setActiveLessonId(nextActiveLessonId);
+      markUnpublishedChanges();
+      loadCurriculum(nextActiveLessonId);
+    } catch (err) {
+      setPublishStatus(formatError(err));
+    }
+  }
+
+  async function handleDeleteSection(sectionId: string) {
+    if (!curriculum) return;
+
+    const section = curriculum.sections.find((item) => item.id === sectionId);
+    if (!section) return;
+    const sectionLessons = safeLessons(section.lessons);
+    const message =
+      sectionLessons.length > 0
+        ? `Удалить раздел "${section.title}" и ${sectionLessons.length} урок(ов) внутри него?`
+        : `Удалить раздел "${section.title}"?`;
+    if (!window.confirm(message)) return;
+
+    const removedLessonIds = new Set(sectionLessons.map((lesson) => lesson.id));
+    const remainingLessons = curriculum.sections
+      .filter((item) => item.id !== sectionId)
+      .flatMap((item) => safeLessons(item.lessons));
+    const nextActiveLessonId = removedLessonIds.has(activeLessonId) ? remainingLessons[0]?.id ?? "" : activeLessonId;
+
+    try {
+      await deleteSection({ courseId: curriculum.course.id, sectionId });
+      setActiveLessonId(nextActiveLessonId);
+      markUnpublishedChanges();
+      loadCurriculum(nextActiveLessonId);
     } catch (err) {
       setPublishStatus(formatError(err));
     }
@@ -913,6 +964,8 @@ export default function App() {
               onAddLesson={handleAddLesson}
               onMoveLesson={handleMoveLesson}
               onRenameSection={handleRenameSection}
+              onDeleteSection={handleDeleteSection}
+              onDeleteLesson={handleDeleteLesson}
               t={t}
             />
 
@@ -954,6 +1007,8 @@ export default function App() {
                     onAddLesson={handleAddLesson}
                     onMoveLesson={handleMoveLesson}
                     onRenameSection={handleRenameSection}
+                    onDeleteSection={handleDeleteSection}
+                    onDeleteLesson={handleDeleteLesson}
                     t={t}
                   />
                 </aside>

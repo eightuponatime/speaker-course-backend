@@ -1,4 +1,4 @@
-import { ArrowLeft, CalendarDays, Check, Download, FileText, Menu, Play, X } from "lucide-react";
+import { ArrowLeft, CalendarDays, Check, Download, FileText, Gauge, LogOut, Menu, Play, UserRound, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
@@ -292,7 +292,7 @@ export function CoursePreviewPage({
                 onClick={() => setIsAccessPopoverOpen((current) => !current)}
               >
                 <CalendarDays size={17} />
-                Доступ до {formatShortDate(curriculum.access.access_expires_at)}
+                <span>Доступ до {formatShortDate(curriculum.access.access_expires_at)}</span>
               </button>
               {isAccessPopoverOpen ? (
                 <div className="preview-access-popover">
@@ -305,15 +305,28 @@ export function CoursePreviewPage({
               ) : null}
             </div>
           ) : null}
-          {onAdminOpen ? <button type="button" onClick={onAdminOpen}>{t("adminPanel")}</button> : null}
-          {onBack ? (
-            <button type="button" onClick={onBack}>
-              <ArrowLeft size={18} />
-              {backLabel || t("backToEditor")}
+          {onAdminOpen ? (
+            <button className="preview-action-button" type="button" onClick={onAdminOpen} aria-label={t("adminPanel")}>
+              <Gauge size={17} />
+              <span>{t("adminPanel")}</span>
             </button>
           ) : null}
-          {onProfileOpen ? <button type="button" onClick={onProfileOpen}>Профиль</button> : null}
-          <button type="button" onClick={handleLogoutClick}>{t("logout")}</button>
+          {onBack ? (
+            <button className="preview-action-button" type="button" onClick={onBack} aria-label={backLabel || t("backToEditor")}>
+              <ArrowLeft size={18} />
+              <span>{backLabel || t("backToEditor")}</span>
+            </button>
+          ) : null}
+          {onProfileOpen ? (
+            <button className="preview-action-button" type="button" onClick={onProfileOpen} aria-label="Профиль">
+              <UserRound size={17} />
+              <span>Профиль</span>
+            </button>
+          ) : null}
+          <button className="preview-action-button" type="button" onClick={handleLogoutClick} aria-label={t("logout")}>
+            <LogOut size={17} />
+            <span>{t("logout")}</span>
+          </button>
         </div>
       </header>
 

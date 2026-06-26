@@ -5,7 +5,6 @@ import {
   deleteNotification,
   getUnreadNotificationsCount,
   listNotifications,
-  markAllNotificationsRead,
   markNotificationRead,
   openNotificationsStream
 } from "../api/notificationsDatasource";
@@ -21,6 +20,7 @@ export function NotificationBell({ emptyLabel, onNotificationOpen }: Notificatio
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const markingReadRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
@@ -56,25 +56,23 @@ export function NotificationBell({ emptyLabel, onNotificationOpen }: Notificatio
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  async function handleOpen() {
-    const nextOpen = !open;
-    setOpen(nextOpen);
-    if (!nextOpen || unreadCount === 0) return;
-
-    await markAllNotificationsRead().catch(() => undefined);
-    setUnreadCount(0);
-    setNotifications((current) => current.map((item) => ({ ...item, read_at: item.read_at || new Date().toISOString() })));
+  function handleOpen() {
+    setOpen((current) => !current);
   }
 
-  async function handleNotificationClick(notification: Notification) {
-    if (!notification.read_at) {
-      const updated = await markNotificationRead(notification.id).catch(() => null);
-      if (updated) {
-        setUnreadCount((current) => Math.max(0, current - 1));
-        setNotifications((current) => current.map((item) => (item.id === updated.id ? updated : item)));
-      }
-    }
+  async function markAsRead(notification: Notification) {
+    if (notification.read_at || markingReadRef.current.has(notification.id)) return;
 
+    markingReadRef.current.add(notification.id);
+    const updated = await markNotificationRead(notification.id).catch(() => null);
+    markingReadRef.current.delete(notification.id);
+    if (!updated) return;
+
+    setUnreadCount((current) => Math.max(0, current - 1));
+    setNotifications((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+  }
+
+  function handleNotificationClick(notification: Notification) {
     setOpen(false);
     onNotificationOpen?.(notification);
   }
@@ -98,7 +96,9 @@ export function NotificationBell({ emptyLabel, onNotificationOpen }: Notificatio
             <article
               className={notification.read_at ? "notification-item" : "notification-item unread"}
               key={notification.id}
-              onClick={() => void handleNotificationClick(notification)}
+              onMouseEnter={() => void markAsRead(notification)}
+              onFocus={() => void markAsRead(notification)}
+              onClick={() => handleNotificationClick(notification)}
             >
               <div>
                 <strong>{notification.title}</strong>

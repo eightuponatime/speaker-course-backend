@@ -7,12 +7,12 @@ import { NotificationBell } from "./NotificationBell";
 
 type CourseTopbarProps = {
   course: Course;
-  activeTab: "curriculum" | "activity" | "requests";
+  activeTab: "curriculum" | "activity" | "requests" | "privileges";
   hasUnpublishedChanges: boolean;
   pendingRequestsCount: number;
   publishStatus: string;
   isPublishing: boolean;
-  onTabChange: (tab: "curriculum" | "activity" | "requests") => void;
+  onTabChange: (tab: "curriculum" | "activity" | "requests" | "privileges") => void;
   t: (key: TranslationKey) => string;
   onLogout: () => void;
   onLandingOpen: () => void;
@@ -77,6 +77,13 @@ export function CourseTopbar({
             <span className={pendingRequestsCount > 0 ? "tab-count active" : "tab-count"}>
               {pendingRequestsCount}
             </span>
+          </button>
+          <button
+            className={activeTab === "privileges" ? "active" : ""}
+            type="button"
+            onClick={() => onTabChange("privileges")}
+          >
+            Права
           </button>
         </nav>
 

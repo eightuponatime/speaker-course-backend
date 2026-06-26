@@ -1,6 +1,7 @@
 import type {
   Course,
   CourseAccessWindow,
+  AdminUserWithEnrollment,
   CourseCurriculum,
   CourseEnrollment,
   CourseStudentActivity,
@@ -10,7 +11,8 @@ import type {
   LessonProgressHistoryItem,
   LessonQuizResponse,
   LessonQuizResponseWithUser,
-  Lesson
+  Lesson,
+  User
 } from "../entities/course/course";
 import { apiBaseUrl, request } from "./http";
 
@@ -285,5 +287,36 @@ export function reviewEnrollment(input: {
       status: input.status,
       admin_note: input.adminNote || null
     })
+  });
+}
+
+export function listAdminCourseUsers(input: {
+  courseId: string;
+  search?: string;
+  role?: "" | "admin" | "member";
+  enrollmentStatus?: "" | "none" | EnrollmentStatus;
+}): Promise<AdminUserWithEnrollment[]> {
+  const params = new URLSearchParams();
+  if (input.search) params.set("search", input.search);
+  if (input.role) params.set("role", input.role);
+  if (input.enrollmentStatus) params.set("enrollment_status", input.enrollmentStatus);
+
+  const suffix = params.toString();
+  return request<AdminUserWithEnrollment[]>(
+    `/admin/courses/${input.courseId}/users${suffix ? `?${suffix}` : ""}`
+  );
+}
+
+export function updateAdminCourseUserRole(input: {
+  courseId: string;
+  userId: string;
+  role: "admin" | "member";
+}): Promise<User> {
+  return request<User>(`/admin/courses/${input.courseId}/users/${input.userId}/role`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ role: input.role })
   });
 }

@@ -30,6 +30,7 @@ import { EnrollmentRequestsPanel } from "./components/EnrollmentRequestsPanel";
 import { LessonWorkspace } from "./components/LessonWorkspace";
 import { LandingPage } from "./components/LandingPage";
 import { ProfileSettingsModal } from "./components/ProfileSettingsModal";
+import { PrivilegesPanel } from "./components/PrivilegesPanel";
 import { StudentActivityPanel } from "./components/StudentActivityPanel";
 import type { BlockType } from "./components/BlockToolbar";
 import type { CourseCurriculum, EditorContent, Lesson, User } from "./entities/course/course";
@@ -51,7 +52,7 @@ export default function App() {
   const [password, setPassword] = useState("");
   const [publishStatus, setPublishStatus] = useState("");
   const [isPublishing, setIsPublishing] = useState(false);
-  const [activeTab, setActiveTab] = useState<"curriculum" | "activity" | "requests">("curriculum");
+  const [activeTab, setActiveTab] = useState<"curriculum" | "activity" | "requests" | "privileges">("curriculum");
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
@@ -941,6 +942,9 @@ export default function App() {
             onPendingCountChange={setPendingRequestsCount}
             t={t}
           />
+        ) : null}
+        {activeTab === "privileges" ? (
+          <PrivilegesPanel courseId={curriculum.course.id} currentUserId={authenticatedUser.id} />
         ) : null}
       </main>
       {renderProfileModal()}

@@ -520,7 +520,8 @@
   box-shadow: 0 0 0 3px rgba(169, 150, 130, 0.16);
 }
 
-.landing-forgot-dialog > button[type="submit"] {
+.landing-forgot-dialog > button[type="submit"],
+.landing-forgot-dialog > button:not(.landing-auth-dialog-close) {
   height: 48px;
   border: 0;
   border-radius: 4px;
@@ -530,7 +531,8 @@
   cursor: pointer;
 }
 
-.landing-forgot-dialog > button[type="submit"]:disabled {
+.landing-forgot-dialog > button[type="submit"]:disabled,
+.landing-forgot-dialog > button:not(.landing-auth-dialog-close):disabled {
   opacity: 0.62;
   cursor: default;
 }

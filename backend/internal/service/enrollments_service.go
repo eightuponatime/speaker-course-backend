@@ -116,6 +116,21 @@ func (s *EnrollmentsService) HasApprovedAccess(
 	return s.rp.HasApprovedAccess(ctx, courseId, userId)
 }
 
+func (s *EnrollmentsService) DeleteByCourseAndUser(
+	ctx context.Context,
+	courseId uuid.UUID,
+	userId uuid.UUID,
+) error {
+	if courseId == uuid.Nil {
+		return fmt.Errorf("%w: course_id is empty", ErrInvalidEnrollment)
+	}
+	if userId == uuid.Nil {
+		return fmt.Errorf("%w: user_id is empty", ErrInvalidEnrollment)
+	}
+
+	return s.rp.DeleteByCourseAndUser(ctx, courseId, userId)
+}
+
 func isEnrollmentStatus(status domain.CourseEnrollmentStatus) bool {
 	switch status {
 	case domain.CourseEnrollmentStatusPending,

@@ -119,3 +119,16 @@ export type User = {
   can_change_password?: boolean;
   created_at?: string;
 };
+
+export type AdminUserWithEnrollment = {
+  id: string;
+  email: string;
+  full_name: string;
+  role: "admin" | "member";
+  created_at: string;
+  auth_provider: "password" | "google" | "google_password";
+  enrollment_id?: string;
+  enrollment_status?: EnrollmentStatus;
+  enrollment_requested_at?: string;
+  enrollment_reviewed_at?: string;
+};

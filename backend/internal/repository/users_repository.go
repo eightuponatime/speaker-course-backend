@@ -121,6 +121,69 @@ func (r *UsersRepository) ListAdmins(ctx context.Context) ([]domain.User, error)
 	return users, nil
 }
 
+func (r *UsersRepository) ListForAdmin(
+	ctx context.Context,
+	courseID uuid.UUID,
+	search string,
+	role string,
+	enrollmentStatus string,
+) ([]domain.AdminUserWithEnrollment, error) {
+	const query = `
+		select u.id,
+			u.email,
+			u.full_name,
+			u.role,
+			u.created_at,
+			case
+				when u.google_sub is not null and u.password is not null then 'google_password'
+				when u.google_sub is not null then 'google'
+				else 'password'
+			end as auth_provider,
+			e.id as enrollment_id,
+			e.status as enrollment_status,
+			e.requested_at as enrollment_requested_at,
+			e.reviewed_at as enrollment_reviewed_at
+		from users u
+		left join course_enrollments e on e.user_id = u.id
+			and e.course_id = $1
+		where ($2 = '' or u.email ilike '%' || $2 || '%' or u.full_name ilike '%' || $2 || '%')
+			and ($3 = '' or u.role = $3)
+			and ($4 = '' or coalesce(e.status::text, 'none') = $4)
+		order by
+			case when e.status = 'pending' then 0 else 1 end,
+			u.created_at desc
+	`
+
+	q := extractTransaction(ctx, r.db)
+	users := make([]domain.AdminUserWithEnrollment, 0)
+	if err := sqlx.SelectContext(ctx, q, &users, query, courseID, search, role, enrollmentStatus); err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
+func (r *UsersRepository) UpdateRole(ctx context.Context, userID uuid.UUID, role domain.UserRole) (*domain.User, error) {
+	const query = `
+		update users
+		set role = $2
+		where id = $1
+		returning id, google_sub, email, password, full_name, role, created_at
+	`
+
+	q := extractTransaction(ctx, r.db)
+	var user domain.User
+	if err := sqlx.GetContext(ctx, q, &user, query, userID, role); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+
+		return nil, err
+	}
+
+	return &user, nil
+}
+
 func (r *UsersRepository) UpdateGoogleSub(
 	ctx context.Context,
 	userID uuid.UUID,

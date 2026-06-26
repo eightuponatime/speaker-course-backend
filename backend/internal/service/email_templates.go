@@ -95,7 +95,6 @@ func AdminEnrollmentRequestedEmail(to string, adminName string, studentName stri
 		Body:        body,
 		ButtonLabel: "Открыть заявки",
 		ButtonURL:   adminURL,
-		Note:        "Письмо отправлено только реальным администраторам. Технический аккаунт Logos Voice не получает уведомления.",
 	})
 }
 

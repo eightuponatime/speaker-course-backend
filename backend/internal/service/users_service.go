@@ -80,6 +80,44 @@ func (s *UsersService) ListAdmins(ctx context.Context) ([]domain.User, error) {
 	return s.rp.ListAdmins(ctx)
 }
 
+func (s *UsersService) ListForAdmin(
+	ctx context.Context,
+	courseID uuid.UUID,
+	search string,
+	role string,
+	enrollmentStatus string,
+) ([]domain.AdminUserWithEnrollment, error) {
+	if courseID == uuid.Nil {
+		return nil, fmt.Errorf("%w: course_id is empty", ErrInvalidUser)
+	}
+
+	search = strings.TrimSpace(search)
+	role = strings.TrimSpace(role)
+	enrollmentStatus = strings.TrimSpace(enrollmentStatus)
+
+	if role != "" && role != string(domain.UserRoleAdmin) && role != string(domain.UserRoleMember) {
+		return nil, fmt.Errorf("%w: unsupported role %q", ErrInvalidUser, role)
+	}
+	switch enrollmentStatus {
+	case "", "none", "pending", "approved", "rejected", "revoked":
+	default:
+		return nil, fmt.Errorf("%w: unsupported enrollment status %q", ErrInvalidUser, enrollmentStatus)
+	}
+
+	return s.rp.ListForAdmin(ctx, courseID, search, role, enrollmentStatus)
+}
+
+func (s *UsersService) UpdateRole(ctx context.Context, userID uuid.UUID, role domain.UserRole) (*domain.User, error) {
+	if userID == uuid.Nil {
+		return nil, fmt.Errorf("%w: id is empty", ErrInvalidUser)
+	}
+	if role != domain.UserRoleAdmin && role != domain.UserRoleMember {
+		return nil, fmt.Errorf("%w: unsupported role %q", ErrInvalidUser, role)
+	}
+
+	return s.rp.UpdateRole(ctx, userID, role)
+}
+
 func (s *UsersService) UpdateGoogleSub(
 	ctx context.Context,
 	userID uuid.UUID,

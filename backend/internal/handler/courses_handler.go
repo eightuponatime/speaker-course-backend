@@ -83,6 +83,8 @@ func (h *CoursesHandler) RegisterRoutes(r chi.Router, authMiddleware *middleware
 		admin.Get("/admin/courses/{courseID}/student-activity", h.ListCourseStudentActivity)
 		admin.Get("/admin/courses/{courseID}/students/{userID}/lesson-history", h.ListStudentLessonHistory)
 		admin.Patch("/admin/courses/{courseID}/students/{userID}/access", h.ExtendStudentCourseAccess)
+		admin.Get("/admin/courses/{courseID}/users", h.ListCourseUsers)
+		admin.Patch("/admin/courses/{courseID}/users/{userID}/role", h.UpdateCourseUserRole)
 		admin.Patch("/admin/lessons/{lessonID}", h.UpdateLesson)
 		admin.Patch("/admin/lessons/{lessonID}/draft", h.SaveLessonDraft)
 		admin.Post("/admin/lessons/{lessonID}/publish", h.PublishLesson)
@@ -945,6 +947,62 @@ func (h *CoursesHandler) ListEnrollments(w http.ResponseWriter, r *http.Request)
 	}
 
 	writeJSON(w, http.StatusOK, enrollments)
+}
+
+func (h *CoursesHandler) ListCourseUsers(w http.ResponseWriter, r *http.Request) {
+	courseID, ok := parseUUIDParam(w, r, "courseID")
+	if !ok {
+		return
+	}
+
+	users, err := h.usersService.ListForAdmin(
+		r.Context(),
+		courseID,
+		r.URL.Query().Get("search"),
+		r.URL.Query().Get("role"),
+		r.URL.Query().Get("enrollment_status"),
+	)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, users)
+}
+
+func (h *CoursesHandler) UpdateCourseUserRole(w http.ResponseWriter, r *http.Request) {
+	courseID, ok := parseUUIDParam(w, r, "courseID")
+	if !ok {
+		return
+	}
+	userID, ok := parseUUIDParam(w, r, "userID")
+	if !ok {
+		return
+	}
+
+	var request struct {
+		Role domain.UserRole `json:"role"`
+	}
+	if err := decodeJSON(r, &request); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	user, err := h.usersService.UpdateRole(r.Context(), userID, request.Role)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	if user == nil {
+		writeError(w, http.StatusNotFound, nil)
+		return
+	}
+
+	if user.Role == domain.UserRoleAdmin {
+		_ = h.enrollmentsService.DeleteByCourseAndUser(r.Context(), courseID, userID)
+	}
+
+	writeJSON(w, http.StatusOK, buildAuthUserResponse(user))
 }
 
 func (h *CoursesHandler) ReviewEnrollment(w http.ResponseWriter, r *http.Request) {

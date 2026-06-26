@@ -81,6 +81,8 @@ export function LandingPage({
   const [forgotStatus, setForgotStatus] = useState("");
   const [forgotSuccess, setForgotSuccess] = useState(false);
   const [forgotSubmitting, setForgotSubmitting] = useState(false);
+  const [authNotice, setAuthNotice] = useState("");
+  const [authNoticeDialogOpen, setAuthNoticeDialogOpen] = useState(false);
   const [programSections, setProgramSections] = useState<CourseProgramSection[]>([]);
   useEffect(() => {
     getPrimaryCourse()
@@ -92,6 +94,8 @@ export function LandingPage({
     if (!isGoogleAccountNotFoundError(error)) return;
 
     setMode("register");
+    setAuthNotice("Такой Google-аккаунт еще не зарегистрирован. Запишитесь на курс через эту вкладку.");
+    setAuthNoticeDialogOpen(true);
     onClearError?.();
     setLoginDialogOpen(false);
     setForgotStatus("");
@@ -246,6 +250,8 @@ export function LandingPage({
 
   function scrollToRegistration() {
     setMode("register");
+    setAuthNotice("");
+    setAuthNoticeDialogOpen(false);
     onClearError?.();
     setLoginDialogOpen(false);
     window.setTimeout(() => {
@@ -261,7 +267,7 @@ export function LandingPage({
       ? loginEmail.trim().length > 0 && loginPassword.length > 0
       : registerEmail.trim().length > 0 && registerPassword.length > 0 && registerFullName.trim().length > 0;
   const canSubmitDialogLogin = dialogEmail.trim().length > 0 && dialogPassword.length > 0;
-  const authError = formatUserFacingError(error);
+  const authError = authNotice || formatUserFacingError(error);
   const accessDisplayError = formatUserFacingError(accessError);
   const authForm = (
     <>
@@ -279,8 +285,10 @@ export function LandingPage({
           className={mode === "login" ? "active" : ""}
           type="button"
           onClick={() => {
-            setMode("login");
-            onClearError?.();
+              setMode("login");
+              setAuthNotice("");
+              setAuthNoticeDialogOpen(false);
+              onClearError?.();
           }}
         >
           {t("signIn")}
@@ -290,6 +298,8 @@ export function LandingPage({
           type="button"
           onClick={() => {
             setMode("register");
+            setAuthNotice("");
+            setAuthNoticeDialogOpen(false);
             onClearError?.();
           }}
         >
@@ -309,6 +319,8 @@ export function LandingPage({
               } else {
                 setRegisterEmail(event.target.value);
               }
+              setAuthNotice("");
+              setAuthNoticeDialogOpen(false);
               onClearError?.();
             }}
             type="email"
@@ -326,6 +338,8 @@ export function LandingPage({
               } else {
                 setRegisterPassword(value);
               }
+              setAuthNotice("");
+              setAuthNoticeDialogOpen(false);
               onClearError?.();
             }}
             visible={mode === "login" ? showLoginPassword : showRegisterPassword}
@@ -347,6 +361,8 @@ export function LandingPage({
             value={registerFullName}
             onChange={(event) => {
               setRegisterFullName(event.target.value);
+              setAuthNotice("");
+              setAuthNoticeDialogOpen(false);
               onClearError?.();
             }}
           />
@@ -386,6 +402,8 @@ export function LandingPage({
             value={dialogEmail}
             onChange={(event) => {
               setDialogEmail(event.target.value);
+              setAuthNotice("");
+              setAuthNoticeDialogOpen(false);
               onClearError?.();
             }}
             type="email"
@@ -399,6 +417,8 @@ export function LandingPage({
             value={dialogPassword}
             onChange={(value) => {
               setDialogPassword(value);
+              setAuthNotice("");
+              setAuthNoticeDialogOpen(false);
               onClearError?.();
             }}
             visible={showDialogPassword}
@@ -617,6 +637,28 @@ export function LandingPage({
               </p>
             ) : null}
           </form>
+        </div>
+      ) : null}
+
+      {!currentUser && authNoticeDialogOpen ? (
+        <div className="landing-auth-dialog-backdrop" onMouseDown={() => setAuthNoticeDialogOpen(false)}>
+          <section className="landing-forgot-dialog" onMouseDown={(event) => event.stopPropagation()}>
+            <button
+              className="landing-auth-dialog-close"
+              type="button"
+              aria-label="Закрыть"
+              onClick={() => setAuthNoticeDialogOpen(false)}
+            >
+              <X size={20} strokeWidth={1.8} />
+            </button>
+            <div className="landing-auth-header">
+              <strong>Google-аккаунт не найден</strong>
+              <span>Сначала запишитесь на курс через Google. После этого аккаунт появится в системе.</span>
+            </div>
+            <button type="button" onClick={() => setAuthNoticeDialogOpen(false)}>
+              Перейти к записи
+            </button>
+          </section>
         </div>
       ) : null}
 

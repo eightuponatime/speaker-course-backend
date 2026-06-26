@@ -176,3 +176,19 @@ func (r *EnrollmentsRepository) HasApprovedAccess(
 
 	return hasAccess, nil
 }
+
+func (r *EnrollmentsRepository) DeleteByCourseAndUser(
+	ctx context.Context,
+	courseId uuid.UUID,
+	userId uuid.UUID,
+) error {
+	const query = `
+		delete from course_enrollments
+		where course_id = $1
+			and user_id = $2
+	`
+
+	q := extractTransaction(ctx, r.db)
+	_, err := q.ExecContext(ctx, query, courseId, userId)
+	return err
+}

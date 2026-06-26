@@ -35,3 +35,16 @@ type UpdateUserProfileInput struct {
 	Email    string
 	FullName string
 }
+
+type AdminUserWithEnrollment struct {
+	Id                 uuid.UUID               `db:"id" json:"id"`
+	Email              string                  `db:"email" json:"email"`
+	FullName           string                  `db:"full_name" json:"full_name"`
+	Role               UserRole                `db:"role" json:"role"`
+	CreatedAt          time.Time               `db:"created_at" json:"created_at"`
+	AuthProvider       string                  `db:"auth_provider" json:"auth_provider"`
+	EnrollmentId       *uuid.UUID              `db:"enrollment_id" json:"enrollment_id,omitempty"`
+	EnrollmentStatus   *CourseEnrollmentStatus `db:"enrollment_status" json:"enrollment_status,omitempty"`
+	EnrollmentDate     *time.Time              `db:"enrollment_requested_at" json:"enrollment_requested_at,omitempty"`
+	EnrollmentReviewed *time.Time              `db:"enrollment_reviewed_at" json:"enrollment_reviewed_at,omitempty"`
+}

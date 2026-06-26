@@ -256,6 +256,33 @@
   background: rgba(43, 43, 43, 0.06);
 }
 
+@media (max-width: 640px) {
+  .notification-panel {
+    position: fixed;
+    top: 76px;
+    left: 12px;
+    right: 12px;
+    z-index: 140;
+    width: auto;
+    max-height: min(460px, calc(100vh - 104px));
+    border-radius: 10px;
+    box-shadow: 0 20px 60px rgba(30, 27, 24, 0.22);
+  }
+
+  .notification-item {
+    grid-template-columns: minmax(0, 1fr) 34px;
+    padding: 14px;
+  }
+
+  .notification-item strong {
+    font-size: 13px;
+  }
+
+  .notification-item p {
+    font-size: 12px;
+  }
+}
+
 .profile-modal-backdrop {
   position: fixed;
   inset: 0;

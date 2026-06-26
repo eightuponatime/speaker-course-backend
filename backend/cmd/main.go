@@ -2,6 +2,8 @@ package main
 
 import (
 	"net/http"
+	"os"
+	"path/filepath"
 	"speaker_course/config"
 	"speaker_course/internal/handler"
 	"speaker_course/internal/logger"
@@ -87,10 +89,37 @@ func main() {
 	coursesHandler.RegisterRoutes(router, authMiddleware)
 	mediaHandler.RegisterRoutes(router, authMiddleware)
 	notificationsHandler.RegisterRoutes(router, authMiddleware)
+	registerStaticFiles(router, "/app/public")
 
 	log.Infof("server listening on :%s", cfg.Port)
 	if err := http.ListenAndServe(":"+cfg.Port, router); err != nil {
 		log.Fatalf("server failed: %v", err)
 	}
 
+}
+
+func registerStaticFiles(router chi.Router, root string) {
+	indexPath := filepath.Join(root, "index.html")
+	if _, err := os.Stat(indexPath); err != nil {
+		return
+	}
+
+	fileServer := http.FileServer(http.Dir(root))
+
+	router.Get("/*", func(w http.ResponseWriter, r *http.Request) {
+		path := filepath.Clean(r.URL.Path)
+		if path == "." || path == "/" {
+			http.ServeFile(w, r, indexPath)
+			return
+		}
+
+		filePath := filepath.Join(root, path)
+		info, err := os.Stat(filePath)
+		if err == nil && !info.IsDir() {
+			fileServer.ServeHTTP(w, r)
+			return
+		}
+
+		http.ServeFile(w, r, indexPath)
+	})
 }

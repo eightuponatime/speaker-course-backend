@@ -44,20 +44,8 @@ services:
       BUNNY_STREAM_EMBED_BASE_URL: ${BUNNY_STREAM_EMBED_BASE_URL:-https://iframe.mediadelivery.net/embed}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       EMAIL_FROM: ${EMAIL_FROM:-}
-    expose:
-      - "8080"
-
-  frontend:
-    build:
-      context: .
-      dockerfile: frontend/Dockerfile
-      args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
-    restart: unless-stopped
-    depends_on:
-      - backend
     ports:
-      - "${HTTP_PORT:-80}:80"
+      - "${APP_PORT:-127.0.0.1:8080}:8080"
 
 volumes:
   postgres_data:

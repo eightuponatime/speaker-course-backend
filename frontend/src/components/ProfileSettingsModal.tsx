@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import { Edit3, KeyRound, RefreshCw, Trash2, X } from "lucide-react";
+import { Edit3, Eye, EyeOff, KeyRound, RefreshCw, Trash2, X } from "lucide-react";
 
 import { changePassword, deleteMe, updateMe } from "../api/authDatasource";
 import { apiBaseUrl } from "../api/http";
@@ -29,6 +29,9 @@ export function ProfileSettingsModal({
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [repeatPassword, setRepeatPassword] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showRepeatPassword, setShowRepeatPassword] = useState(false);
   const [passwordStatus, setPasswordStatus] = useState("");
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [deleteStatus, setDeleteStatus] = useState("");
@@ -96,6 +99,9 @@ export function ProfileSettingsModal({
       setCurrentPassword("");
       setNewPassword("");
       setRepeatPassword("");
+      setShowCurrentPassword(false);
+      setShowNewPassword(false);
+      setShowRepeatPassword(false);
       setPasswordStatus("Пароль обновлен");
       window.setTimeout(() => setPasswordDialogOpen(false), 700);
     } catch (err) {
@@ -218,29 +224,32 @@ export function ProfileSettingsModal({
               </header>
               <label>
                 <span>Старый пароль</span>
-                <input
+                <ProfilePasswordInput
                   value={currentPassword}
-                  onChange={(event) => setCurrentPassword(event.target.value)}
-                  type="password"
                   autoComplete="current-password"
+                  visible={showCurrentPassword}
+                  onChange={setCurrentPassword}
+                  onToggle={() => setShowCurrentPassword((value) => !value)}
                 />
               </label>
               <label>
                 <span>Новый пароль</span>
-                <input
+                <ProfilePasswordInput
                   value={newPassword}
-                  onChange={(event) => setNewPassword(event.target.value)}
-                  type="password"
                   autoComplete="new-password"
+                  visible={showNewPassword}
+                  onChange={setNewPassword}
+                  onToggle={() => setShowNewPassword((value) => !value)}
                 />
               </label>
               <label>
                 <span>Повторите новый пароль</span>
-                <input
+                <ProfilePasswordInput
                   value={repeatPassword}
-                  onChange={(event) => setRepeatPassword(event.target.value)}
-                  type="password"
                   autoComplete="new-password"
+                  visible={showRepeatPassword}
+                  onChange={setRepeatPassword}
+                  onToggle={() => setShowRepeatPassword((value) => !value)}
                 />
               </label>
               <button type="submit" disabled={passwordSaving}>
@@ -273,6 +282,34 @@ export function ProfileSettingsModal({
         ) : null}
       </section>
     </div>
+  );
+}
+
+function ProfilePasswordInput({
+  value,
+  onChange,
+  autoComplete,
+  visible,
+  onToggle
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  autoComplete: string;
+  visible: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <span className="profile-password-field">
+      <input
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        type={visible ? "text" : "password"}
+        autoComplete={autoComplete}
+      />
+      <button type="button" aria-label={visible ? "Скрыть пароль" : "Показать пароль"} onClick={onToggle}>
+        {visible ? <EyeOff size={18} strokeWidth={1.8} /> : <Eye size={18} strokeWidth={1.8} />}
+      </button>
+    </span>
   );
 }
 

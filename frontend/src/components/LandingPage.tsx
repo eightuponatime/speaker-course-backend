@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import {
   CheckCircle2,
+  Eye,
+  EyeOff,
   Flame,
   Instagram,
   MessageCircle,
@@ -61,11 +63,21 @@ export function LandingPage({
   const [accessError, setAccessError] = useState("");
   const [mode, setMode] = useState<"login" | "register">("login");
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [registerFullName, setRegisterFullName] = useState("");
+  const [registerEmail, setRegisterEmail] = useState("");
+  const [registerPassword, setRegisterPassword] = useState("");
+  const [dialogEmail, setDialogEmail] = useState("");
+  const [dialogPassword, setDialogPassword] = useState("");
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
+  const [showDialogPassword, setShowDialogPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [forgotDialogOpen, setForgotDialogOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
   const [forgotStatus, setForgotStatus] = useState("");
+  const [forgotSuccess, setForgotSuccess] = useState(false);
   const [forgotSubmitting, setForgotSubmitting] = useState(false);
   const [programSections, setProgramSections] = useState<CourseProgramSection[]>([]);
   useEffect(() => {
@@ -80,6 +92,8 @@ export function LandingPage({
     setMode("register");
     setLoginDialogOpen(false);
     setForgotStatus("");
+    setForgotSuccess(false);
+    setForgotDialogOpen(false);
     setAccessError("");
   }, [error]);
 
@@ -146,9 +160,9 @@ export function LandingPage({
     setSubmitting(true);
     try {
       if (mode === "login") {
-        await onLogin(email, password);
+        await onLogin(loginEmail, loginPassword);
       } else {
-        await onRegister({ email, password, fullName });
+        await onRegister({ email: registerEmail, password: registerPassword, fullName: registerFullName });
         setAccessError("");
         const nextEnrollment = await requestPrimaryCourseEnrollment();
         setEnrollment(nextEnrollment);
@@ -164,7 +178,7 @@ export function LandingPage({
     event.preventDefault();
     setSubmitting(true);
     try {
-      await onLogin(email, password);
+      await onLogin(dialogEmail, dialogPassword);
       setLoginDialogOpen(false);
     } finally {
       setSubmitting(false);
@@ -185,18 +199,26 @@ export function LandingPage({
     }
   }
 
-  async function handleForgotPassword() {
-    if (!email.trim()) {
-      setForgotStatus("Введите email, чтобы получить временный пароль");
-      return;
-    }
+  function openForgotPassword(initialEmail = "") {
+    setForgotEmail(initialEmail);
+    setForgotStatus("");
+    setForgotSuccess(false);
+    setForgotDialogOpen(true);
+  }
+
+  async function handleForgotPassword(event: FormEvent) {
+    event.preventDefault();
+    const normalizedEmail = forgotEmail.trim();
+    if (!normalizedEmail) return;
 
     setForgotSubmitting(true);
     setForgotStatus("");
+    setForgotSuccess(false);
 
     try {
-      await forgotPassword(email);
-      setForgotStatus("Если аккаунт найден, временный пароль придет на email");
+      await forgotPassword(normalizedEmail);
+      setForgotSuccess(true);
+      setForgotStatus("Если аккаунт найден, мы отправим временный пароль на указанную почту.");
     } catch (err) {
       setForgotStatus(formatError(err));
     } finally {
@@ -253,16 +275,40 @@ export function LandingPage({
       <div className="landing-field-stack">
         <label>
           <span>{t("email")}</span>
-          <input autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} type="email" />
+          <input
+            autoComplete="email"
+            value={mode === "login" ? loginEmail : registerEmail}
+            onChange={(event) => {
+              if (mode === "login") {
+                setLoginEmail(event.target.value);
+              } else {
+                setRegisterEmail(event.target.value);
+              }
+            }}
+            type="email"
+          />
         </label>
 
         <label>
           <span>{t("password")}</span>
-          <input
+          <PasswordInput
             autoComplete={mode === "login" ? "current-password" : "new-password"}
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            type="password"
+            value={mode === "login" ? loginPassword : registerPassword}
+            onChange={(value) => {
+              if (mode === "login") {
+                setLoginPassword(value);
+              } else {
+                setRegisterPassword(value);
+              }
+            }}
+            visible={mode === "login" ? showLoginPassword : showRegisterPassword}
+            onToggle={() => {
+              if (mode === "login") {
+                setShowLoginPassword((value) => !value);
+              } else {
+                setShowRegisterPassword((value) => !value);
+              }
+            }}
           />
         </label>
 
@@ -271,8 +317,8 @@ export function LandingPage({
           <input
             autoComplete="name"
             tabIndex={mode === "register" ? 0 : -1}
-            value={fullName}
-            onChange={(event) => setFullName(event.target.value)}
+            value={registerFullName}
+            onChange={(event) => setRegisterFullName(event.target.value)}
           />
         </label>
       </div>
@@ -281,8 +327,8 @@ export function LandingPage({
         {submitting ? t("wait") : mode === "login" ? t("enterCourse") : "Оставить заявку"}
       </button>
       {mode === "login" ? (
-        <button className="landing-forgot-button" type="button" disabled={forgotSubmitting} onClick={handleForgotPassword}>
-          {forgotSubmitting ? t("wait") : "Забыли пароль?"}
+        <button className="landing-forgot-button" type="button" onClick={() => openForgotPassword(loginEmail)}>
+          Забыли пароль?
         </button>
       ) : null}
       <a
@@ -292,7 +338,6 @@ export function LandingPage({
         <GoogleIcon />
         {mode === "register" ? "Записаться через Google" : t("continueWithGoogle")}
       </a>
-      {forgotStatus ? <p>{forgotStatus}</p> : null}
       {error ? <p>{error}</p> : null}
     </>
   );
@@ -306,16 +351,17 @@ export function LandingPage({
       <div className="landing-field-stack">
         <label>
           <span>{t("email")}</span>
-          <input autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} type="email" />
+          <input autoComplete="email" value={dialogEmail} onChange={(event) => setDialogEmail(event.target.value)} type="email" />
         </label>
 
         <label>
           <span>{t("password")}</span>
-          <input
+          <PasswordInput
             autoComplete="current-password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            type="password"
+            value={dialogPassword}
+            onChange={setDialogPassword}
+            visible={showDialogPassword}
+            onToggle={() => setShowDialogPassword((value) => !value)}
           />
         </label>
       </div>
@@ -323,8 +369,8 @@ export function LandingPage({
       <button type="submit" disabled={submitting}>
         {submitting ? t("wait") : t("enterCourse")}
       </button>
-      <button className="landing-forgot-button" type="button" disabled={forgotSubmitting} onClick={handleForgotPassword}>
-        {forgotSubmitting ? t("wait") : "Забыли пароль?"}
+      <button className="landing-forgot-button" type="button" onClick={() => openForgotPassword(dialogEmail)}>
+        Забыли пароль?
       </button>
       <a className="landing-google" href={`${apiBaseUrl}/auth/google/start`}>
         <GoogleIcon />
@@ -333,7 +379,6 @@ export function LandingPage({
       <button className="landing-auth-switch" type="button" onClick={scrollToRegistration}>
         Нет аккаунта? Запишитесь на курс
       </button>
-      {forgotStatus ? <p>{forgotStatus}</p> : null}
       {error ? <p>{error}</p> : null}
     </>
   );
@@ -493,6 +538,45 @@ export function LandingPage({
         </div>
       ) : null}
 
+      {!currentUser && forgotDialogOpen ? (
+        <div className="landing-auth-dialog-backdrop" onMouseDown={() => setForgotDialogOpen(false)}>
+          <form
+            className="landing-forgot-dialog"
+            onSubmit={handleForgotPassword}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <button
+              className="landing-auth-dialog-close"
+              type="button"
+              aria-label="Закрыть"
+              onClick={() => setForgotDialogOpen(false)}
+            >
+              <X size={20} strokeWidth={1.8} />
+            </button>
+            <div className="landing-auth-header">
+              <strong>Восстановить доступ</strong>
+              <span>Укажите email аккаунта. Мы отправим временный пароль, если найдем такой аккаунт.</span>
+            </div>
+            <label>
+              <span>{t("email")}</span>
+              <input
+                autoComplete="email"
+                value={forgotEmail}
+                onChange={(event) => setForgotEmail(event.target.value)}
+                type="email"
+                required
+              />
+            </label>
+            <button type="submit" disabled={forgotSubmitting || !forgotEmail.trim()}>
+              {forgotSubmitting ? t("wait") : "Отправить временный пароль"}
+            </button>
+            {forgotStatus ? (
+              <p className={forgotSuccess ? "landing-forgot-success" : "landing-forgot-error"}>{forgotStatus}</p>
+            ) : null}
+          </form>
+        </div>
+      ) : null}
+
       <section className="landing-benefits" aria-label="Преимущества курса">
         {benefits.map((item) => (
           <article key={item.title}>
@@ -625,6 +709,34 @@ function formatError(err: unknown): string {
 
 function isGoogleAccountNotFoundError(error: string): boolean {
   return error.includes("Аккаунт с таким Google еще не зарегистрирован");
+}
+
+function PasswordInput({
+  value,
+  onChange,
+  autoComplete,
+  visible,
+  onToggle
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  autoComplete: string;
+  visible: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <span className="landing-password-field">
+      <input
+        autoComplete={autoComplete}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        type={visible ? "text" : "password"}
+      />
+      <button type="button" aria-label={visible ? "Скрыть пароль" : "Показать пароль"} onClick={onToggle}>
+        {visible ? <EyeOff size={18} strokeWidth={1.8} /> : <Eye size={18} strokeWidth={1.8} />}
+      </button>
+    </span>
+  );
 }
 
 function GoogleIcon() {

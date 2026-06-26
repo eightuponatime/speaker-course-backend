@@ -382,6 +382,36 @@
   font: inherit;
 }
 
+.profile-password-field {
+  position: relative;
+  display: block;
+}
+
+.profile-password-field input {
+  padding-right: 44px;
+}
+
+.profile-password-field button {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  color: #6b6259;
+  background: transparent;
+  cursor: pointer;
+}
+
+.profile-password-field button:hover {
+  background: rgba(45, 41, 36, 0.06);
+}
+
 .profile-form input:disabled {
   color: #81786f;
   background: #f3ede6;

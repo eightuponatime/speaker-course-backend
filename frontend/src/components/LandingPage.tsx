@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import {
+  Gauge,
   CheckCircle2,
   Eye,
   EyeOff,
@@ -8,6 +9,9 @@ import {
   Instagram,
   MessageCircle,
   Mic2,
+  LogIn,
+  LogOut,
+  UserRound,
   ShieldCheck,
   Sparkles,
   Target,
@@ -469,13 +473,15 @@ export function LandingPage({
             <>
               <NotificationBell emptyLabel={t("noNotifications")} onNotificationOpen={onNotificationOpen} />
               {onAdminOpen ? (
-                <button className="landing-nav-button" type="button" onClick={onAdminOpen}>
-                  {t("adminPanel")}
+                <button className="landing-nav-button landing-icon-button" type="button" onClick={onAdminOpen} aria-label={t("adminPanel")}>
+                  <Gauge size={18} strokeWidth={1.9} />
+                  <span>{t("adminPanel")}</span>
                 </button>
               ) : null}
               {onProfileOpen ? (
-                <button className="landing-nav-button" type="button" onClick={onProfileOpen}>
-                  Профиль
+                <button className="landing-nav-button landing-icon-button" type="button" onClick={onProfileOpen} aria-label="Профиль">
+                  <UserRound size={18} strokeWidth={1.9} />
+                  <span>Профиль</span>
                 </button>
               ) : null}
             </>
@@ -484,16 +490,19 @@ export function LandingPage({
             <button
               className="landing-nav-button"
               type="button"
+              aria-label={t("signIn")}
               onClick={() => {
                 setLoginDialogOpen(true);
               }}
             >
-              {t("signIn")}
+              <LogIn size={18} strokeWidth={1.9} />
+              <span>{t("signIn")}</span>
             </button>
           ) : null}
           {currentUser && onLogout ? (
-            <button className="landing-nav-button dark" type="button" onClick={onLogout}>
-              {t("logout")}
+            <button className="landing-nav-button landing-icon-button dark" type="button" onClick={onLogout} aria-label={t("logout")}>
+              <LogOut size={18} strokeWidth={1.9} />
+              <span>{t("logout")}</span>
             </button>
           ) : null}
         </div>

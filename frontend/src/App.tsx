@@ -100,12 +100,14 @@ export default function App() {
     }
   }
 
-  const resetAuthenticatedState = useCallback(() => {
+  const resetAuthenticatedState = useCallback((options?: { preserveError?: boolean }) => {
     setCurrentUser(null);
     setCurriculum(null);
     setIsPreviewing(false);
     setIsProfileOpen(false);
-    setError("");
+    if (!options?.preserveError) {
+      setError("");
+    }
   }, []);
 
   const refreshAuthenticatedUser = useCallback(async () => {
@@ -123,7 +125,7 @@ export default function App() {
         }
       }
     } catch {
-      resetAuthenticatedState();
+      resetAuthenticatedState({ preserveError: true });
       if (window.location.pathname.startsWith("/admin")) {
         navigate("/");
       }

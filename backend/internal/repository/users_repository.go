@@ -146,6 +146,33 @@ func (r *UsersRepository) UpdateGoogleSub(
 	return &user, nil
 }
 
+func (r *UsersRepository) UpdateGoogleIdentity(
+	ctx context.Context,
+	userID uuid.UUID,
+	googleSub string,
+	email string,
+) (*domain.User, error) {
+	const query = `
+		update users
+		set google_sub = $2,
+			email = $3
+		where id = $1
+		returning id, google_sub, email, password, full_name, role, created_at
+	`
+
+	q := extractTransaction(ctx, r.db)
+	var user domain.User
+	if err := sqlx.GetContext(ctx, q, &user, query, userID, googleSub, email); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+
+		return nil, err
+	}
+
+	return &user, nil
+}
+
 func (r *UsersRepository) UpdateProfile(
 	ctx context.Context,
 	userID uuid.UUID,

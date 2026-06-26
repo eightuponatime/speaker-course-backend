@@ -12,6 +12,7 @@ import (
 	"speaker_course/config"
 	"speaker_course/internal/domain"
 
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -232,6 +233,23 @@ func (s *AuthService) LoginWithGoogleCode(ctx context.Context, code string) (*Au
 	}
 
 	return &AuthResult{User: user, Session: session}, nil
+}
+
+func (s *AuthService) LinkGoogleCode(ctx context.Context, userID uuid.UUID, code string) (*domain.User, error) {
+	token, err := s.exchangeGoogleCode(ctx, code)
+	if err != nil {
+		return nil, err
+	}
+
+	info, err := s.fetchGoogleUserInfo(ctx, token.AccessToken)
+	if err != nil {
+		return nil, err
+	}
+	if info.Sub == "" || info.Email == "" || !info.EmailVerified {
+		return nil, fmt.Errorf("%w: google account email is not verified", ErrInvalidAuth)
+	}
+
+	return s.usersService.LinkGoogleIdentity(ctx, userID, info.Sub, info.Email)
 }
 
 func (s *AuthService) exchangeGoogleCode(ctx context.Context, code string) (*googleTokenResponse, error) {

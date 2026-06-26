@@ -12,9 +12,12 @@ import (
 	"speaker_course/internal/service"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 )
 
 const googleOAuthStateCookieName = "google_oauth_state"
+const googleOAuthModeCookieName = "google_oauth_mode"
+const googleOAuthModeLink = "link"
 
 type AuthHandler struct {
 	cfg             *config.Config
@@ -62,6 +65,7 @@ func (h *AuthHandler) RegisterRoutes(r chi.Router, authMiddleware *middlewarego.
 		r.Use(authMiddleware.RequireAuth())
 
 		r.Get("/auth/me", h.Me)
+		r.Get("/auth/google/link/start", h.GoogleLinkStart)
 		r.Patch("/auth/me", h.UpdateMe)
 		r.Patch("/auth/me/password", h.ChangePassword)
 		r.Delete("/auth/me", h.DeleteMe)
@@ -263,6 +267,25 @@ func (h *AuthHandler) GoogleStart(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.setOAuthStateCookie(w, state)
+	h.clearOAuthModeCookie(w)
+	http.Redirect(w, r, authURL, http.StatusFound)
+}
+
+func (h *AuthHandler) GoogleLinkStart(w http.ResponseWriter, r *http.Request) {
+	state, err := randomState()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	authURL, err := h.authService.GoogleAuthURL(state)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	h.setOAuthStateCookie(w, state)
+	h.setOAuthModeCookie(w, googleOAuthModeLink)
 	http.Redirect(w, r, authURL, http.StatusFound)
 }
 
@@ -275,6 +298,37 @@ func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 	h.clearOAuthStateCookie(w)
 
 	code := r.URL.Query().Get("code")
+	modeCookie, _ := r.Cookie(googleOAuthModeCookieName)
+	if modeCookie != nil && modeCookie.Value == googleOAuthModeLink {
+		h.clearOAuthModeCookie(w)
+
+		sessionCookie, err := r.Cookie(middlewarego.SessionCookieName)
+		if err != nil || sessionCookie.Value == "" {
+			writeError(w, http.StatusUnauthorized, service.ErrInvalidSession)
+			return
+		}
+
+		sessionID, err := uuid.Parse(sessionCookie.Value)
+		if err != nil {
+			writeError(w, http.StatusUnauthorized, service.ErrInvalidSession)
+			return
+		}
+
+		session, err := h.sessionsService.GetValidByID(r.Context(), sessionID)
+		if err != nil || session == nil {
+			writeError(w, http.StatusUnauthorized, service.ErrInvalidSession)
+			return
+		}
+
+		if _, err := h.authService.LinkGoogleCode(r.Context(), session.UserId, code); err != nil {
+			writeError(w, http.StatusBadRequest, err)
+			return
+		}
+
+		http.Redirect(w, r, h.cfg.FrontendURL, http.StatusFound)
+		return
+	}
+
 	result, err := h.authService.LoginWithGoogleCode(r.Context(), code)
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, err)
@@ -324,6 +378,30 @@ func (h *AuthHandler) setOAuthStateCookie(w http.ResponseWriter, value string) {
 func (h *AuthHandler) clearOAuthStateCookie(w http.ResponseWriter) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     googleOAuthStateCookieName,
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   h.cfg.Env != "development",
+	})
+}
+
+func (h *AuthHandler) setOAuthModeCookie(w http.ResponseWriter, value string) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     googleOAuthModeCookieName,
+		Value:    value,
+		Path:     "/",
+		MaxAge:   10 * 60,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   h.cfg.Env != "development",
+	})
+}
+
+func (h *AuthHandler) clearOAuthModeCookie(w http.ResponseWriter) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     googleOAuthModeCookieName,
 		Value:    "",
 		Path:     "/",
 		MaxAge:   -1,

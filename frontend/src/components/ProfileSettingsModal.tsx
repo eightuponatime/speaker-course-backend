@@ -172,7 +172,7 @@ export function ProfileSettingsModal({
               <>
                 <p className="profile-hint">Email обновляется через Google. Если он изменился в Google-аккаунте, обновите его через повторный Google-вход.</p>
                 {isGoogleAccount ? (
-                  <a className="profile-inline-link" href={`${apiBaseUrl}/auth/google/start`}>
+                  <a className="profile-inline-link" href={`${apiBaseUrl}/auth/google/link/start`}>
                     <RefreshCw size={17} />
                     Обновить email через Google
                   </a>

@@ -181,6 +181,55 @@ func (s *UsersService) SyncGoogleEmail(ctx context.Context, userID uuid.UUID, em
 	})
 }
 
+func (s *UsersService) LinkGoogleIdentity(
+	ctx context.Context,
+	userID uuid.UUID,
+	googleSub string,
+	email string,
+) (*domain.User, error) {
+	if userID == uuid.Nil {
+		return nil, fmt.Errorf("%w: id is empty", ErrInvalidUser)
+	}
+
+	googleSub = strings.TrimSpace(googleSub)
+	email = strings.TrimSpace(strings.ToLower(email))
+	if googleSub == "" {
+		return nil, fmt.Errorf("%w: google_sub is empty", ErrInvalidUser)
+	}
+	if email == "" {
+		return nil, fmt.Errorf("%w: email is empty", ErrInvalidUser)
+	}
+	if _, err := mail.ParseAddress(email); err != nil {
+		return nil, fmt.Errorf("%w: email is invalid", ErrInvalidUser)
+	}
+
+	user, err := s.rp.GetByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, fmt.Errorf("%w: user not found", ErrInvalidUser)
+	}
+
+	existingByGoogleSub, err := s.rp.GetByGoogleSub(ctx, googleSub)
+	if err != nil {
+		return nil, err
+	}
+	if existingByGoogleSub != nil && existingByGoogleSub.Id != userID {
+		return nil, fmt.Errorf("%w: google account is already linked to another user", ErrInvalidUser)
+	}
+
+	existingByEmail, err := s.rp.GetByEmail(ctx, email)
+	if err != nil {
+		return nil, err
+	}
+	if existingByEmail != nil && existingByEmail.Id != userID {
+		return nil, fmt.Errorf("%w: google email belongs to another account", ErrInvalidUser)
+	}
+
+	return s.rp.UpdateGoogleIdentity(ctx, userID, googleSub, email)
+}
+
 func (s *UsersService) ChangePassword(
 	ctx context.Context,
 	userID uuid.UUID,

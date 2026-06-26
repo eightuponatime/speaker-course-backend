@@ -1,4 +1,5 @@
-import { CheckCircle2, Eye } from "lucide-react";
+import { CheckCircle2, Eye, Menu, X } from "lucide-react";
+import { useState } from "react";
 
 import type { Course } from "../entities/course/course";
 import type { Notification } from "../entities/notification/notification";
@@ -38,11 +39,30 @@ export function CourseTopbar({
   onProfileOpen,
   onNotificationOpen
 }: CourseTopbarProps) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const statusText = activeTab === "curriculum" ? publishStatus || t("saved") : t("saved");
+
+  function selectTab(tab: CourseTopbarProps["activeTab"]) {
+    onTabChange(tab);
+    setMobileMenuOpen(false);
+  }
+
+  function runMobileAction(action: () => void) {
+    action();
+    setMobileMenuOpen(false);
+  }
 
   return (
     <header className="course-topbar">
       <div className="course-topbar-title-row">
+        <button
+          className="admin-menu-trigger"
+          type="button"
+          aria-label="Открыть меню админки"
+          onClick={() => setMobileMenuOpen(true)}
+        >
+          <Menu size={20} />
+        </button>
         <div className="course-title-button">
           <span>{course.title}</span>
         </div>
@@ -50,6 +70,9 @@ export function CourseTopbar({
         {course.status === "published" && hasUnpublishedChanges ? (
           <span className="course-changes-pill">{t("unpublishedChanges")}</span>
         ) : null}
+        <div className="mobile-notification-slot">
+          <NotificationBell emptyLabel={t("noNotifications")} onNotificationOpen={onNotificationOpen} />
+        </div>
       </div>
 
       <div className="course-topbar-bottom-row">
@@ -116,6 +139,60 @@ export function CourseTopbar({
           </button>
         </div>
       </div>
+
+      {mobileMenuOpen ? (
+        <div className="admin-mobile-menu-backdrop" onMouseDown={() => setMobileMenuOpen(false)}>
+          <aside className="admin-mobile-menu" onMouseDown={(event) => event.stopPropagation()}>
+            <header>
+              <div>
+                <span>Админ панель</span>
+                <strong>{course.title}</strong>
+              </div>
+              <button type="button" aria-label="Закрыть меню" onClick={() => setMobileMenuOpen(false)}>
+                <X size={20} />
+              </button>
+            </header>
+
+            <nav aria-label="Разделы админки">
+              <button className={activeTab === "curriculum" ? "active" : ""} type="button" onClick={() => selectTab("curriculum")}>
+                {t("curriculum")}
+              </button>
+              <button className={activeTab === "activity" ? "active" : ""} type="button" onClick={() => selectTab("activity")}>
+                Активность
+              </button>
+              <button className={activeTab === "requests" ? "active" : ""} type="button" onClick={() => selectTab("requests")}>
+                {t("requests")}
+                {pendingRequestsCount > 0 ? <span>{pendingRequestsCount}</span> : null}
+              </button>
+              <button className={activeTab === "privileges" ? "active" : ""} type="button" onClick={() => selectTab("privileges")}>
+                Права
+              </button>
+            </nav>
+
+            <div className="admin-mobile-menu-actions">
+              <button type="button" onClick={() => runMobileAction(onLandingOpen)}>
+                {t("backToLanding")}
+              </button>
+              <button type="button" onClick={() => runMobileAction(onPreview)}>
+                {t("preview")}
+              </button>
+              <button type="button" onClick={() => runMobileAction(onProfileOpen)}>
+                Профиль
+              </button>
+              <button
+                type="button"
+                disabled={isPublishing || !hasUnpublishedChanges}
+                onClick={() => runMobileAction(onPublish)}
+              >
+                {isPublishing ? t("publishing") : t("publish")}
+              </button>
+              <button type="button" onClick={() => runMobileAction(onLogout)}>
+                {t("logout")}
+              </button>
+            </div>
+          </aside>
+        </div>
+      ) : null}
     </header>
   );
 }

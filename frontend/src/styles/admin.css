@@ -128,6 +128,17 @@
   padding-bottom: 11px;
 }
 
+.admin-menu-trigger,
+.mobile-notification-slot,
+.mobile-lesson-picker-trigger {
+  display: none;
+}
+
+.admin-lesson-area {
+  min-width: 0;
+  min-height: 0;
+}
+
 .save-indicator,
 .preview-button {
   display: inline-flex;
@@ -1736,13 +1747,30 @@
     position: sticky;
     top: 0;
     z-index: 40;
-    grid-template-rows: auto auto;
-    padding: 10px 12px 8px;
+    grid-template-rows: auto;
+    padding: 10px 12px;
   }
 
   .course-topbar-title-row {
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr) auto auto;
     padding: 0;
+  }
+
+  .admin-menu-trigger {
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #d7dde7;
+    border-radius: 10px;
+    color: #263247;
+    background: #ffffff;
+  }
+
+  .mobile-notification-slot {
+    display: inline-flex;
   }
 
   .course-title-button span {
@@ -1752,9 +1780,7 @@
   }
 
   .course-topbar-bottom-row {
-    display: grid;
-    gap: 10px;
-    padding: 10px 0 0;
+    display: none;
   }
 
   .course-tabs {
@@ -1784,44 +1810,34 @@
     background: #eef4ff;
   }
 
-  .course-actions {
-    height: auto;
-    flex-wrap: wrap;
-    gap: 8px;
-    padding-bottom: 0;
-  }
-
-  .save-indicator,
-  .preview-button {
-    min-height: 34px;
-    border: 1px solid #d7dde7;
-    border-radius: 999px;
-    padding: 0 11px;
-    background: #ffffff;
-    font-size: 13px;
-  }
-
-  .publish-button {
-    height: 36px;
-    border-radius: 999px;
-    padding: 0 14px;
-    font-size: 13px;
-  }
-
   .page {
     min-height: 0;
     grid-template-columns: 1fr;
   }
 
-  .curriculum-sidebar {
-    position: relative;
-    max-height: none;
-    border-right: 0;
-    border-bottom: 1px solid #dbe1ea;
+  .page > .curriculum-sidebar {
+    display: none;
+  }
+
+  .mobile-lesson-picker-trigger {
+    width: calc(100% - 24px);
+    min-height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 12px;
+    border: 1px solid #cfd7e3;
+    border-radius: 8px;
+    color: #263247;
+    background: #ffffff;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 850;
   }
 
   .lesson-workspace {
     min-width: 0;
+    grid-template-columns: 1fr;
   }
 
   .student-activity-panel,
@@ -1853,6 +1869,134 @@
     width: calc(100vw - 24px);
     max-height: calc(100vh - 24px);
   }
+
+  .admin-mobile-menu-backdrop,
+  .mobile-lesson-picker-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 120;
+    background: rgba(15, 23, 42, 0.34);
+  }
+
+  .admin-mobile-menu,
+  .mobile-lesson-picker-panel {
+    width: min(340px, calc(100vw - 28px));
+    height: 100%;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    background: #ffffff;
+    box-shadow: 20px 0 70px rgba(15, 23, 42, 0.22);
+  }
+
+  .admin-mobile-menu header,
+  .mobile-lesson-picker-panel header {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 16px;
+  }
+
+  .admin-mobile-menu header span,
+  .admin-mobile-menu header strong,
+  .mobile-lesson-picker-panel header strong {
+    display: block;
+    min-width: 0;
+  }
+
+  .admin-mobile-menu header span {
+    color: #667085;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .admin-mobile-menu header strong,
+  .mobile-lesson-picker-panel header strong {
+    overflow: hidden;
+    color: #172033;
+    font-size: 17px;
+    font-weight: 850;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .admin-mobile-menu header button,
+  .mobile-lesson-picker-panel header button {
+    min-height: 36px;
+    border: 1px solid #d7dde7;
+    border-radius: 8px;
+    padding: 0 11px;
+    color: #263247;
+    background: #ffffff;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .admin-mobile-menu nav,
+  .admin-mobile-menu-actions {
+    display: grid;
+    align-content: start;
+    gap: 8px;
+    padding: 14px;
+  }
+
+  .admin-mobile-menu nav button,
+  .admin-mobile-menu-actions button {
+    min-height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0 12px;
+    color: #344054;
+    background: #ffffff;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 800;
+  }
+
+  .admin-mobile-menu nav button.active {
+    border-color: #2457d6;
+    color: #2457d6;
+    background: #eef4ff;
+  }
+
+  .admin-mobile-menu nav button span {
+    min-width: 22px;
+    height: 22px;
+    display: inline-grid;
+    place-items: center;
+    border-radius: 999px;
+    color: #ffffff;
+    background: #d92d20;
+    font-size: 12px;
+  }
+
+  .admin-mobile-menu-actions {
+    border-top: 1px solid #e2e8f0;
+  }
+
+  .admin-mobile-menu-actions button:disabled {
+    color: #98a2b3;
+    background: #eef1f5;
+  }
+
+  .mobile-lesson-picker-panel {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .mobile-lesson-picker-panel .curriculum-sidebar {
+    width: 100%;
+    display: block;
+    overflow-y: auto;
+    border-right: 0;
+  }
 }
 
 @media (max-width: 640px) {
@@ -1880,14 +2024,30 @@
   }
 
   .editor-holder {
-    padding: 14px 12px 80px;
+    padding: 14px 12px 92px;
   }
 
   .block-toolbar {
-    left: 12px;
-    right: 12px;
-    bottom: 12px;
+    position: sticky;
+    bottom: 0;
+    z-index: 30;
+    flex-direction: row;
     justify-content: space-between;
+    gap: 8px;
+    overflow-x: auto;
+    border-top: 1px solid #e2e8f0;
+    padding: 8px 12px;
+  }
+
+  .tool-group {
+    width: auto;
+    display: flex;
+    flex-direction: row;
+  }
+
+  .tool-group button {
+    width: 76px;
+    min-height: 58px;
   }
 
   .student-activity-summary,

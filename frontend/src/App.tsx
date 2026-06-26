@@ -55,6 +55,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<"curriculum" | "activity" | "requests" | "privileges">("curriculum");
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isLessonPickerOpen, setIsLessonPickerOpen] = useState(false);
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const editorRef = useRef<EditorJS | null>(null);
   const autosaveTimerRef = useRef<number | null>(null);
@@ -915,18 +916,49 @@ export default function App() {
               t={t}
             />
 
-            <LessonWorkspace
-              lesson={activeLesson}
-              onEditorReady={handleEditorReady}
-              onDebug={addDebug}
-              onUploadImage={handleInlineImageUpload}
-              onUploadPdf={handleInlinePdfUpload}
-              onUploadVideo={handleInlineVideoUpload}
-              onEditorChange={scheduleAutosave}
-              onRenameLesson={handleRenameLesson}
-              onInsertBlock={handleInsertBlock}
-              t={t}
-            />
+            <div className="admin-lesson-area">
+              <button className="mobile-lesson-picker-trigger" type="button" onClick={() => setIsLessonPickerOpen(true)}>
+                Выбрать урок
+              </button>
+              <LessonWorkspace
+                lesson={activeLesson}
+                onEditorReady={handleEditorReady}
+                onDebug={addDebug}
+                onUploadImage={handleInlineImageUpload}
+                onUploadPdf={handleInlinePdfUpload}
+                onUploadVideo={handleInlineVideoUpload}
+                onEditorChange={scheduleAutosave}
+                onRenameLesson={handleRenameLesson}
+                onInsertBlock={handleInsertBlock}
+                t={t}
+              />
+            </div>
+
+            {isLessonPickerOpen ? (
+              <div className="mobile-lesson-picker-backdrop" onMouseDown={() => setIsLessonPickerOpen(false)}>
+                <aside className="mobile-lesson-picker-panel" onMouseDown={(event) => event.stopPropagation()}>
+                  <header>
+                    <strong>Уроки курса</strong>
+                    <button type="button" onClick={() => setIsLessonPickerOpen(false)}>
+                      Закрыть
+                    </button>
+                  </header>
+                  <CurriculumSidebar
+                    curriculum={curriculum}
+                    activeLessonId={activeLessonId}
+                    onSelectLesson={(lessonId) => {
+                      setActiveLessonId(lessonId);
+                      setIsLessonPickerOpen(false);
+                    }}
+                    onAddSection={handleAddSection}
+                    onAddLesson={handleAddLesson}
+                    onMoveLesson={handleMoveLesson}
+                    onRenameSection={handleRenameSection}
+                    t={t}
+                  />
+                </aside>
+              </div>
+            ) : null}
           </div>
         ) : null}
         {activeTab === "activity" ? (

@@ -114,4 +114,8 @@ export type User = {
   email: string;
   full_name: string;
   role: "admin" | "member";
+  auth_provider?: "password" | "google" | "google_password";
+  can_change_email?: boolean;
+  can_change_password?: boolean;
+  created_at?: string;
 };

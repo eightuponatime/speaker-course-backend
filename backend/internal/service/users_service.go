@@ -118,6 +118,17 @@ func (s *UsersService) UpdateProfile(
 		return nil, fmt.Errorf("%w: full_name is empty", ErrInvalidUser)
 	}
 
+	user, err := s.rp.GetByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, fmt.Errorf("%w: user not found", ErrInvalidUser)
+	}
+	if user.GoogleSub != nil && input.Email != user.Email {
+		return nil, fmt.Errorf("%w: email cannot be changed for google account", ErrInvalidUser)
+	}
+
 	existing, err := s.rp.GetByEmail(ctx, input.Email)
 	if err != nil {
 		return nil, err

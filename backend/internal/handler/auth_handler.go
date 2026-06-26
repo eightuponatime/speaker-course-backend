@@ -24,6 +24,17 @@ type AuthHandler struct {
 	emailService    *service.EmailService
 }
 
+type authUserResponse struct {
+	Id                string          `json:"id"`
+	Email             string          `json:"email"`
+	FullName          string          `json:"full_name"`
+	Role              domain.UserRole `json:"role"`
+	AuthProvider      string          `json:"auth_provider"`
+	CanChangeEmail    bool            `json:"can_change_email"`
+	CanChangePassword bool            `json:"can_change_password"`
+	CreatedAt         time.Time       `json:"created_at"`
+}
+
 func NewAuthHandler(
 	cfg *config.Config,
 	authService *service.AuthService,
@@ -80,7 +91,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.setSessionCookie(w, result.Session.Id.String(), result.Session.ExpiresAt)
-	writeJSON(w, http.StatusCreated, result.User)
+	writeJSON(w, http.StatusCreated, buildAuthUserResponse(result.User))
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
@@ -103,7 +114,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.setSessionCookie(w, result.Session.Id.String(), result.Session.ExpiresAt)
-	writeJSON(w, http.StatusOK, result.User)
+	writeJSON(w, http.StatusOK, buildAuthUserResponse(result.User))
 }
 
 func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
@@ -157,7 +168,7 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, user)
+	writeJSON(w, http.StatusOK, buildAuthUserResponse(user))
 }
 
 func (h *AuthHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
@@ -189,7 +200,7 @@ func (h *AuthHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, user)
+	writeJSON(w, http.StatusOK, buildAuthUserResponse(user))
 }
 
 func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
@@ -329,6 +340,26 @@ func randomState() (string, error) {
 	}
 
 	return base64.RawURLEncoding.EncodeToString(bytes), nil
+}
+
+func buildAuthUserResponse(user *domain.User) authUserResponse {
+	provider := "password"
+	if user.GoogleSub != nil && user.Password == nil {
+		provider = "google"
+	} else if user.GoogleSub != nil && user.Password != nil {
+		provider = "google_password"
+	}
+
+	return authUserResponse{
+		Id:                user.Id.String(),
+		Email:             user.Email,
+		FullName:          user.FullName,
+		Role:              user.Role,
+		AuthProvider:      provider,
+		CanChangeEmail:    user.GoogleSub == nil,
+		CanChangePassword: user.Password != nil,
+		CreatedAt:         user.CreatedAt,
+	}
 }
 
 func randomTemporaryPassword() (string, error) {

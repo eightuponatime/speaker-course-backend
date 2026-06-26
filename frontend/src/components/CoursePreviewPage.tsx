@@ -9,6 +9,7 @@ import {
   saveMyLessonQuizResponse,
   trackCourseActivity
 } from "../api/courseDatasource";
+import { isExternalAuthSyncActive } from "../authSync";
 import logosVoiceLogo from "../../assets/images/transparent_logo.png";
 import type { CourseCurriculum, EditorContent, Lesson, LessonQuizResponseWithUser } from "../entities/course/course";
 import type { TranslationKey } from "../i18n";
@@ -204,6 +205,7 @@ export function CoursePreviewPage({
     const markOffline = () => {
       if (!activityOnlineRef.current) return;
       activityOnlineRef.current = false;
+      if (isExternalAuthSyncActive()) return;
       markCourseActivityOfflineKeepalive(curriculum.course.id);
     };
 

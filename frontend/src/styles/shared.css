@@ -1,3 +1,35 @@
+.auth-check-screen {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 18% 8%, rgba(255, 255, 255, 0.92), transparent 28rem),
+    radial-gradient(circle at 80% 18%, rgba(235, 226, 214, 0.7), transparent 34rem),
+    #f3eee7;
+}
+
+@keyframes imageSoftReveal {
+  from {
+    opacity: 0;
+    filter: blur(4px);
+  }
+
+  to {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+@keyframes heroImageReveal {
+  from {
+    opacity: 0;
+    filter: blur(8px) saturate(0.85) contrast(1.05);
+  }
+
+  to {
+    opacity: 1;
+    filter: blur(0) saturate(0.85) contrast(1.05);
+  }
+}
+
 .language-switcher {
   height: 34px;
   border: 1px solid rgba(43, 43, 43, 0.24);
@@ -200,9 +232,37 @@
 }
 
 .profile-form,
+.profile-summary,
 .profile-nested-dialog {
   display: grid;
   gap: 13px;
+}
+
+.profile-summary {
+  gap: 10px;
+}
+
+.profile-summary > div {
+  display: grid;
+  gap: 5px;
+  border: 1px solid #e3d8cb;
+  border-radius: 8px;
+  padding: 11px 12px;
+  background: #fffdf9;
+}
+
+.profile-summary span {
+  color: #867a6f;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.profile-summary strong {
+  color: #2d2924;
+  font-size: 15px;
+  line-height: 1.35;
 }
 
 .profile-form label,
@@ -226,6 +286,18 @@
   font: inherit;
 }
 
+.profile-form input:disabled {
+  color: #81786f;
+  background: #f3ede6;
+}
+
+.profile-hint {
+  margin: -2px 0 2px;
+  color: #716960;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .profile-actions-row {
   display: flex;
   align-items: center;
@@ -234,6 +306,7 @@
 }
 
 .profile-actions-row button,
+.profile-summary > button,
 .profile-nested-dialog > button,
 .profile-secondary-actions button {
   min-height: 44px;
@@ -250,7 +323,14 @@
   cursor: pointer;
 }
 
+.profile-actions-row button.secondary {
+  border-color: #d8d0c7;
+  color: #3e3933;
+  background: #fffdf9;
+}
+
 .profile-actions-row button:disabled,
+.profile-summary > button:disabled,
 .profile-nested-dialog > button:disabled,
 .profile-secondary-actions button:disabled {
   opacity: 0.58;
@@ -258,6 +338,7 @@
 }
 
 .profile-actions-row p,
+.profile-summary p,
 .profile-nested-dialog p {
   margin: 0;
   color: #716960;

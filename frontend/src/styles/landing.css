@@ -44,6 +44,7 @@
   border-radius: 50%;
   object-fit: cover;
   object-position: 50% 28%;
+  animation: imageSoftReveal 420ms ease both;
 }
 
 .landing-brand span {
@@ -230,6 +231,7 @@
   mix-blend-mode: multiply;
   filter: saturate(0.85) contrast(1.05);
   transform: translateX(-10px);
+  animation: heroImageReveal 620ms ease both;
 }
 
 .landing-auth {

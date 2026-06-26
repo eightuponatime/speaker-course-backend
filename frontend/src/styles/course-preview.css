@@ -43,6 +43,7 @@
   border-radius: 50%;
   object-fit: cover;
   object-position: 50% 28%;
+  animation: imageSoftReveal 420ms ease both;
 }
 
 .preview-brand span {

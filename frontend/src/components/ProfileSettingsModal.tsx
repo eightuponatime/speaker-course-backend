@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import { KeyRound, Trash2, X } from "lucide-react";
+import { Edit3, KeyRound, Trash2, X } from "lucide-react";
 
 import { changePassword, deleteMe, updateMe } from "../api/authDatasource";
 import type { User } from "../entities/course/course";
@@ -20,6 +20,7 @@ export function ProfileSettingsModal({
 }: ProfileSettingsModalProps) {
   const [email, setEmail] = useState(user.email);
   const [fullName, setFullName] = useState(user.full_name);
+  const [isEditing, setIsEditing] = useState(false);
   const [profileStatus, setProfileStatus] = useState("");
   const [profileSaving, setProfileSaving] = useState(false);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
@@ -35,22 +36,46 @@ export function ProfileSettingsModal({
   useEffect(() => {
     setEmail(user.email);
     setFullName(user.full_name);
+    setIsEditing(false);
   }, [user]);
+
+  const canChangeEmail = user.can_change_email !== false;
+  const canChangePassword = user.can_change_password === true;
+  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedFullName = fullName.trim();
+  const hasProfileChanges =
+    normalizedFullName !== user.full_name || (canChangeEmail && normalizedEmail !== user.email);
+  const canSaveProfile =
+    isEditing && hasProfileChanges && normalizedFullName.length > 0 && (!canChangeEmail || normalizedEmail.length > 0);
+  const authLabel = user.auth_provider === "google" ? "Google" : "Email и пароль";
 
   async function handleProfileSubmit(event: FormEvent) {
     event.preventDefault();
+    if (!canSaveProfile) return;
+
     setProfileSaving(true);
     setProfileStatus("");
 
     try {
-      const updated = await updateMe({ email, fullName });
+      const updated = await updateMe({
+        email: canChangeEmail ? normalizedEmail : user.email,
+        fullName: normalizedFullName
+      });
       onUserChange(updated);
       setProfileStatus("Профиль сохранен");
+      setIsEditing(false);
     } catch (err) {
       setProfileStatus(formatError(err));
     } finally {
       setProfileSaving(false);
     }
+  }
+
+  function cancelEditing() {
+    setEmail(user.email);
+    setFullName(user.full_name);
+    setProfileStatus("");
+    setIsEditing(false);
   }
 
   async function handlePasswordSubmit(event: FormEvent) {
@@ -105,33 +130,69 @@ export function ProfileSettingsModal({
           </button>
         </header>
 
-        <form className="profile-form" onSubmit={handleProfileSubmit}>
-          <label>
-            <span>Имя</span>
-            <input value={fullName} onChange={(event) => setFullName(event.target.value)} autoComplete="name" />
-          </label>
-          <label>
-            <span>Email</span>
-            <input
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              type="email"
-              autoComplete="email"
-            />
-          </label>
-          <div className="profile-actions-row">
-            <button type="submit" disabled={profileSaving}>
-              {profileSaving ? "Сохранение..." : "Сохранить"}
+        {!isEditing ? (
+          <section className="profile-summary">
+            <div>
+              <span>Имя</span>
+              <strong>{user.full_name}</strong>
+            </div>
+            <div>
+              <span>Email</span>
+              <strong>{user.email}</strong>
+            </div>
+            <div>
+              <span>Способ входа</span>
+              <strong>{authLabel}</strong>
+            </div>
+            <button type="button" onClick={() => setIsEditing(true)}>
+              <Edit3 size={17} />
+              Редактировать
             </button>
             {profileStatus ? <p>{profileStatus}</p> : null}
-          </div>
-        </form>
+          </section>
+        ) : (
+          <form className="profile-form" onSubmit={handleProfileSubmit}>
+            <label>
+              <span>Имя</span>
+              <input value={fullName} onChange={(event) => setFullName(event.target.value)} autoComplete="name" />
+            </label>
+            <label>
+              <span>Email</span>
+              <input
+                value={canChangeEmail ? email : user.email}
+                onChange={(event) => setEmail(event.target.value)}
+                type="email"
+                autoComplete="email"
+                disabled={!canChangeEmail}
+              />
+            </label>
+            {!canChangeEmail ? (
+              <p className="profile-hint">Email привязан к Google-входу. Чтобы не потерять доступ и прогресс, он не меняется в профиле.</p>
+            ) : null}
+            <div className="profile-actions-row">
+              <button type="submit" disabled={profileSaving || !canSaveProfile}>
+                {profileSaving ? "Сохранение..." : "Сохранить"}
+              </button>
+              <button className="secondary" type="button" disabled={profileSaving} onClick={cancelEditing}>
+                Отмена
+              </button>
+              {profileStatus ? <p>{profileStatus}</p> : null}
+            </div>
+          </form>
+        )}
 
         <div className="profile-secondary-actions">
-          <button type="button" onClick={() => setPasswordDialogOpen(true)}>
-            <KeyRound size={17} />
-            Изменить пароль
-          </button>
+          {canChangePassword ? (
+            <button type="button" onClick={() => setPasswordDialogOpen(true)}>
+              <KeyRound size={17} />
+              Изменить пароль
+            </button>
+          ) : (
+            <button type="button" disabled title="Пароль не используется для Google-входа">
+              <KeyRound size={17} />
+              Вход через Google
+            </button>
+          )}
           <button className="danger" type="button" onClick={() => setDeleteConfirmOpen(true)}>
             <Trash2 size={17} />
             Удалить аккаунт

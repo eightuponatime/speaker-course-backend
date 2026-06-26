@@ -35,6 +35,7 @@ import type { BlockType } from "./components/BlockToolbar";
 import type { CourseCurriculum, EditorContent, Lesson, User } from "./entities/course/course";
 import type { StreamVideoStatus } from "./entities/media/media";
 import { translate } from "./i18n";
+import { markExternalAuthSyncActive, notifyAuthChanged, subscribeToAuthChanges } from "./authSync";
 
 export default function App() {
   const [path, setPath] = useState(window.location.pathname);
@@ -99,6 +100,38 @@ export default function App() {
     }
   }
 
+  const resetAuthenticatedState = useCallback(() => {
+    setCurrentUser(null);
+    setCurriculum(null);
+    setIsPreviewing(false);
+    setIsProfileOpen(false);
+    setError("");
+  }, []);
+
+  const refreshAuthenticatedUser = useCallback(async () => {
+    try {
+      const user = await getMe();
+      setCurrentUser(user);
+      setError("");
+      if (user.role === "admin") {
+        loadCurriculum(undefined, true);
+      } else {
+        setCurriculum(null);
+        setIsPreviewing(false);
+        if (window.location.pathname.startsWith("/admin")) {
+          navigate("/");
+        }
+      }
+    } catch {
+      resetAuthenticatedState();
+      if (window.location.pathname.startsWith("/admin")) {
+        navigate("/");
+      }
+    } finally {
+      setAuthChecked(true);
+    }
+  }, [navigate, resetAuthenticatedState]);
+
   useEffect(() => {
     const onPopState = () => setPath(window.location.pathname);
     window.addEventListener("popstate", onPopState);
@@ -109,21 +142,17 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    getMe()
-      .then((user) => {
-        setCurrentUser(user);
-        if (user.role === "admin") {
-          loadCurriculum(undefined, true);
-        }
-      })
-      .catch(() => {
-        setCurrentUser(null);
-        if (isAdminRoute) {
-          setError("Please sign in as admin");
-        }
-      })
-      .finally(() => setAuthChecked(true));
-  }, []);
+    void refreshAuthenticatedUser().then(() => {
+      notifyAuthChanged("session");
+    });
+  }, [refreshAuthenticatedUser]);
+
+  useEffect(() => {
+    return subscribeToAuthChanges(() => {
+      markExternalAuthSyncActive();
+      void refreshAuthenticatedUser();
+    });
+  }, [refreshAuthenticatedUser]);
 
   useEffect(() => {
     if (autosaveTimerRef.current) {
@@ -585,6 +614,7 @@ export default function App() {
     if (user.role === "admin") {
       loadCurriculum(undefined, true);
     }
+    notifyAuthChanged("login");
   }
 
   async function handleLogin(event: React.FormEvent) {
@@ -608,6 +638,7 @@ export default function App() {
       if (user.role === "admin") {
         loadCurriculum(undefined, true);
       }
+      notifyAuthChanged("login");
       return user;
     } catch (err) {
       setError(formatError(err));
@@ -617,21 +648,16 @@ export default function App() {
 
   async function handleLogout() {
     await logoutUser().catch(() => undefined);
-    setCurrentUser(null);
-    setCurriculum(null);
-    setIsPreviewing(false);
-    setError("");
+    resetAuthenticatedState();
+    notifyAuthChanged("logout");
     if (path.startsWith("/admin")) {
       navigate("/");
     }
   }
 
   function handleAccountDeleted() {
-    setIsProfileOpen(false);
-    setCurrentUser(null);
-    setCurriculum(null);
-    setIsPreviewing(false);
-    setError("");
+    resetAuthenticatedState();
+    notifyAuthChanged("delete");
     navigate("/");
   }
 
@@ -642,7 +668,10 @@ export default function App() {
       <ProfileSettingsModal
         user={currentUser}
         onClose={() => setIsProfileOpen(false)}
-        onUserChange={setCurrentUser}
+        onUserChange={(user) => {
+          setCurrentUser(user);
+          notifyAuthChanged("profile");
+        }}
         onAccountDeleted={handleAccountDeleted}
       />
     );
@@ -702,11 +731,7 @@ export default function App() {
   }
 
   if (!authChecked) {
-    return (
-      <main className="page">
-        <div className="loading-box">{t("checkingSession")}</div>
-      </main>
-    );
+    return <main className="auth-check-screen" aria-hidden="true" />;
   }
 
   if (!currentUser && !isAdminRoute) {

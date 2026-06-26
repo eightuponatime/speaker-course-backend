@@ -728,9 +728,17 @@ export default function App() {
     });
   }
 
-  function handleAdminNotificationOpen(notification: Notification) {
+  function handleNotificationOpen(notification: Notification) {
     if (notification.type === "course_enrollment_requested") {
       setActiveTab("requests");
+      if (!window.location.pathname.startsWith("/admin")) {
+        navigate("/admin");
+      }
+      return;
+    }
+
+    if (notification.type === "course_access_approved" || notification.type === "course_access_restored") {
+      navigate("/course");
     }
   }
 
@@ -793,6 +801,7 @@ export default function App() {
           onLogout={handleLogout}
           onOpenCourse={() => navigate("/course")}
           onProfileOpen={() => setIsProfileOpen(true)}
+          onNotificationOpen={handleNotificationOpen}
         />
         {renderProfileModal()}
       </>
@@ -888,7 +897,7 @@ export default function App() {
           onPreview={() => setIsPreviewing(true)}
           onPublish={handlePublish}
           onProfileOpen={() => setIsProfileOpen(true)}
-          onNotificationOpen={handleAdminNotificationOpen}
+          onNotificationOpen={handleNotificationOpen}
         />
         {activeTab === "curriculum" ? (
           <div className="page">

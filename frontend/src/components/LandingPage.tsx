@@ -25,6 +25,7 @@ import { apiBaseUrl } from "../api/http";
 import logosVoiceLogo from "../../assets/images/transparent_logo.png";
 import type { CourseProgramSection } from "../api/courseDatasource";
 import type { Course, CourseEnrollment, User } from "../entities/course/course";
+import type { Notification } from "../entities/notification/notification";
 import type { TranslationKey } from "../i18n";
 import { NotificationBell } from "./NotificationBell";
 
@@ -38,6 +39,7 @@ type LandingPageProps = {
   onLogout?: () => void;
   onOpenCourse?: () => void;
   onProfileOpen?: () => void;
+  onNotificationOpen?: (notification: Notification) => void;
 };
 
 export function LandingPage({
@@ -49,7 +51,8 @@ export function LandingPage({
   onAdminOpen,
   onLogout,
   onOpenCourse,
-  onProfileOpen
+  onProfileOpen,
+  onNotificationOpen
 }: LandingPageProps) {
   const [course, setCourse] = useState<Course | null>(null);
   const [enrollment, setEnrollment] = useState<CourseEnrollment | null>(null);
@@ -358,7 +361,7 @@ export function LandingPage({
         <div className="landing-nav-actions">
           {currentUser ? (
             <>
-              <NotificationBell emptyLabel={t("noNotifications")} />
+              <NotificationBell emptyLabel={t("noNotifications")} onNotificationOpen={onNotificationOpen} />
               {onAdminOpen ? (
                 <button className="landing-nav-button" type="button" onClick={onAdminOpen}>
                   {t("adminPanel")}

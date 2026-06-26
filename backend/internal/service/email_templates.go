@@ -78,6 +78,24 @@ func EnrollmentRequestedEmail(to string, fullName string, courseTitle string) Se
 	})
 }
 
+func AdminEnrollmentRequestedEmail(to string, adminName string, studentName string, studentEmail string, courseTitle string, adminURL string) SendEmailInput {
+	studentName = strings.TrimSpace(studentName)
+	if studentName == "" {
+		studentName = studentEmail
+	}
+
+	body := `Поступила новая заявка на курс "` + courseTitle + `" от ` + studentName + ` (` + studentEmail + `).`
+	return templatedEmail(to, emailTemplateData{
+		Title:       "Новая заявка на курс",
+		Preheader:   "В админ-панели ожидает новая заявка.",
+		Greeting:    greetingFor(adminName),
+		Body:        body,
+		ButtonLabel: "Открыть заявки",
+		ButtonURL:   adminURL,
+		Note:        "Письмо отправлено только реальным администраторам. Технический аккаунт Logos Voice не получает уведомления.",
+	})
+}
+
 func EnrollmentReviewedEmail(to string, fullName string, courseTitle string, status string) SendEmailInput {
 	title := "Статус доступа к курсу обновлен"
 	body := `Статус вашей заявки на курс "` + courseTitle + `" обновлен.`

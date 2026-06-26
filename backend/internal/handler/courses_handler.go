@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"speaker_course/config"
 	"speaker_course/internal/domain"
 	middlewarego "speaker_course/internal/middleware.go"
 	"speaker_course/internal/service"
@@ -16,6 +17,7 @@ import (
 )
 
 type CoursesHandler struct {
+	cfg                  *config.Config
 	coursesService       *service.CoursesService
 	enrollmentsService   *service.EnrollmentsService
 	notificationsService *service.NotificationsService
@@ -26,6 +28,7 @@ type CoursesHandler struct {
 }
 
 func NewCoursesHandler(
+	cfg *config.Config,
 	coursesService *service.CoursesService,
 	enrollmentsService *service.EnrollmentsService,
 	notificationsService *service.NotificationsService,
@@ -35,6 +38,7 @@ func NewCoursesHandler(
 	emailService *service.EmailService,
 ) *CoursesHandler {
 	return &CoursesHandler{
+		cfg:                  cfg,
 		coursesService:       coursesService,
 		enrollmentsService:   enrollmentsService,
 		notificationsService: notificationsService,
@@ -1064,6 +1068,13 @@ func (h *CoursesHandler) notifyAdminsAboutEnrollmentRequest(
 	if err != nil {
 		return
 	}
+	student, _ := h.usersService.GetByID(ctx, actorID)
+	studentEmail := ""
+	studentName := ""
+	if student != nil {
+		studentEmail = student.Email
+		studentName = student.FullName
+	}
 
 	for _, admin := range admins {
 		if admin.Id == actorID || admin.Email == "system@logos-voice.local" {
@@ -1079,6 +1090,14 @@ func (h *CoursesHandler) notifyAdminsAboutEnrollmentRequest(
 			Title:        "New course access request",
 			Body:         "A student requested access to " + courseTitle + ".",
 		})
+		_ = h.emailService.Send(ctx, service.AdminEnrollmentRequestedEmail(
+			admin.Email,
+			admin.FullName,
+			studentName,
+			studentEmail,
+			courseTitle,
+			h.cfg.FrontendURL+"/admin",
+		))
 	}
 }
 

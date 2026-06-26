@@ -4,7 +4,9 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 	"net/http"
+	"net/url"
 	"time"
 
 	"speaker_course/config"
@@ -359,8 +361,19 @@ func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.authService.LoginWithGoogleCode(r.Context(), code)
+	var result *service.AuthResult
+	if modeCookie != nil && modeCookie.Value == googleOAuthModeEnroll {
+		result, err = h.authService.RegisterOrLoginWithGoogleCode(r.Context(), code)
+	} else {
+		result, err = h.authService.LoginWithGoogleCode(r.Context(), code)
+	}
 	if err != nil {
+		if errors.Is(err, service.ErrGoogleAccountNotFound) {
+			h.clearOAuthModeCookie(w)
+			http.Redirect(w, r, h.frontendURLWithError("google_account_not_found"), http.StatusFound)
+			return
+		}
+
 		writeError(w, http.StatusUnauthorized, err)
 		return
 	}
@@ -448,6 +461,19 @@ func (h *AuthHandler) clearOAuthModeCookie(w http.ResponseWriter) {
 	})
 }
 
+func (h *AuthHandler) frontendURLWithError(code string) string {
+	frontendURL := h.cfg.FrontendURL
+	parsedURL, err := url.Parse(frontendURL)
+	if err != nil {
+		return frontendURL
+	}
+
+	query := parsedURL.Query()
+	query.Set("auth_error", code)
+	parsedURL.RawQuery = query.Encode()
+	return parsedURL.String()
+}
+
 func randomState() (string, error) {
 	bytes := make([]byte, 32)
 	if _, err := rand.Read(bytes); err != nil {
@@ -527,6 +553,13 @@ func (h *AuthHandler) notifyAdminsAboutEnrollmentRequest(
 	if err != nil {
 		return
 	}
+	student, _ := h.usersService.GetByID(ctx, actorID)
+	studentEmail := ""
+	studentName := ""
+	if student != nil {
+		studentEmail = student.Email
+		studentName = student.FullName
+	}
 
 	for _, admin := range admins {
 		if admin.Id == actorID || admin.Email == "system@logos-voice.local" {
@@ -542,6 +575,14 @@ func (h *AuthHandler) notifyAdminsAboutEnrollmentRequest(
 			Title:        "New course access request",
 			Body:         "A student requested access to " + courseTitle + ".",
 		})
+		_ = h.emailService.Send(ctx, service.AdminEnrollmentRequestedEmail(
+			admin.Email,
+			admin.FullName,
+			studentName,
+			studentEmail,
+			courseTitle,
+			h.cfg.FrontendURL+"/admin",
+		))
 	}
 }
 

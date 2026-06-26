@@ -43,7 +43,7 @@ export default function App() {
   const isCourseRoute = path.startsWith("/course");
   const [curriculum, setCurriculum] = useState<CourseCurriculum | null>(null);
   const [activeLessonId, setActiveLessonId] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState(() => readAuthErrorFromURL());
   const [authChecked, setAuthChecked] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [email, setEmail] = useState("");
@@ -135,6 +135,7 @@ export default function App() {
   useEffect(() => {
     const onPopState = () => setPath(window.location.pathname);
     window.addEventListener("popstate", onPopState);
+    clearAuthErrorFromURL();
 
     return () => {
       window.removeEventListener("popstate", onPopState);
@@ -1097,6 +1098,26 @@ function humanizeError(message: string): string {
   }
 
   return message;
+}
+
+function readAuthErrorFromURL(): string {
+  const params = new URLSearchParams(window.location.search);
+  const authError = params.get("auth_error");
+  if (authError === "google_account_not_found") {
+    return "Аккаунт с таким Google еще не зарегистрирован. Чтобы отправить заявку, используйте «Записаться через Google».";
+  }
+
+  return "";
+}
+
+function clearAuthErrorFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  if (!params.has("auth_error")) return;
+
+  params.delete("auth_error");
+  const nextSearch = params.toString();
+  const nextURL = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`;
+  window.history.replaceState(null, "", nextURL);
 }
 
 function normalizeCurriculum(curriculum: CourseCurriculum): CourseCurriculum {

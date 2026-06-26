@@ -74,7 +74,16 @@ func main() {
 		notificationsService,
 		emailService,
 	)
-	coursesHandler := handler.NewCoursesHandler(coursesService, enrollmentsService, notificationsService, quizResponsesService, activityService, usersService, emailService)
+	coursesHandler := handler.NewCoursesHandler(
+		cfg,
+		coursesService,
+		enrollmentsService,
+		notificationsService,
+		quizResponsesService,
+		activityService,
+		usersService,
+		emailService,
+	)
 	mediaHandler := handler.NewMediaHandler(mediaService)
 	notificationsHandler := handler.NewNotificationsHandler(notificationsService)
 

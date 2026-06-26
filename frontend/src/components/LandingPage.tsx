@@ -72,6 +72,15 @@ export function LandingPage({
   }, []);
 
   useEffect(() => {
+    if (!isGoogleAccountNotFoundError(error)) return;
+
+    setMode("register");
+    setLoginDialogOpen(false);
+    setForgotStatus("");
+    setAccessError("");
+  }, [error]);
+
+  useEffect(() => {
     let cancelled = false;
 
     async function loadEnrollment() {
@@ -609,6 +618,10 @@ function enrollmentText(status: CourseEnrollment["status"], t: (key: Translation
 
 function formatError(err: unknown): string {
   return err instanceof Error ? err.message : "Request failed";
+}
+
+function isGoogleAccountNotFoundError(error: string): boolean {
+  return error.includes("Аккаунт с таким Google еще не зарегистрирован");
 }
 
 function GoogleIcon() {

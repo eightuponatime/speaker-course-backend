@@ -17,6 +17,7 @@ import (
 )
 
 var ErrInvalidAuth = errors.New("invalid auth")
+var ErrGoogleAccountNotFound = errors.New("google account is not registered")
 
 type AuthService struct {
 	cfg             *config.Config
@@ -165,6 +166,14 @@ func (s *AuthService) GoogleAuthURL(state string) (string, error) {
 }
 
 func (s *AuthService) LoginWithGoogleCode(ctx context.Context, code string) (*AuthResult, error) {
+	return s.loginWithGoogleCode(ctx, code, false)
+}
+
+func (s *AuthService) RegisterOrLoginWithGoogleCode(ctx context.Context, code string) (*AuthResult, error) {
+	return s.loginWithGoogleCode(ctx, code, true)
+}
+
+func (s *AuthService) loginWithGoogleCode(ctx context.Context, code string, allowCreate bool) (*AuthResult, error) {
 	code = strings.TrimSpace(code)
 	if code == "" {
 		return nil, fmt.Errorf("%w: oauth code is empty", ErrInvalidAuth)
@@ -196,6 +205,10 @@ func (s *AuthService) LoginWithGoogleCode(ctx context.Context, code string) (*Au
 	}
 
 	if user == nil {
+		if !allowCreate {
+			return nil, ErrGoogleAccountNotFound
+		}
+
 		googleSub := info.Sub
 		fullName := strings.TrimSpace(info.Name)
 		if fullName == "" {

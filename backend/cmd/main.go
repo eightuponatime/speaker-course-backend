@@ -103,6 +103,7 @@ func main() {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
+	registerSPAEntry(router, "/admin", "/app/public")
 	authHandler.RegisterRoutes(router, authMiddleware)
 	coursesHandler.RegisterRoutes(router, authMiddleware)
 	mediaHandler.RegisterRoutes(router, authMiddleware)
@@ -114,6 +115,17 @@ func main() {
 		log.Fatalf("server failed: %v", err)
 	}
 
+}
+
+func registerSPAEntry(router chi.Router, route string, root string) {
+	indexPath := filepath.Join(root, "index.html")
+	if _, err := os.Stat(indexPath); err != nil {
+		return
+	}
+
+	router.Get(route, func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, indexPath)
+	})
 }
 
 func registerStaticFiles(router chi.Router, root string) {

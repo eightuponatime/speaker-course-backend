@@ -1860,11 +1860,6 @@
     width: 100%;
   }
 
-  .privileges-table,
-  .student-activity-table {
-    min-width: 860px;
-  }
-
   .admin-dialog {
     width: calc(100vw - 24px);
     max-height: calc(100vh - 24px);
@@ -2000,6 +1995,265 @@
 }
 
 @media (max-width: 640px) {
+  .admin-section-heading.compact {
+    gap: 10px;
+  }
+
+  .admin-section-heading.compact h1 {
+    font-size: 24px;
+    line-height: 1.12;
+  }
+
+  .admin-section-heading.compact p {
+    font-size: 14px;
+    line-height: 1.35;
+  }
+
+  .privileges-chip-row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
+  .privileges-chip-row button {
+    flex: 0 0 auto;
+  }
+
+  .privileges-summary {
+    display: grid;
+  }
+
+  .privileges-summary span {
+    width: 100%;
+  }
+
+  .privileges-table-wrap {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+
+  .privileges-table,
+  .privileges-table thead,
+  .privileges-table tbody,
+  .privileges-table tr,
+  .privileges-table td {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .privileges-table thead {
+    display: none;
+  }
+
+  .privileges-table tr {
+    margin-bottom: 10px;
+    border: 1px solid #dbe1ea;
+    border-radius: 8px;
+    background: #ffffff;
+    overflow: hidden;
+  }
+
+  .privileges-table tr.pending td {
+    background: transparent;
+  }
+
+  .privileges-table tr.pending {
+    background: #fffaf0;
+  }
+
+  .privileges-table td {
+    border-bottom: 1px solid #edf0f4;
+    padding: 10px 12px;
+  }
+
+  .privileges-table td:last-child {
+    border-bottom: 0;
+  }
+
+  .privileges-table td:nth-child(1)::before {
+    content: "Пользователь";
+  }
+
+  .privileges-table td:nth-child(2)::before {
+    content: "Роль";
+  }
+
+  .privileges-table td:nth-child(3)::before {
+    content: "Вход";
+  }
+
+  .privileges-table td:nth-child(4)::before {
+    content: "Заявка";
+  }
+
+  .privileges-table td:nth-child(5)::before {
+    content: "Дата";
+  }
+
+  .privileges-table td:nth-child(n + 2)::before {
+    display: block;
+    margin-bottom: 4px;
+    color: #667085;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .privileges-actions button {
+    width: 100%;
+  }
+
+  .requests-toolbar {
+    display: grid;
+    gap: 10px;
+  }
+
+  .status-segments {
+    width: 100%;
+    overflow-x: auto;
+    border-radius: 8px;
+  }
+
+  .status-segments button {
+    flex: 0 0 auto;
+    height: 42px;
+    padding: 0 14px;
+  }
+
+  .requests-toolbar .secondary-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .enrollment-list {
+    width: 100%;
+  }
+
+  .enrollment-row,
+  .expired-access-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .enrollment-meta {
+    border-top: 1px solid #edf0f4;
+    padding-top: 10px;
+  }
+
+  .enrollment-actions {
+    justify-content: stretch;
+  }
+
+  .enrollment-actions button,
+  .extend-actions label,
+  .extend-actions input {
+    width: 100%;
+  }
+
+  .student-activity-header {
+    gap: 10px;
+  }
+
+  .student-activity-header h1 {
+    font-size: 22px;
+    line-height: 1.16;
+  }
+
+  .student-activity-header .secondary-button,
+  .student-activity-summary {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .student-activity-table {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+
+  .student-activity-head {
+    display: none;
+  }
+
+  .student-activity-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+    margin-bottom: 10px;
+    border: 1px solid #dbe1ea;
+    border-radius: 8px;
+    padding: 0;
+    background: #ffffff;
+    overflow: hidden;
+  }
+
+  .student-activity-row > div {
+    border-bottom: 1px solid #edf0f4;
+    padding: 10px 12px;
+  }
+
+  .student-activity-row > div:nth-child(1)::before {
+    content: "Ученик";
+  }
+
+  .student-activity-row > div:nth-child(2)::before {
+    content: "Статус";
+  }
+
+  .student-activity-row > div:nth-child(3)::before {
+    content: "Последний урок";
+  }
+
+  .student-activity-row > div:nth-child(4)::before {
+    content: "Прогресс";
+  }
+
+  .student-activity-row > div:nth-child(5)::before {
+    content: "Доступ";
+  }
+
+  .student-activity-row > div:nth-child(6)::before {
+    content: "Последний вход";
+  }
+
+  .student-activity-row > div:nth-child(7)::before {
+    content: "Активность";
+  }
+
+  .student-activity-row > div::before {
+    display: block;
+    margin-bottom: 4px;
+    color: #667085;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .student-activity-row .secondary-button {
+    width: calc(100% - 24px);
+    margin: 10px 12px 12px;
+  }
+
+  .student-activity-row strong,
+  .student-activity-row span {
+    white-space: normal;
+  }
+
+  .lesson-history-head {
+    display: none;
+  }
+
+  .lesson-history-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
   .course-actions .save-indicator {
     display: none;
   }
@@ -2050,8 +2304,7 @@
     min-height: 58px;
   }
 
-  .student-activity-summary,
-  .privileges-summary span {
+  .student-activity-summary {
     width: 100%;
   }
 }

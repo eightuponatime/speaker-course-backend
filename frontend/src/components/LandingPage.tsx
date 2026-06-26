@@ -42,6 +42,7 @@ type LandingPageProps = {
   onOpenCourse?: () => void;
   onProfileOpen?: () => void;
   onNotificationOpen?: (notification: Notification) => void;
+  onClearError?: () => void;
 };
 
 export function LandingPage({
@@ -54,7 +55,8 @@ export function LandingPage({
   onLogout,
   onOpenCourse,
   onProfileOpen,
-  onNotificationOpen
+  onNotificationOpen,
+  onClearError
 }: LandingPageProps) {
   const [course, setCourse] = useState<Course | null>(null);
   const [enrollment, setEnrollment] = useState<CourseEnrollment | null>(null);
@@ -90,6 +92,7 @@ export function LandingPage({
     if (!isGoogleAccountNotFoundError(error)) return;
 
     setMode("register");
+    onClearError?.();
     setLoginDialogOpen(false);
     setForgotStatus("");
     setForgotSuccess(false);
@@ -243,6 +246,7 @@ export function LandingPage({
 
   function scrollToRegistration() {
     setMode("register");
+    onClearError?.();
     setLoginDialogOpen(false);
     window.setTimeout(() => {
       document.getElementById("landing-application")?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -252,6 +256,13 @@ export function LandingPage({
   const courseTitle = "Курсы ораторского мастерства";
   const courseDescription = "Риторика • Влияние • Публичная речь";
   const currentYear = new Date().getFullYear();
+  const canSubmitAuth =
+    mode === "login"
+      ? loginEmail.trim().length > 0 && loginPassword.length > 0
+      : registerEmail.trim().length > 0 && registerPassword.length > 0 && registerFullName.trim().length > 0;
+  const canSubmitDialogLogin = dialogEmail.trim().length > 0 && dialogPassword.length > 0;
+  const authError = formatUserFacingError(error);
+  const accessDisplayError = formatUserFacingError(accessError);
   const authForm = (
     <>
       <div className="landing-auth-header">
@@ -264,10 +275,24 @@ export function LandingPage({
       </div>
 
       <div className="landing-auth-tabs">
-        <button className={mode === "login" ? "active" : ""} type="button" onClick={() => setMode("login")}>
+        <button
+          className={mode === "login" ? "active" : ""}
+          type="button"
+          onClick={() => {
+            setMode("login");
+            onClearError?.();
+          }}
+        >
           {t("signIn")}
         </button>
-        <button className={mode === "register" ? "active" : ""} type="button" onClick={() => setMode("register")}>
+        <button
+          className={mode === "register" ? "active" : ""}
+          type="button"
+          onClick={() => {
+            setMode("register");
+            onClearError?.();
+          }}
+        >
           {t("requestAccess")}
         </button>
       </div>
@@ -284,6 +309,7 @@ export function LandingPage({
               } else {
                 setRegisterEmail(event.target.value);
               }
+              onClearError?.();
             }}
             type="email"
           />
@@ -300,6 +326,7 @@ export function LandingPage({
               } else {
                 setRegisterPassword(value);
               }
+              onClearError?.();
             }}
             visible={mode === "login" ? showLoginPassword : showRegisterPassword}
             onToggle={() => {
@@ -318,12 +345,15 @@ export function LandingPage({
             autoComplete="name"
             tabIndex={mode === "register" ? 0 : -1}
             value={registerFullName}
-            onChange={(event) => setRegisterFullName(event.target.value)}
+            onChange={(event) => {
+              setRegisterFullName(event.target.value);
+              onClearError?.();
+            }}
           />
         </label>
       </div>
 
-      <button type="submit" disabled={submitting}>
+      <button type="submit" disabled={submitting || !canSubmitAuth}>
         {submitting ? t("wait") : mode === "login" ? t("enterCourse") : "Оставить заявку"}
       </button>
       {mode === "login" ? (
@@ -338,7 +368,7 @@ export function LandingPage({
         <GoogleIcon />
         {mode === "register" ? "Записаться через Google" : t("continueWithGoogle")}
       </a>
-      {error ? <p>{error}</p> : null}
+      {authError ? <AuthAlert message={authError} /> : null}
     </>
   );
   const loginDialogForm = (
@@ -351,7 +381,15 @@ export function LandingPage({
       <div className="landing-field-stack">
         <label>
           <span>{t("email")}</span>
-          <input autoComplete="email" value={dialogEmail} onChange={(event) => setDialogEmail(event.target.value)} type="email" />
+          <input
+            autoComplete="email"
+            value={dialogEmail}
+            onChange={(event) => {
+              setDialogEmail(event.target.value);
+              onClearError?.();
+            }}
+            type="email"
+          />
         </label>
 
         <label>
@@ -359,14 +397,17 @@ export function LandingPage({
           <PasswordInput
             autoComplete="current-password"
             value={dialogPassword}
-            onChange={setDialogPassword}
+            onChange={(value) => {
+              setDialogPassword(value);
+              onClearError?.();
+            }}
             visible={showDialogPassword}
             onToggle={() => setShowDialogPassword((value) => !value)}
           />
         </label>
       </div>
 
-      <button type="submit" disabled={submitting}>
+      <button type="submit" disabled={submitting || !canSubmitDialogLogin}>
         {submitting ? t("wait") : t("enterCourse")}
       </button>
       <button className="landing-forgot-button" type="button" onClick={() => openForgotPassword(dialogEmail)}>
@@ -379,7 +420,7 @@ export function LandingPage({
       <button className="landing-auth-switch" type="button" onClick={scrollToRegistration}>
         Нет аккаунта? Запишитесь на курс
       </button>
-      {error ? <p>{error}</p> : null}
+      {authError ? <AuthAlert message={authError} /> : null}
     </>
   );
 
@@ -505,7 +546,7 @@ export function LandingPage({
               </>
             )}
 
-            {accessError ? <p>{accessError}</p> : null}
+            {accessDisplayError ? <AuthAlert message={accessDisplayError} /> : null}
           </section>
         ) : (
           <form
@@ -571,7 +612,9 @@ export function LandingPage({
               {forgotSubmitting ? t("wait") : "Отправить временный пароль"}
             </button>
             {forgotStatus ? (
-              <p className={forgotSuccess ? "landing-forgot-success" : "landing-forgot-error"}>{forgotStatus}</p>
+              <p className={forgotSuccess ? "landing-forgot-success" : "landing-forgot-error"}>
+                {formatUserFacingError(forgotStatus)}
+              </p>
             ) : null}
           </form>
         </div>
@@ -707,6 +750,43 @@ function formatError(err: unknown): string {
   return err instanceof Error ? err.message : "Request failed";
 }
 
+function formatUserFacingError(message: string): string {
+  const normalized = extractServerError(message).trim();
+  if (!normalized) return "";
+
+  const lower = normalized.toLowerCase();
+
+  if (lower.includes("email is empty")) return "Введите email.";
+  if (lower.includes("password is empty")) return "Введите пароль.";
+  if (lower.includes("full name") && lower.includes("empty")) return "Введите имя.";
+  if (lower.includes("email or password is incorrect")) return "Email или пароль указаны неверно.";
+  if (lower.includes("password must contain at least 8 characters")) return "Пароль должен быть не короче 8 символов.";
+  if (lower.includes("email already exists") || lower.includes("duplicate key")) return "Аккаунт с таким email уже существует.";
+  if (lower.includes("google account is not registered")) {
+    return "Аккаунт с таким Google еще не зарегистрирован. Перейдите во вкладку записи.";
+  }
+  if (lower.includes("forbidden")) return "Недостаточно прав для этого действия.";
+  if (lower.includes("unauthorized")) return "Сессия истекла. Войдите снова.";
+  if (lower.includes("failed to fetch")) return "Не удалось связаться с сервером. Проверьте подключение и попробуйте еще раз.";
+  if (lower.includes("request failed")) return "Не удалось выполнить запрос. Попробуйте еще раз.";
+
+  return normalized;
+}
+
+function extractServerError(message: string): string {
+  if (!message) return "";
+
+  try {
+    const payload = JSON.parse(message) as { error?: unknown; message?: unknown };
+    if (typeof payload.error === "string") return payload.error;
+    if (typeof payload.message === "string") return payload.message;
+  } catch {
+    return message;
+  }
+
+  return message;
+}
+
 function isGoogleAccountNotFoundError(error: string): boolean {
   return error.includes("Аккаунт с таким Google еще не зарегистрирован");
 }
@@ -736,6 +816,14 @@ function PasswordInput({
         {visible ? <EyeOff size={18} strokeWidth={1.8} /> : <Eye size={18} strokeWidth={1.8} />}
       </button>
     </span>
+  );
+}
+
+function AuthAlert({ message }: { message: string }) {
+  return (
+    <div className="landing-auth-alert" role="alert">
+      {message}
+    </div>
   );
 }
 

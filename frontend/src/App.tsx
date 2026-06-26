@@ -753,6 +753,7 @@ export default function App() {
         t={t}
         onLogin={handleLandingLogin}
         onRegister={handleLandingRegister}
+        onClearError={() => setError("")}
       />
     );
   }
@@ -802,6 +803,7 @@ export default function App() {
           onOpenCourse={() => navigate("/course")}
           onProfileOpen={() => setIsProfileOpen(true)}
           onNotificationOpen={handleNotificationOpen}
+          onClearError={() => setError("")}
         />
         {renderProfileModal()}
       </>

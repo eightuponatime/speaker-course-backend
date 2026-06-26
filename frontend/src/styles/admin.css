@@ -226,7 +226,7 @@
 }
 
 .admin-section-heading.compact button,
-.privileges-filters button,
+.privileges-chip-row button,
 .privileges-actions button {
   min-height: 38px;
   display: inline-flex;
@@ -245,17 +245,16 @@
 }
 
 .admin-section-heading.compact button:disabled,
-.privileges-filters button:disabled,
+.privileges-chip-row button:disabled,
 .privileges-actions button:disabled {
   opacity: 0.55;
   cursor: default;
 }
 
-.privileges-filters {
+.privileges-controls {
   width: min(1320px, 100%);
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) 170px 210px auto;
-  gap: 10px;
+  gap: 8px;
   margin-bottom: 12px;
 }
 
@@ -272,8 +271,7 @@
   background: #ffffff;
 }
 
-.privileges-search input,
-.privileges-filters select {
+.privileges-search input {
   min-width: 0;
   border: 0;
   color: #263247;
@@ -287,12 +285,25 @@
   width: 100%;
 }
 
-.privileges-filters select {
-  min-height: 38px;
-  border: 1px solid #cfd7e3;
-  border-radius: 6px;
-  padding: 0 10px;
+.privileges-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.privileges-chip-row button {
+  min-height: 30px;
+  border-radius: 999px;
+  padding: 0 11px;
+  color: #526071;
   background: #ffffff;
+  font-size: 12px;
+}
+
+.privileges-chip-row button.active {
+  border-color: #2457d6;
+  color: #2457d6;
+  background: #eef4ff;
 }
 
 .privileges-summary {

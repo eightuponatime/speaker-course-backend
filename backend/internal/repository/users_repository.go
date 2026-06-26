@@ -149,6 +149,7 @@ func (r *UsersRepository) ListForAdmin(
 		where ($2 = '' or u.email ilike '%' || $2 || '%' or u.full_name ilike '%' || $2 || '%')
 			and ($3 = '' or u.role = $3)
 			and ($4 = '' or coalesce(e.status::text, 'none') = $4)
+			and u.email <> 'system@logos-voice.local'
 		order by
 			case when e.status = 'pending' then 0 else 1 end,
 			u.created_at desc

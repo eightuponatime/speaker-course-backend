@@ -1,6 +1,5 @@
 import { RefreshCw, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import type { FormEvent } from "react";
 
 import { listAdminCourseUsers, updateAdminCourseUserRole } from "../api/courseDatasource";
 import type { AdminUserWithEnrollment, EnrollmentStatus } from "../entities/course/course";
@@ -22,9 +21,25 @@ export function PrivilegesPanel({ courseId, currentUserId }: PrivilegesPanelProp
   const [message, setMessage] = useState("");
   const [savingUserId, setSavingUserId] = useState("");
 
+  const filteredUsers = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
+
+    return users.filter((user) => {
+      const matchesSearch =
+        normalizedSearch.length === 0 ||
+        user.email.toLowerCase().includes(normalizedSearch) ||
+        user.full_name.toLowerCase().includes(normalizedSearch);
+      const matchesRole = role === "" || user.role === role;
+      const userEnrollmentStatus = user.enrollment_status || "none";
+      const matchesEnrollment = enrollmentStatus === "" || userEnrollmentStatus === enrollmentStatus;
+
+      return matchesSearch && matchesRole && matchesEnrollment;
+    });
+  }, [enrollmentStatus, role, search, users]);
+
   const pendingCount = useMemo(
-    () => users.filter((user) => user.enrollment_status === "pending" && user.role !== "admin").length,
-    [users]
+    () => filteredUsers.filter((user) => user.enrollment_status === "pending" && user.role !== "admin").length,
+    [filteredUsers]
   );
 
   useEffect(() => {
@@ -35,7 +50,7 @@ export function PrivilegesPanel({ courseId, currentUserId }: PrivilegesPanelProp
     setLoading(true);
     setMessage("");
     try {
-      const nextUsers = await listAdminCourseUsers({ courseId, search, role, enrollmentStatus });
+      const nextUsers = await listAdminCourseUsers({ courseId });
       setUsers(nextUsers);
     } catch (err) {
       setMessage(formatError(err));
@@ -60,11 +75,6 @@ export function PrivilegesPanel({ courseId, currentUserId }: PrivilegesPanelProp
     }
   }
 
-  function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-    void loadUsers();
-  }
-
   return (
     <section className="privileges-panel">
       <div className="admin-section-heading compact">
@@ -79,7 +89,7 @@ export function PrivilegesPanel({ courseId, currentUserId }: PrivilegesPanelProp
         </button>
       </div>
 
-      <form className="privileges-filters" onSubmit={handleSubmit}>
+      <div className="privileges-controls">
         <label className="privileges-search">
           <Search size={17} />
           <input
@@ -88,29 +98,34 @@ export function PrivilegesPanel({ courseId, currentUserId }: PrivilegesPanelProp
             placeholder="Поиск по имени или email"
           />
         </label>
-        <select value={role} onChange={(event) => setRole(event.target.value as RoleFilter)}>
-          <option value="">Все роли</option>
-          <option value="member">Ученики</option>
-          <option value="admin">Администраторы</option>
-        </select>
-        <select
-          value={enrollmentStatus}
-          onChange={(event) => setEnrollmentStatus(event.target.value as EnrollmentFilter)}
-        >
-          <option value="">Любой статус заявки</option>
-          <option value="pending">Ожидают</option>
-          <option value="approved">Одобрены</option>
-          <option value="rejected">Отклонены</option>
-          <option value="revoked">Отозваны</option>
-          <option value="none">Без заявки</option>
-        </select>
-        <button type="submit" disabled={loading}>
-          Найти
-        </button>
-      </form>
+        <div className="privileges-chip-row" aria-label="Фильтр по роли">
+          {roleFilters.map((item) => (
+            <button
+              className={role === item.value ? "active" : ""}
+              key={item.label}
+              type="button"
+              onClick={() => setRole(item.value)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+        <div className="privileges-chip-row" aria-label="Фильтр по заявке">
+          {enrollmentFilters.map((item) => (
+            <button
+              className={enrollmentStatus === item.value ? "active" : ""}
+              key={item.label}
+              type="button"
+              onClick={() => setEnrollmentStatus(item.value)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="privileges-summary">
-        <span>{users.length} пользователей</span>
+        <span>{filteredUsers.length} пользователей</span>
         <span>{pendingCount} ожидают решения</span>
       </div>
 
@@ -129,7 +144,7 @@ export function PrivilegesPanel({ courseId, currentUserId }: PrivilegesPanelProp
             </tr>
           </thead>
           <tbody>
-            {users.map((user) => (
+            {filteredUsers.map((user) => (
               <tr key={user.id} className={user.enrollment_status === "pending" ? "pending" : ""}>
                 <td>
                   <strong>{user.full_name || "Без имени"}</strong>
@@ -164,7 +179,7 @@ export function PrivilegesPanel({ courseId, currentUserId }: PrivilegesPanelProp
                 </td>
               </tr>
             ))}
-            {users.length === 0 ? (
+            {filteredUsers.length === 0 ? (
               <tr>
                 <td colSpan={6}>Пользователи не найдены.</td>
               </tr>
@@ -175,6 +190,21 @@ export function PrivilegesPanel({ courseId, currentUserId }: PrivilegesPanelProp
     </section>
   );
 }
+
+const roleFilters: Array<{ label: string; value: RoleFilter }> = [
+  { label: "Все роли", value: "" },
+  { label: "Ученики", value: "member" },
+  { label: "Админы", value: "admin" }
+];
+
+const enrollmentFilters: Array<{ label: string; value: EnrollmentFilter }> = [
+  { label: "Все заявки", value: "" },
+  { label: "Ожидают", value: "pending" },
+  { label: "Одобрены", value: "approved" },
+  { label: "Отклонены", value: "rejected" },
+  { label: "Отозваны", value: "revoked" },
+  { label: "Без заявки", value: "none" }
+];
 
 function roleLabel(role: AdminUserWithEnrollment["role"]): string {
   return role === "admin" ? "Админ" : "Ученик";

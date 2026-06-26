@@ -32,7 +32,10 @@ const baseEmailTemplate = `<!doctype html>
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:#fffaf4;border:1px solid #d9cdbf;border-radius:14px;overflow:hidden;">
           <tr>
             <td style="padding:26px 30px 18px;border-bottom:1px solid #e3d8cb;">
-              <div style="font-size:12px;letter-spacing:6px;text-transform:uppercase;color:#8b8177;font-weight:700;">Logos Voice</div>
+              <div style="font-family:Georgia,'Times New Roman',serif;color:#2b2723;line-height:1;">
+                <div style="font-size:19px;letter-spacing:10px;text-transform:uppercase;">LOGOS</div>
+                <div style="margin-top:6px;font-size:10px;letter-spacing:8px;text-transform:uppercase;color:#8b8177;">VOICE</div>
+              </div>
               <h1 style="margin:12px 0 0;font-family:Georgia,'Times New Roman',serif;font-size:30px;line-height:1.1;font-weight:400;color:#2b2723;">{{.Title}}</h1>
             </td>
           </tr>
@@ -96,16 +99,20 @@ func AdminEnrollmentRequestedEmail(to string, adminName string, studentName stri
 	})
 }
 
-func EnrollmentReviewedEmail(to string, fullName string, courseTitle string, status string) SendEmailInput {
+func EnrollmentReviewedEmail(to string, fullName string, courseTitle string, status string, landingURL string) SendEmailInput {
 	title := "Статус доступа к курсу обновлен"
 	body := `Статус вашей заявки на курс "` + courseTitle + `" обновлен.`
 	note := ""
+	buttonLabel := ""
+	buttonURL := ""
 
 	switch status {
 	case "approved":
 		title = "Доступ к курсу открыт"
-		body = `Администратор открыл вам доступ к курсу "` + courseTitle + `". Можно заходить в кабинет и начинать обучение.`
-		note = "Срок доступа начнет отсчитываться с первого открытия курса."
+		body = `Администратор открыл вам доступ к курсу "` + courseTitle + `". На сайте можно перейти в кабинет, когда будете готовы начать обучение.`
+		note = "Срок доступа начнет отсчитываться с первого открытия самого курса."
+		buttonLabel = "Открыть сайт"
+		buttonURL = landingURL
 	case "rejected":
 		title = "Заявка на курс отклонена"
 		body = `К сожалению, заявка на курс "` + courseTitle + `" была отклонена.`
@@ -115,11 +122,13 @@ func EnrollmentReviewedEmail(to string, fullName string, courseTitle string, sta
 	}
 
 	return templatedEmail(to, emailTemplateData{
-		Title:     title,
-		Preheader: body,
-		Greeting:  greetingFor(fullName),
-		Body:      body,
-		Note:      note,
+		Title:       title,
+		Preheader:   body,
+		Greeting:    greetingFor(fullName),
+		Body:        body,
+		Note:        note,
+		ButtonLabel: buttonLabel,
+		ButtonURL:   buttonURL,
 	})
 }
 

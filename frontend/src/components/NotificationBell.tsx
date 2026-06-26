@@ -5,6 +5,7 @@ import {
   deleteNotification,
   getUnreadNotificationsCount,
   listNotifications,
+  markAllNotificationsRead,
   markNotificationRead,
   openNotificationsStream
 } from "../api/notificationsDatasource";
@@ -56,7 +57,13 @@ export function NotificationBell({ emptyLabel, onNotificationOpen }: Notificatio
   }, []);
 
   async function handleOpen() {
-    setOpen((current) => !current);
+    const nextOpen = !open;
+    setOpen(nextOpen);
+    if (!nextOpen || unreadCount === 0) return;
+
+    await markAllNotificationsRead().catch(() => undefined);
+    setUnreadCount(0);
+    setNotifications((current) => current.map((item) => ({ ...item, read_at: item.read_at || new Date().toISOString() })));
   }
 
   async function handleNotificationClick(notification: Notification) {

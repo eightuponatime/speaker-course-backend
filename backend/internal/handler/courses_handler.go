@@ -1023,25 +1023,25 @@ func reviewNotificationPayload(
 	case domain.CourseEnrollmentStatusApproved:
 		if previous == domain.CourseEnrollmentStatusRejected || previous == domain.CourseEnrollmentStatusRevoked {
 			return domain.NotificationCourseAccessRestored,
-				"Course access restored",
-				"Your access to " + courseTitle + " was restored."
+				"Доступ к курсу восстановлен",
+				"Доступ к " + courseTitle + " снова открыт."
 		}
 
 		return domain.NotificationCourseAccessApproved,
-			"Course access approved",
-			"Your access to " + courseTitle + " was approved."
+			"Доступ к курсу открыт",
+			"Ваша заявка на " + courseTitle + " одобрена."
 	case domain.CourseEnrollmentStatusRejected:
 		return domain.NotificationCourseAccessRejected,
-			"Course access rejected",
-			"Your access request for " + courseTitle + " was rejected."
+			"Заявка на курс отклонена",
+			"Ваша заявка на " + courseTitle + " отклонена."
 	case domain.CourseEnrollmentStatusRevoked:
 		return domain.NotificationCourseAccessRevoked,
-			"Course access revoked",
-			"Your access to " + courseTitle + " was revoked."
+			"Доступ к курсу закрыт",
+			"Доступ к " + courseTitle + " закрыт администратором."
 	default:
 		return domain.NotificationCourseAccessRejected,
-			"Course access updated",
-			"Your course access status was updated."
+			"Статус доступа обновлен",
+			"Статус доступа к курсу обновлен."
 	}
 }
 
@@ -1113,7 +1113,13 @@ func (h *CoursesHandler) emailCourseAccessReviewed(
 		return
 	}
 
-	_ = h.emailService.Send(ctx, service.EnrollmentReviewedEmail(user.Email, user.FullName, courseTitle, string(status)))
+	_ = h.emailService.Send(ctx, service.EnrollmentReviewedEmail(
+		user.Email,
+		user.FullName,
+		courseTitle,
+		string(status),
+		h.cfg.FrontendURL,
+	))
 }
 
 func (h *CoursesHandler) emailCourseAccessExtended(

@@ -1726,3 +1726,172 @@
   color: #a33a32;
   font-size: 13px;
 }
+
+@media (max-width: 1020px) {
+  .admin-screen {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .course-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    grid-template-rows: auto auto;
+    padding: 10px 12px 8px;
+  }
+
+  .course-topbar-title-row {
+    flex-wrap: wrap;
+    padding: 0;
+  }
+
+  .course-title-button span {
+    max-width: 100%;
+    font-size: 20px;
+    font-weight: 750;
+  }
+
+  .course-topbar-bottom-row {
+    display: grid;
+    gap: 10px;
+    padding: 10px 0 0;
+  }
+
+  .course-tabs {
+    width: 100%;
+    height: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: thin;
+  }
+
+  .course-tabs button {
+    height: 36px;
+    flex: 0 0 auto;
+    border: 1px solid #d7dde7;
+    border-radius: 999px;
+    padding: 0 13px;
+    background: #ffffff;
+    font-size: 14px;
+  }
+
+  .course-tabs button.active {
+    border-color: #2457d6;
+    color: #2457d6;
+    background: #eef4ff;
+  }
+
+  .course-actions {
+    height: auto;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-bottom: 0;
+  }
+
+  .save-indicator,
+  .preview-button {
+    min-height: 34px;
+    border: 1px solid #d7dde7;
+    border-radius: 999px;
+    padding: 0 11px;
+    background: #ffffff;
+    font-size: 13px;
+  }
+
+  .publish-button {
+    height: 36px;
+    border-radius: 999px;
+    padding: 0 14px;
+    font-size: 13px;
+  }
+
+  .page {
+    min-height: 0;
+    grid-template-columns: 1fr;
+  }
+
+  .curriculum-sidebar {
+    position: relative;
+    max-height: none;
+    border-right: 0;
+    border-bottom: 1px solid #dbe1ea;
+  }
+
+  .lesson-workspace {
+    min-width: 0;
+  }
+
+  .student-activity-panel,
+  .requests-panel,
+  .privileges-panel {
+    padding: 14px 12px 24px;
+  }
+
+  .student-activity-header,
+  .admin-section-heading.compact {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .privileges-controls,
+  .privileges-summary,
+  .privileges-table-wrap,
+  .admin-inline-message,
+  .student-activity-table {
+    width: 100%;
+  }
+
+  .privileges-table,
+  .student-activity-table {
+    min-width: 860px;
+  }
+
+  .admin-dialog {
+    width: calc(100vw - 24px);
+    max-height: calc(100vh - 24px);
+  }
+}
+
+@media (max-width: 640px) {
+  .course-actions .save-indicator {
+    display: none;
+  }
+
+  .preview-button,
+  .publish-button {
+    flex: 1 1 auto;
+  }
+
+  .course-actions .notification-root {
+    order: -1;
+  }
+
+  .lesson-title-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .lesson-title-row h1,
+  .lesson-title-input {
+    font-size: 20px;
+  }
+
+  .editor-holder {
+    padding: 14px 12px 80px;
+  }
+
+  .block-toolbar {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    justify-content: space-between;
+  }
+
+  .student-activity-summary,
+  .privileges-summary span {
+    width: 100%;
+  }
+}

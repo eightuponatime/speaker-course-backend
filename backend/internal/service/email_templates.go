@@ -9,6 +9,7 @@ import (
 
 type emailTemplateData struct {
 	Title       string
+	Subject     string
 	Preheader   string
 	Greeting    string
 	Body        string
@@ -73,6 +74,7 @@ func EnrollmentRequestedEmail(to string, fullName string, courseTitle string) Se
 	greeting := greetingFor(fullName)
 	body := `Мы получили вашу заявку на курс "` + courseTitle + `". Администратор проверит заявку и откроет доступ, если все в порядке.`
 	return templatedEmail(to, emailTemplateData{
+		Subject:   uniqueEmailSubject("Заявка получена", fullName, to),
 		Title:     "Заявка на курс получена",
 		Preheader: "Мы получили вашу заявку и скоро проверим доступ.",
 		Greeting:  greeting,
@@ -89,6 +91,7 @@ func AdminEnrollmentRequestedEmail(to string, adminName string, studentName stri
 
 	body := `Поступила новая заявка на курс "` + courseTitle + `" от ` + studentName + ` (` + studentEmail + `).`
 	return templatedEmail(to, emailTemplateData{
+		Subject:     uniqueEmailSubject("Новая заявка", studentName, studentEmail),
 		Title:       "Новая заявка на курс",
 		Preheader:   "В админ-панели ожидает новая заявка.",
 		Greeting:    greetingFor(adminName),
@@ -121,6 +124,7 @@ func EnrollmentReviewedEmail(to string, fullName string, courseTitle string, sta
 	}
 
 	return templatedEmail(to, emailTemplateData{
+		Subject:     uniqueEmailSubject(title, fullName, to),
 		Title:       title,
 		Preheader:   body,
 		Greeting:    greetingFor(fullName),
@@ -135,6 +139,7 @@ func CourseAccessExtendedEmail(to string, fullName string, courseTitle string, a
 	date := accessExpiresAt.Format("02.01.2006")
 	body := `Доступ к курсу "` + courseTitle + `" продлен до ` + date + `.`
 	return templatedEmail(to, emailTemplateData{
+		Subject:   uniqueEmailSubject("Доступ продлен", fullName, to),
 		Title:     "Доступ к курсу продлен",
 		Preheader: body,
 		Greeting:  greetingFor(fullName),
@@ -146,6 +151,7 @@ func CourseAccessExtendedEmail(to string, fullName string, courseTitle string, a
 func TemporaryPasswordEmail(to string, fullName string, temporaryPassword string) SendEmailInput {
 	body := "Мы создали временный пароль для входа в кабинет Logos Voice."
 	return templatedEmail(to, emailTemplateData{
+		Subject:   uniqueEmailSubject("Временный пароль", fullName, to),
 		Title:     "Временный пароль для входа",
 		Preheader: "Используйте временный пароль для входа и затем смените его в профиле.",
 		Greeting:  greetingFor(fullName),
@@ -162,10 +168,30 @@ func templatedEmail(to string, data emailTemplateData) SendEmailInput {
 
 	return SendEmailInput{
 		To:      to,
-		Subject: data.Title,
+		Subject: emailSubject(data),
 		Text:    plainTextEmail(data),
 		HTML:    html.String(),
 	}
+}
+
+func emailSubject(data emailTemplateData) string {
+	if strings.TrimSpace(data.Subject) != "" {
+		return data.Subject
+	}
+
+	return data.Title
+}
+
+func uniqueEmailSubject(base string, fullName string, email string) string {
+	recipient := strings.TrimSpace(fullName)
+	if recipient == "" {
+		recipient = strings.TrimSpace(email)
+	}
+	if recipient == "" {
+		recipient = "пользователь"
+	}
+
+	return base + " — " + recipient + " — " + time.Now().Format("02.01.2006 15:04")
 }
 
 func plainTextEmail(data emailTemplateData) string {

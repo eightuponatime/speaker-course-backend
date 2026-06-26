@@ -309,7 +309,7 @@
 .profile-summary > button,
 .profile-nested-dialog > button,
 .profile-secondary-actions button,
-.profile-secondary-link,
+.profile-inline-link,
 .profile-secondary-note {
   min-height: 44px;
   display: inline-flex;
@@ -362,7 +362,7 @@
   background: #fffdf9;
 }
 
-.profile-secondary-link {
+.profile-inline-link {
   border: 1px solid #d8d0c7;
   color: #3e3933;
   background: #fffdf9;

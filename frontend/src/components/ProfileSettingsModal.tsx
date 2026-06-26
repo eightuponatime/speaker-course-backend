@@ -169,7 +169,15 @@ export function ProfileSettingsModal({
               />
             </label>
             {!canChangeEmail ? (
-              <p className="profile-hint">Email обновляется через Google. Если он изменился в Google-аккаунте, обновите его через повторный Google-вход.</p>
+              <>
+                <p className="profile-hint">Email обновляется через Google. Если он изменился в Google-аккаунте, обновите его через повторный Google-вход.</p>
+                {isGoogleAccount ? (
+                  <a className="profile-inline-link" href={`${apiBaseUrl}/auth/google/start`}>
+                    <RefreshCw size={17} />
+                    Обновить email через Google
+                  </a>
+                ) : null}
+              </>
             ) : null}
             <div className="profile-actions-row">
               <button type="submit" disabled={profileSaving || !canSaveProfile}>
@@ -189,12 +197,6 @@ export function ProfileSettingsModal({
               <KeyRound size={17} />
               Изменить пароль
             </button>
-          ) : null}
-          {isGoogleAccount ? (
-            <a className="profile-secondary-link" href={`${apiBaseUrl}/auth/google/start`}>
-              <RefreshCw size={17} />
-              Обновить email через Google
-            </a>
           ) : null}
           {!canChangePassword && !isGoogleAccount ? (
             <span className="profile-secondary-note">Пароль для этого аккаунта не задан</span>

@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import { Edit3, KeyRound, Trash2, X } from "lucide-react";
+import { Edit3, KeyRound, RefreshCw, Trash2, X } from "lucide-react";
 
 import { changePassword, deleteMe, updateMe } from "../api/authDatasource";
+import { apiBaseUrl } from "../api/http";
 import type { User } from "../entities/course/course";
 
 type ProfileSettingsModalProps = {
@@ -41,6 +42,7 @@ export function ProfileSettingsModal({
 
   const canChangeEmail = user.can_change_email !== false;
   const canChangePassword = user.can_change_password === true;
+  const isGoogleAccount = user.auth_provider === "google" || user.auth_provider === "google_password";
   const normalizedEmail = email.trim().toLowerCase();
   const normalizedFullName = fullName.trim();
   const hasProfileChanges =
@@ -167,7 +169,7 @@ export function ProfileSettingsModal({
               />
             </label>
             {!canChangeEmail ? (
-              <p className="profile-hint">Email привязан к Google-входу. Чтобы не потерять доступ и прогресс, он не меняется в профиле.</p>
+              <p className="profile-hint">Email обновляется через Google. Если он изменился в Google-аккаунте, обновите его через повторный Google-вход.</p>
             ) : null}
             <div className="profile-actions-row">
               <button type="submit" disabled={profileSaving || !canSaveProfile}>
@@ -187,12 +189,16 @@ export function ProfileSettingsModal({
               <KeyRound size={17} />
               Изменить пароль
             </button>
-          ) : (
-            <button type="button" disabled title="Пароль не используется для Google-входа">
-              <KeyRound size={17} />
-              Вход через Google
-            </button>
-          )}
+          ) : null}
+          {isGoogleAccount ? (
+            <a className="profile-secondary-link" href={`${apiBaseUrl}/auth/google/start`}>
+              <RefreshCw size={17} />
+              Обновить email через Google
+            </a>
+          ) : null}
+          {!canChangePassword && !isGoogleAccount ? (
+            <span className="profile-secondary-note">Пароль для этого аккаунта не задан</span>
+          ) : null}
           <button className="danger" type="button" onClick={() => setDeleteConfirmOpen(true)}>
             <Trash2 size={17} />
             Удалить аккаунт

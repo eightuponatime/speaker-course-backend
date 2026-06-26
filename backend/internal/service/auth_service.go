@@ -219,6 +219,13 @@ func (s *AuthService) LoginWithGoogleCode(ctx context.Context, code string) (*Au
 		return nil, fmt.Errorf("%w: email is linked to another google account", ErrInvalidAuth)
 	}
 
+	if user.GoogleSub != nil && *user.GoogleSub == info.Sub && user.Email != strings.ToLower(strings.TrimSpace(info.Email)) {
+		user, err = s.usersService.SyncGoogleEmail(ctx, user.Id, info.Email)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	session, err := s.sessionsService.Create(ctx, user.Id)
 	if err != nil {
 		return nil, err

@@ -308,7 +308,9 @@
 .profile-actions-row button,
 .profile-summary > button,
 .profile-nested-dialog > button,
-.profile-secondary-actions button {
+.profile-secondary-actions button,
+.profile-secondary-link,
+.profile-secondary-note {
   min-height: 44px;
   display: inline-flex;
   align-items: center;
@@ -358,6 +360,20 @@
   border-color: #d8d0c7;
   color: #3e3933;
   background: #fffdf9;
+}
+
+.profile-secondary-link {
+  border: 1px solid #d8d0c7;
+  color: #3e3933;
+  background: #fffdf9;
+  text-decoration: none;
+}
+
+.profile-secondary-note {
+  border: 1px solid #e3d8cb;
+  color: #716960;
+  background: #f7f1ea;
+  cursor: default;
 }
 
 .profile-secondary-actions button.danger,

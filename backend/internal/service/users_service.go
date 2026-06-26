@@ -140,6 +140,47 @@ func (s *UsersService) UpdateProfile(
 	return s.rp.UpdateProfile(ctx, userID, input)
 }
 
+func (s *UsersService) SyncGoogleEmail(ctx context.Context, userID uuid.UUID, email string) (*domain.User, error) {
+	if userID == uuid.Nil {
+		return nil, fmt.Errorf("%w: id is empty", ErrInvalidUser)
+	}
+
+	email = strings.TrimSpace(strings.ToLower(email))
+	if email == "" {
+		return nil, fmt.Errorf("%w: email is empty", ErrInvalidUser)
+	}
+	if _, err := mail.ParseAddress(email); err != nil {
+		return nil, fmt.Errorf("%w: email is invalid", ErrInvalidUser)
+	}
+
+	user, err := s.rp.GetByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, fmt.Errorf("%w: user not found", ErrInvalidUser)
+	}
+	if user.GoogleSub == nil {
+		return nil, fmt.Errorf("%w: google account is not linked", ErrInvalidUser)
+	}
+	if user.Email == email {
+		return user, nil
+	}
+
+	existing, err := s.rp.GetByEmail(ctx, email)
+	if err != nil {
+		return nil, err
+	}
+	if existing != nil && existing.Id != userID {
+		return nil, fmt.Errorf("%w: google email belongs to another account", ErrInvalidUser)
+	}
+
+	return s.rp.UpdateProfile(ctx, userID, domain.UpdateUserProfileInput{
+		Email:    email,
+		FullName: user.FullName,
+	})
+}
+
 func (s *UsersService) ChangePassword(
 	ctx context.Context,
 	userID uuid.UUID,

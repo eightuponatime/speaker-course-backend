@@ -1072,6 +1072,10 @@ func (h *CoursesHandler) notifyAdminsAboutEnrollmentRequest(
 		studentEmail = student.Email
 		studentName = student.FullName
 	}
+	studentLabel := strings.TrimSpace(studentName)
+	if studentLabel == "" {
+		studentLabel = studentEmail
+	}
 
 	for _, admin := range admins {
 		if admin.Id == actorID || admin.Email == "system@logos-voice.local" {
@@ -1084,8 +1088,8 @@ func (h *CoursesHandler) notifyAdminsAboutEnrollmentRequest(
 			CourseId:     &courseID,
 			EnrollmentId: &enrollmentID,
 			Type:         domain.NotificationCourseEnrollmentRequested,
-			Title:        "New course access request",
-			Body:         "A student requested access to " + courseTitle + ".",
+			Title:        "Новая заявка на курс",
+			Body:         studentLabel + " отправил(а) заявку на " + courseTitle + ".",
 		})
 		_ = h.emailService.Send(ctx, service.AdminEnrollmentRequestedEmail(
 			admin.Email,

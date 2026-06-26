@@ -5,7 +5,6 @@ import {
   deleteNotification,
   getUnreadNotificationsCount,
   listNotifications,
-  markAllNotificationsRead,
   markNotificationRead,
   openNotificationsStream
 } from "../api/notificationsDatasource";
@@ -13,9 +12,10 @@ import type { Notification } from "../entities/notification/notification";
 
 type NotificationBellProps = {
   emptyLabel: string;
+  onNotificationOpen?: (notification: Notification) => void;
 };
 
-export function NotificationBell({ emptyLabel }: NotificationBellProps) {
+export function NotificationBell({ emptyLabel, onNotificationOpen }: NotificationBellProps) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
@@ -56,23 +56,20 @@ export function NotificationBell({ emptyLabel }: NotificationBellProps) {
   }, []);
 
   async function handleOpen() {
-    const nextOpen = !open;
-    setOpen(nextOpen);
-    if (!nextOpen || unreadCount === 0) return;
-
-    await markAllNotificationsRead().catch(() => undefined);
-    setUnreadCount(0);
-    setNotifications((current) => current.map((item) => ({ ...item, read_at: item.read_at || new Date().toISOString() })));
+    setOpen((current) => !current);
   }
 
   async function handleNotificationClick(notification: Notification) {
-    if (notification.read_at) return;
+    if (!notification.read_at) {
+      const updated = await markNotificationRead(notification.id).catch(() => null);
+      if (updated) {
+        setUnreadCount((current) => Math.max(0, current - 1));
+        setNotifications((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+      }
+    }
 
-    const updated = await markNotificationRead(notification.id).catch(() => null);
-    if (!updated) return;
-
-    setUnreadCount((current) => Math.max(0, current - 1));
-    setNotifications((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+    setOpen(false);
+    onNotificationOpen?.(notification);
   }
 
   async function handleDelete(notificationId: string) {

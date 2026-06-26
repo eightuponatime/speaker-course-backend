@@ -1,6 +1,7 @@
 import { CheckCircle2, Eye } from "lucide-react";
 
 import type { Course } from "../entities/course/course";
+import type { Notification } from "../entities/notification/notification";
 import type { TranslationKey } from "../i18n";
 import { NotificationBell } from "./NotificationBell";
 
@@ -18,6 +19,7 @@ type CourseTopbarProps = {
   onPreview: () => void;
   onPublish: () => void;
   onProfileOpen: () => void;
+  onNotificationOpen?: (notification: Notification) => void;
 };
 
 export function CourseTopbar({
@@ -33,7 +35,8 @@ export function CourseTopbar({
   onLandingOpen,
   onPreview,
   onPublish,
-  onProfileOpen
+  onProfileOpen,
+  onNotificationOpen
 }: CourseTopbarProps) {
   const statusText = activeTab === "curriculum" ? publishStatus || t("saved") : t("saved");
 
@@ -81,7 +84,7 @@ export function CourseTopbar({
           <button className="preview-button" type="button" onClick={onLandingOpen}>
             {t("backToLanding")}
           </button>
-          <NotificationBell emptyLabel={t("noNotifications")} />
+          <NotificationBell emptyLabel={t("noNotifications")} onNotificationOpen={onNotificationOpen} />
           <span className="save-indicator">
             <CheckCircle2 size={16} />
             {statusText}

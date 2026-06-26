@@ -166,3 +166,31 @@ create index notifications_user_id_created_at_idx on notifications(user_id, crea
     where deleted_at is null;
 create index notifications_user_id_unread_idx on notifications(user_id)
     where read_at is null and deleted_at is null;
+
+insert into users (id, google_sub, email, password, full_name, role)
+values (
+    '00000000-0000-0000-0000-000000000001',
+    null,
+    'system@logos-voice.local',
+    null,
+    'Logos Voice',
+    'admin'
+)
+on conflict (email) do update
+set full_name = excluded.full_name,
+    role = excluded.role;
+
+insert into courses (id, author_id, title, slug, description, status)
+select
+    '10000000-0000-0000-0000-000000000001',
+    (select id from users where email = 'system@logos-voice.local'),
+    'Курсы ораторского мастерства',
+    'logos-voice',
+    'Риторика, влияние и публичная речь.',
+    'draft'
+where not exists (
+    select 1
+    from courses
+    where status <> 'archived'
+)
+on conflict (id) do nothing;

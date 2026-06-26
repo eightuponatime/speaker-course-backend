@@ -104,6 +104,23 @@ func (r *UsersRepository) GetByGoogleSub(ctx context.Context, googleSub string) 
 	return &user, nil
 }
 
+func (r *UsersRepository) ListAdmins(ctx context.Context) ([]domain.User, error) {
+	const query = `
+		select id, google_sub, email, password, full_name, role, created_at
+		from users
+		where role = 'admin'
+		order by created_at asc
+	`
+
+	q := extractTransaction(ctx, r.db)
+	users := make([]domain.User, 0)
+	if err := sqlx.SelectContext(ctx, q, &users, query); err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
 func (r *UsersRepository) UpdateGoogleSub(
 	ctx context.Context,
 	userID uuid.UUID,

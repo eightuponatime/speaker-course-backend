@@ -592,18 +592,8 @@ func (h *CoursesHandler) requestEnrollmentForCourse(w http.ResponseWriter, r *ht
 	}
 
 	course, err := h.coursesService.GetCourseByID(r.Context(), courseID)
-	if existingEnrollment == nil && err == nil && course != nil && course.AuthorId != userID {
-		actorID := userID
-		enrollmentID := enrollment.Id
-		_, _ = h.notificationsService.Create(r.Context(), domain.CreateNotificationInput{
-			UserId:       course.AuthorId,
-			ActorId:      &actorID,
-			CourseId:     &courseID,
-			EnrollmentId: &enrollmentID,
-			Type:         domain.NotificationCourseEnrollmentRequested,
-			Title:        "New course access request",
-			Body:         "A student requested access to " + course.Title + ".",
-		})
+	if existingEnrollment == nil && err == nil && course != nil {
+		h.notifyAdminsAboutEnrollmentRequest(r.Context(), userID, courseID, enrollment.Id, course.Title)
 	}
 	if existingEnrollment == nil && err == nil && course != nil {
 		h.emailCourseAccessRequested(r.Context(), userID, course.Title)
@@ -1061,6 +1051,35 @@ func (h *CoursesHandler) emailCourseAccessRequested(ctx context.Context, userID 
 	}
 
 	_ = h.emailService.Send(ctx, service.EnrollmentRequestedEmail(user.Email, user.FullName, courseTitle))
+}
+
+func (h *CoursesHandler) notifyAdminsAboutEnrollmentRequest(
+	ctx context.Context,
+	actorID uuid.UUID,
+	courseID uuid.UUID,
+	enrollmentID uuid.UUID,
+	courseTitle string,
+) {
+	admins, err := h.usersService.ListAdmins(ctx)
+	if err != nil {
+		return
+	}
+
+	for _, admin := range admins {
+		if admin.Id == actorID || admin.Email == "system@logos-voice.local" {
+			continue
+		}
+
+		_, _ = h.notificationsService.Create(ctx, domain.CreateNotificationInput{
+			UserId:       admin.Id,
+			ActorId:      &actorID,
+			CourseId:     &courseID,
+			EnrollmentId: &enrollmentID,
+			Type:         domain.NotificationCourseEnrollmentRequested,
+			Title:        "New course access request",
+			Body:         "A student requested access to " + courseTitle + ".",
+		})
+	}
 }
 
 func (h *CoursesHandler) emailCourseAccessReviewed(

@@ -76,6 +76,10 @@ func (s *UsersService) GetByGoogleSub(ctx context.Context, googleSub string) (*d
 	return s.rp.GetByGoogleSub(ctx, googleSub)
 }
 
+func (s *UsersService) ListAdmins(ctx context.Context) ([]domain.User, error) {
+	return s.rp.ListAdmins(ctx)
+}
+
 func (s *UsersService) UpdateGoogleSub(
 	ctx context.Context,
 	userID uuid.UUID,

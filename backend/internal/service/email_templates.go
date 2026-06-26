@@ -191,7 +191,7 @@ func uniqueEmailSubject(base string, fullName string, email string) string {
 		recipient = "пользователь"
 	}
 
-	return base + " — " + recipient + " — " + time.Now().Format("02.01.2006 15:04")
+	return base + " – " + recipient + " – " + time.Now().Format("02.01.2006 15:04")
 }
 
 func plainTextEmail(data emailTemplateData) string {

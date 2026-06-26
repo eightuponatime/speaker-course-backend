@@ -273,7 +273,10 @@ export function LandingPage({
           {forgotSubmitting ? t("wait") : "Забыли пароль?"}
         </button>
       ) : null}
-      <a className="landing-google" href={`${apiBaseUrl}/auth/google/start`}>
+      <a
+        className="landing-google"
+        href={`${apiBaseUrl}${mode === "register" ? "/auth/google/enroll/start" : "/auth/google/start"}`}
+      >
         <GoogleIcon />
         {mode === "register" ? "Записаться через Google" : t("continueWithGoogle")}
       </a>

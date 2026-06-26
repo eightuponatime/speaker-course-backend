@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"net/http"
@@ -18,13 +19,17 @@ import (
 const googleOAuthStateCookieName = "google_oauth_state"
 const googleOAuthModeCookieName = "google_oauth_mode"
 const googleOAuthModeLink = "link"
+const googleOAuthModeEnroll = "enroll"
 
 type AuthHandler struct {
-	cfg             *config.Config
-	authService     *service.AuthService
-	sessionsService *service.SessionsService
-	usersService    *service.UsersService
-	emailService    *service.EmailService
+	cfg                  *config.Config
+	authService          *service.AuthService
+	sessionsService      *service.SessionsService
+	usersService         *service.UsersService
+	coursesService       *service.CoursesService
+	enrollmentsService   *service.EnrollmentsService
+	notificationsService *service.NotificationsService
+	emailService         *service.EmailService
 }
 
 type authUserResponse struct {
@@ -43,14 +48,20 @@ func NewAuthHandler(
 	authService *service.AuthService,
 	sessionsService *service.SessionsService,
 	usersService *service.UsersService,
+	coursesService *service.CoursesService,
+	enrollmentsService *service.EnrollmentsService,
+	notificationsService *service.NotificationsService,
 	emailService *service.EmailService,
 ) *AuthHandler {
 	return &AuthHandler{
-		cfg:             cfg,
-		authService:     authService,
-		sessionsService: sessionsService,
-		usersService:    usersService,
-		emailService:    emailService,
+		cfg:                  cfg,
+		authService:          authService,
+		sessionsService:      sessionsService,
+		usersService:         usersService,
+		coursesService:       coursesService,
+		enrollmentsService:   enrollmentsService,
+		notificationsService: notificationsService,
+		emailService:         emailService,
 	}
 }
 
@@ -59,6 +70,7 @@ func (h *AuthHandler) RegisterRoutes(r chi.Router, authMiddleware *middlewarego.
 	r.Post("/auth/login", h.Login)
 	r.Post("/auth/forgot-password", h.ForgotPassword)
 	r.Get("/auth/google/start", h.GoogleStart)
+	r.Get("/auth/google/enroll/start", h.GoogleEnrollStart)
 	r.Get("/auth/google/callback", h.GoogleCallback)
 
 	r.Group(func(r chi.Router) {
@@ -289,6 +301,24 @@ func (h *AuthHandler) GoogleLinkStart(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, authURL, http.StatusFound)
 }
 
+func (h *AuthHandler) GoogleEnrollStart(w http.ResponseWriter, r *http.Request) {
+	state, err := randomState()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	authURL, err := h.authService.GoogleAuthURL(state)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	h.setOAuthStateCookie(w, state)
+	h.setOAuthModeCookie(w, googleOAuthModeEnroll)
+	http.Redirect(w, r, authURL, http.StatusFound)
+}
+
 func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 	stateCookie, err := r.Cookie(googleOAuthStateCookieName)
 	if err != nil || stateCookie.Value == "" || stateCookie.Value != r.URL.Query().Get("state") {
@@ -336,6 +366,13 @@ func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.setSessionCookie(w, result.Session.Id.String(), result.Session.ExpiresAt)
+	if modeCookie != nil && modeCookie.Value == googleOAuthModeEnroll {
+		h.clearOAuthModeCookie(w)
+		if err := h.requestPrimaryCourseEnrollment(r.Context(), result.User.Id); err != nil {
+			writeError(w, http.StatusBadRequest, err)
+			return
+		}
+	}
 	http.Redirect(w, r, h.cfg.FrontendURL, http.StatusFound)
 }
 
@@ -437,6 +474,74 @@ func buildAuthUserResponse(user *domain.User) authUserResponse {
 		CanChangeEmail:    user.GoogleSub == nil,
 		CanChangePassword: user.Password != nil,
 		CreatedAt:         user.CreatedAt,
+	}
+}
+
+func (h *AuthHandler) requestPrimaryCourseEnrollment(ctx context.Context, userID uuid.UUID) error {
+	course, err := h.coursesService.GetPrimaryCourse(ctx)
+	if err != nil {
+		return err
+	}
+	if course == nil {
+		return service.ErrInvalidCourse
+	}
+
+	existingEnrollment, err := h.enrollmentsService.GetByCourseAndUser(ctx, course.Id, userID)
+	if err != nil {
+		return err
+	}
+
+	enrollment, err := h.enrollmentsService.RequestAccess(ctx, domain.CreateCourseEnrollmentInput{
+		CourseId: course.Id,
+		UserId:   userID,
+	})
+	if err != nil {
+		return err
+	}
+
+	if existingEnrollment == nil {
+		h.notifyAdminsAboutEnrollmentRequest(ctx, userID, course.Id, enrollment.Id, course.Title)
+		h.emailCourseAccessRequested(ctx, userID, course.Title)
+	}
+
+	return nil
+}
+
+func (h *AuthHandler) emailCourseAccessRequested(ctx context.Context, userID uuid.UUID, courseTitle string) {
+	user, err := h.usersService.GetByID(ctx, userID)
+	if err != nil || user == nil {
+		return
+	}
+
+	_ = h.emailService.Send(ctx, service.EnrollmentRequestedEmail(user.Email, user.FullName, courseTitle))
+}
+
+func (h *AuthHandler) notifyAdminsAboutEnrollmentRequest(
+	ctx context.Context,
+	actorID uuid.UUID,
+	courseID uuid.UUID,
+	enrollmentID uuid.UUID,
+	courseTitle string,
+) {
+	admins, err := h.usersService.ListAdmins(ctx)
+	if err != nil {
+		return
+	}
+
+	for _, admin := range admins {
+		if admin.Id == actorID || admin.Email == "system@logos-voice.local" {
+			continue
+		}
+
+		_, _ = h.notificationsService.Create(ctx, domain.CreateNotificationInput{
+			UserId:       admin.Id,
+			ActorId:      &actorID,
+			CourseId:     &courseID,
+			EnrollmentId: &enrollmentID,
+			Type:         domain.NotificationCourseEnrollmentRequested,
+			Title:        "New course access request",
+			Body:         "A student requested access to " + courseTitle + ".",
+		})
 	}
 }
 

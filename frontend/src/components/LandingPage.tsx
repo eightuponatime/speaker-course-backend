@@ -1,22 +1,15 @@
 import { useEffect, useState } from "react";
-import type { FormEvent } from "react";
+import type { CSSProperties, FormEvent } from "react";
 import {
   Gauge,
   CheckCircle2,
   Eye,
   EyeOff,
-  Flame,
   Instagram,
   MessageCircle,
-  Mic2,
   LogIn,
   LogOut,
   UserRound,
-  ShieldCheck,
-  Sparkles,
-  Target,
-  Users,
-  Volume2,
   X
 } from "lucide-react";
 
@@ -34,6 +27,14 @@ import type { Course, CourseEnrollment, User } from "../entities/course/course";
 import type { Notification } from "../entities/notification/notification";
 import type { TranslationKey } from "../i18n";
 import { NotificationBell } from "./NotificationBell";
+import aboutProgramImage from "../../assets/images/about_program.png";
+import affectionIcon from "../../assets/images/affection.png";
+import clearSpeechIcon from "../../assets/images/clear_speach.png";
+import confidenceIcon from "../../assets/images/confidence.png";
+import professionalGrowthIcon from "../../assets/images/prof_grow.png";
+import durationIcon from "../../assets/images/duration.png";
+import experienceIcon from "../../assets/images/experience.png";
+import liveLessonsIcon from "../../assets/images/live_lessons.png";
 
 type LandingPageProps = {
   error: string;
@@ -280,7 +281,7 @@ export function LandingPage({
         <span>
           {mode === "login"
             ? "Введите данные, чтобы вернуться к материалам"
-            : "Оставьте заявку - мы свяжемся с вами для уточнения деталей"}
+            : ""}
         </span>
       </div>
 
@@ -289,10 +290,10 @@ export function LandingPage({
           className={mode === "login" ? "active" : ""}
           type="button"
           onClick={() => {
-              setMode("login");
-              setAuthNotice("");
-              setAuthNoticeDialogOpen(false);
-              onClearError?.();
+            setMode("login");
+            setAuthNotice("");
+            setAuthNoticeDialogOpen(false);
+            onClearError?.();
           }}
         >
           {t("signIn")}
@@ -517,7 +518,7 @@ export function LandingPage({
           <div className="landing-hero-metrics">
             {heroMetrics.map((item) => (
               <div key={item.title}>
-                <item.icon size={24} strokeWidth={1.6} />
+                <img src={item.icon} alt="" />
                 <span>{item.title}</span>
               </div>
             ))}
@@ -674,7 +675,7 @@ export function LandingPage({
       <section className="landing-benefits" aria-label="Преимущества курса">
         {benefits.map((item) => (
           <article key={item.title}>
-            <item.icon size={31} strokeWidth={1.5} />
+            <img src={item.icon} alt="" />
             <div>
               <h2>{item.title}</h2>
               <p>{item.text}</p>
@@ -683,45 +684,72 @@ export function LandingPage({
         ))}
       </section>
 
-      <section className="landing-split-section" id="about">
-        <div>
+      <section className="landing-about-panel" id="about">
+        <div className="landing-about-copy">
           <span className="landing-kicker">О курсе</span>
           <h2 data-section-heading>Практика. Обратная связь. Реальный результат.</h2>
           <p>
-            Курс построен на практиках: каждую неделю вы будете выступать, получать обратную связь и улучшать навыки.
+            Курс построен на практике: каждую неделю вы будете выступать, получать обратную связь и улучшать навыки.
             Формат сочетает живые вебинары, разборы и домашние задания.
           </p>
           <ul className="landing-check-list">
             {["Индивидуальные занятия", "Разбор выступлений и обратная связь", "Поддержка куратора и сообщества"].map(
               (item) => (
                 <li key={item}>
-                  <CheckCircle2 size={17} strokeWidth={1.8} />
+                  <CheckCircle2 size={20} strokeWidth={1.7} />
                   {item}
                 </li>
               )
             )}
           </ul>
         </div>
-        <div className="landing-program" id="program">
+        <div className="landing-about-art" aria-hidden="true">
+          <img src={aboutProgramImage} alt="" />
+        </div>
+      </section>
+
+      <section
+        className="landing-program-showcase"
+        id="program"
+        style={{ "--program-count": Math.max(programSections.length, 1) } as CSSProperties}
+      >
+        <div className="landing-program-intro">
           <span className="landing-kicker">Программа курса</span>
           <h2 data-section-heading>
-            {programSections.length > 0
-              ? `${programSections.length} ${formatSectionCount(programSections.length)} в программе – от базы до мастерства`
-              : "Программа курса"}
-          </h2>
-          <div>
             {programSections.length > 0 ? (
-              programSections.map((section, index) => (
-                <button key={section.id} type="button">
-                  <span>{String(index + 1).padStart(2, "0")}</span>
-                  {section.title}
-                </button>
-              ))
+              <>
+                <span>
+                  {programSections.length} {formatStageCount(programSections.length)}
+                </span>{" "}
+                <span>
+                  к <em>уверенной</em> речи и <em>сильному</em> выступлению
+                </span>
+              </>
             ) : (
-              <p className="landing-program-empty">Программа скоро появится.</p>
+              "Программа курса"
             )}
-          </div>
+          </h2>
         </div>
+
+        {programSections.length > 0 ? (
+          <div className="landing-program-flow">
+            <div className="landing-program-cards">
+              {programSections.map((section, index) => (
+                <article className="landing-program-card" key={section.id}>
+                  <span>{String(index + 1).padStart(2, "0")}</span>
+                  <strong>{section.title}</strong>
+                </article>
+              ))}
+            </div>
+            <div className="landing-program-track" aria-hidden="true">
+              {programSections.map((section) => (
+                <span className="landing-program-dot" key={section.id} />
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="landing-program-empty">Программа скоро появится.</p>
+        )}
       </section>
 
       <footer className="landing-contact">
@@ -746,31 +774,31 @@ export function LandingPage({
 }
 
 const heroMetrics = [
-  { title: "4 недели практики", icon: ShieldCheck },
-  { title: "Подходит для новичков и профи", icon: Flame },
-  { title: "Живые занятия и обратная связь", icon: Users }
+  { title: "4 недели практики", icon: durationIcon },
+  { title: "Подходит для новичков и профи", icon: experienceIcon },
+  { title: "Живые занятия и обратная связь", icon: liveLessonsIcon }
 ];
 
 const benefits = [
   {
     title: "Уверенность в каждом выступлении",
     text: "Избавитесь от страха сцены и научитесь чувствовать себя свободно в любой ситуации.",
-    icon: Mic2
+    icon: confidenceIcon
   },
   {
     title: "Влияние на аудиторию",
     text: "Научитесь убеждать, вдохновлять и удерживать внимание слушателей с первых секунд.",
-    icon: Target
+    icon: affectionIcon
   },
   {
     title: "Чистая и сильная речь",
     text: "Поставите голос, улучшите дикцию и научитесь выражать мысли точно и понятно.",
-    icon: Volume2
+    icon: clearSpeechIcon
   },
   {
     title: "Профессиональный рост",
     text: "Ораторское мастерство откроет новые возможности в карьере и бизнесе.",
-    icon: Sparkles
+    icon: professionalGrowthIcon
   }
 ];
 
@@ -781,13 +809,13 @@ function enrollmentLabel(status: CourseEnrollment["status"], t: (key: Translatio
   return t("revokedStatus");
 }
 
-function formatSectionCount(count: number): string {
+function formatStageCount(count: number): string {
   const mod10 = count % 10;
   const mod100 = count % 100;
 
-  if (mod10 === 1 && mod100 !== 11) return "раздел";
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "раздела";
-  return "разделов";
+  if (mod10 === 1 && mod100 !== 11) return "этап";
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "этапа";
+  return "этапов";
 }
 
 function enrollmentText(status: CourseEnrollment["status"], t: (key: TranslationKey) => string): string {

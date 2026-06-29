@@ -1,3 +1,72 @@
+.landing-preload-screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 22px;
+  color: #2d2924;
+  background:
+    radial-gradient(circle at 18% 8%, rgba(255, 255, 255, 0.92), transparent 28rem),
+    radial-gradient(circle at 80% 18%, rgba(235, 226, 214, 0.7), transparent 34rem),
+    #f3eee7;
+}
+
+.landing-preload-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.landing-preload-brand img {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: 50% 28%;
+}
+
+.landing-preload-brand span {
+  display: grid;
+  gap: 4px;
+}
+
+.landing-preload-brand strong,
+.landing-preload-brand small {
+  display: block;
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 500;
+  letter-spacing: 0.48em;
+  line-height: 1;
+}
+
+.landing-preload-brand strong {
+  font-size: 19px;
+}
+
+.landing-preload-brand small {
+  color: #716960;
+  font-size: 11px;
+}
+
+.landing-preload-bar {
+  position: relative;
+  width: min(220px, 52vw);
+  height: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(45, 41, 36, 0.12);
+}
+
+.landing-preload-bar::before {
+  position: absolute;
+  inset: 0;
+  width: 42%;
+  border-radius: inherit;
+  background: #242220;
+  animation: landingPreloadBar 1100ms ease-in-out infinite;
+  content: "";
+}
+
 .landing-page {
   min-height: 100vh;
   color: #2d2924;
@@ -5,6 +74,20 @@
     radial-gradient(circle at 18% 8%, rgba(255, 255, 255, 0.92), transparent 28rem),
     radial-gradient(circle at 80% 18%, rgba(235, 226, 214, 0.7), transparent 34rem),
     #f3eee7;
+}
+
+@keyframes landingPreloadBar {
+  0% {
+    transform: translateX(-110%);
+  }
+
+  55% {
+    transform: translateX(170%);
+  }
+
+  100% {
+    transform: translateX(170%);
+  }
 }
 
 .landing-page h1,

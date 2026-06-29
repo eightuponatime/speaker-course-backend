@@ -22,6 +22,7 @@ import {
 import { forgotPassword } from "../api/authDatasource";
 import { apiBaseUrl } from "../api/http";
 import logosVoiceLogo from "../../assets/images/transparent_logo.png";
+import mainSectionBannerImage from "../../assets/images/main_section_banner.png";
 import type { CourseProgramSection } from "../api/courseDatasource";
 import type { Course, CourseEnrollment, User } from "../entities/course/course";
 import type { Notification } from "../entities/notification/notification";
@@ -89,6 +90,25 @@ export function LandingPage({
   const [authNotice, setAuthNotice] = useState("");
   const [authNoticeDialogOpen, setAuthNoticeDialogOpen] = useState(false);
   const [programSections, setProgramSections] = useState<CourseProgramSection[]>([]);
+  const [criticalAssetsReady, setCriticalAssetsReady] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    preloadImages(landingCriticalImages, {
+      minDelayMs: 450,
+      timeoutMs: 3500
+    }).then(() => {
+      if (active) {
+        setCriticalAssetsReady(true);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   useEffect(() => {
     getPrimaryCourse()
       .then(setCourse)
@@ -274,6 +294,22 @@ export function LandingPage({
   const canSubmitDialogLogin = dialogEmail.trim().length > 0 && dialogPassword.length > 0;
   const authError = authNotice || formatUserFacingError(error);
   const accessDisplayError = formatUserFacingError(accessError);
+
+  if (!criticalAssetsReady) {
+    return (
+      <main className="landing-preload-screen" aria-busy="true" aria-label="Загрузка сайта">
+        <div className="landing-preload-brand">
+          <img src={logosVoiceLogo} alt="" />
+          <span>
+            <strong>LOGOS</strong>
+            <small>VOICE</small>
+          </span>
+        </div>
+        <div className="landing-preload-bar" aria-hidden="true" />
+      </main>
+    );
+  }
+
   const authForm = (
     <>
       <div className="landing-auth-header">
@@ -779,6 +815,14 @@ const heroMetrics = [
   { title: "Живые занятия и обратная связь", icon: liveLessonsIcon }
 ];
 
+const landingCriticalImages = [
+  logosVoiceLogo,
+  mainSectionBannerImage,
+  durationIcon,
+  experienceIcon,
+  liveLessonsIcon
+];
+
 const benefits = [
   {
     title: "Уверенность в каждом выступлении",
@@ -868,6 +912,32 @@ function extractServerError(message: string): string {
 
 function isGoogleAccountNotFoundError(error: string): boolean {
   return error.includes("Аккаунт с таким Google еще не зарегистрирован");
+}
+
+async function preloadImages(srcList: string[], options: { minDelayMs: number; timeoutMs: number }): Promise<void> {
+  await Promise.race([
+    Promise.allSettled(srcList.map((src) => preloadImage(src))),
+    delay(options.timeoutMs)
+  ]);
+  await delay(options.minDelayMs);
+}
+
+async function preloadImage(src: string): Promise<void> {
+  const image = new Image();
+
+  await new Promise<void>((resolve) => {
+    image.onload = () => resolve();
+    image.onerror = () => resolve();
+    image.src = src;
+  });
+
+  if ("decode" in image) {
+    await image.decode().catch(() => undefined);
+  }
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
 function PasswordInput({

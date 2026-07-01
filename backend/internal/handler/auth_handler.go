@@ -21,8 +21,10 @@ import (
 
 const googleOAuthStateCookieName = "google_oauth_state"
 const googleOAuthModeCookieName = "google_oauth_mode"
+const googleOAuthInviteCodeCookieName = "google_oauth_invite_code"
 const googleOAuthModeLink = "link"
 const googleOAuthModeEnroll = "enroll"
+const googleOAuthModeInvitation = "invitation"
 
 type AuthHandler struct {
 	cfg                    *config.Config
@@ -79,6 +81,7 @@ func (h *AuthHandler) RegisterRoutes(r chi.Router, authMiddleware *middlewarego.
 	r.Post("/auth/forgot-password", h.ForgotPassword)
 	r.Get("/auth/google/start", h.GoogleStart)
 	r.Get("/auth/google/enroll/start", h.GoogleEnrollStart)
+	r.Get("/auth/google/invitation/start", h.GoogleInvitationStart)
 	r.Get("/auth/google/callback", h.GoogleCallback)
 
 	r.Group(func(r chi.Router) {
@@ -365,6 +368,31 @@ func (h *AuthHandler) GoogleEnrollStart(w http.ResponseWriter, r *http.Request) 
 	http.Redirect(w, r, authURL, http.StatusFound)
 }
 
+func (h *AuthHandler) GoogleInvitationStart(w http.ResponseWriter, r *http.Request) {
+	inviteCode := strings.TrimSpace(r.URL.Query().Get("code"))
+	if inviteCode == "" {
+		writeError(w, http.StatusBadRequest, service.ErrInvalidAuth)
+		return
+	}
+
+	state, err := randomState()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	authURL, err := h.authService.GoogleAuthURL(state)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	h.setOAuthStateCookie(w, state)
+	h.setOAuthModeCookie(w, googleOAuthModeInvitation)
+	h.setOAuthInviteCodeCookie(w, inviteCode)
+	http.Redirect(w, r, authURL, http.StatusFound)
+}
+
 func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 	stateCookie, err := r.Cookie(googleOAuthStateCookieName)
 	if err != nil || stateCookie.Value == "" || stateCookie.Value != r.URL.Query().Get("state") {
@@ -408,6 +436,8 @@ func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 	var result *service.AuthResult
 	if modeCookie != nil && modeCookie.Value == googleOAuthModeEnroll {
 		result, err = h.authService.RegisterOrLoginWithGoogleCode(r.Context(), code)
+	} else if modeCookie != nil && modeCookie.Value == googleOAuthModeInvitation {
+		result, err = h.authService.RegisterOrLoginWithGoogleCode(r.Context(), code)
 	} else {
 		result, err = h.authService.LoginWithGoogleCode(r.Context(), code)
 	}
@@ -422,13 +452,41 @@ func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.setSessionCookie(w, result.Session.Id.String(), result.Session.ExpiresAt)
 	if modeCookie != nil && modeCookie.Value == googleOAuthModeEnroll {
 		h.clearOAuthModeCookie(w)
 		if err := h.requestPrimaryCourseEnrollment(r.Context(), result.User.Id); err != nil {
 			writeError(w, http.StatusBadRequest, err)
 			return
 		}
+		h.setSessionCookie(w, result.Session.Id.String(), result.Session.ExpiresAt)
+	} else if modeCookie != nil && modeCookie.Value == googleOAuthModeInvitation {
+		h.clearOAuthModeCookie(w)
+		inviteCodeCookie, err := r.Cookie(googleOAuthInviteCodeCookieName)
+		if err != nil || inviteCodeCookie.Value == "" {
+			writeError(w, http.StatusBadRequest, service.ErrInvalidAuth)
+			return
+		}
+		h.clearOAuthInviteCodeCookie(w)
+
+		course, err := h.coursesService.GetPrimaryCourse(r.Context())
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err)
+			return
+		}
+		if course == nil {
+			writeError(w, http.StatusNotFound, nil)
+			return
+		}
+		if err := h.invitationCodesService.RedeemCodeForUser(r.Context(), course.Id, inviteCodeCookie.Value, result.User.Id); err != nil {
+			writeError(w, http.StatusBadRequest, err)
+			return
+		}
+
+		h.setSessionCookie(w, result.Session.Id.String(), result.Session.ExpiresAt)
+		http.Redirect(w, r, h.cfg.FrontendURL+"/course", http.StatusFound)
+		return
+	} else {
+		h.setSessionCookie(w, result.Session.Id.String(), result.Session.ExpiresAt)
 	}
 	http.Redirect(w, r, h.cfg.FrontendURL, http.StatusFound)
 }
@@ -496,6 +554,30 @@ func (h *AuthHandler) setOAuthModeCookie(w http.ResponseWriter, value string) {
 func (h *AuthHandler) clearOAuthModeCookie(w http.ResponseWriter) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     googleOAuthModeCookieName,
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   h.cfg.Env != "development",
+	})
+}
+
+func (h *AuthHandler) setOAuthInviteCodeCookie(w http.ResponseWriter, value string) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     googleOAuthInviteCodeCookieName,
+		Value:    value,
+		Path:     "/",
+		MaxAge:   10 * 60,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   h.cfg.Env != "development",
+	})
+}
+
+func (h *AuthHandler) clearOAuthInviteCodeCookie(w http.ResponseWriter) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     googleOAuthInviteCodeCookieName,
 		Value:    "",
 		Path:     "/",
 		MaxAge:   -1,

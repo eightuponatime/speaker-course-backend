@@ -277,14 +277,14 @@ export function LandingPage({
     }, 1500);
   }
 
-  function scrollToRegistration() {
+  function scrollToProgramFromLogin() {
     setMode("login");
     setAuthNotice("");
     setAuthNoticeDialogOpen(false);
     onClearError?.();
     setLoginDialogOpen(false);
     window.setTimeout(() => {
-      document.getElementById("landing-application")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      highlightSection("program");
     }, 0);
   }
 
@@ -413,6 +413,9 @@ export function LandingPage({
         <GoogleIcon />
         {t("continueWithGoogle")}
       </a>
+      <button className="landing-auth-switch" type="button" onClick={scrollToProgramFromLogin}>
+        Еще нет доступа? Посмотрите программу курса
+      </button>
       {authError ? <AuthAlert message={authError} /> : null}
     </>
   );
@@ -466,11 +469,9 @@ export function LandingPage({
         <GoogleIcon />
         {t("continueWithGoogle")}
       </a>
-      {/*
-      <button className="landing-auth-switch" type="button" onClick={scrollToRegistration}>
-        Нет аккаунта? Запишитесь на курс
+      <button className="landing-auth-switch" type="button" onClick={scrollToProgramFromLogin}>
+        Еще нет доступа? Посмотрите программу курса
       </button>
-      */}
       {authError ? <AuthAlert message={authError} /> : null}
     </>
   );

@@ -232,6 +232,7 @@
   margin-top: 10px;
   color: #3b3631;
   background: rgba(255, 253, 249, 0.76);
+  text-decoration: none;
 }
 
 .signup-google svg {

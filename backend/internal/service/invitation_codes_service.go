@@ -145,6 +145,51 @@ func (s *InvitationCodesService) RegisterWithCode(
 	return result, nil
 }
 
+func (s *InvitationCodesService) RedeemCodeForUser(
+	ctx context.Context,
+	courseId uuid.UUID,
+	code string,
+	userId uuid.UUID,
+) error {
+	code = strings.TrimSpace(code)
+	if courseId == uuid.Nil {
+		return fmt.Errorf("%w: course_id is empty", ErrInvalidInvitationCode)
+	}
+	if userId == uuid.Nil {
+		return fmt.Errorf("%w: user_id is empty", ErrInvalidInvitationCode)
+	}
+	if code == "" {
+		return fmt.Errorf("%w: code is empty", ErrInvalidInvitationCode)
+	}
+
+	return s.txManager.WithTransaction(ctx, func(txCtx context.Context) error {
+		invitationCode, err := s.rp.GetActiveByCodeForUpdate(txCtx, courseId, code)
+		if err != nil {
+			return err
+		}
+		if invitationCode == nil {
+			return fmt.Errorf("%w: code is expired, used, or not found", ErrInvalidInvitationCode)
+		}
+
+		if _, err := s.enrollmentsRp.GrantApprovedAccess(txCtx, domain.CreateCourseEnrollmentInput{
+			CourseId: courseId,
+			UserId:   userId,
+		}); err != nil {
+			return err
+		}
+
+		usedCode, err := s.rp.MarkUsed(txCtx, invitationCode.Id, userId)
+		if err != nil {
+			return err
+		}
+		if usedCode == nil {
+			return fmt.Errorf("%w: code was already used", ErrInvalidInvitationCode)
+		}
+
+		return nil
+	})
+}
+
 func randomInvitationCode() (string, error) {
 	buffer := make([]byte, 18)
 	if _, err := rand.Read(buffer); err != nil {

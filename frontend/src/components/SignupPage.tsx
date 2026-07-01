@@ -3,6 +3,7 @@ import type { CSSProperties, FormEvent } from "react";
 import { Eye, EyeOff, ShieldCheck } from "lucide-react";
 
 import { registerWithInvitationCode } from "../api/authDatasource";
+import { apiBaseUrl } from "../api/http";
 import logosVoiceLogo from "../../assets/images/transparent_logo.png";
 import signUpBackground from "../../assets/images/sign_up_screen_background.png";
 
@@ -19,6 +20,7 @@ export function SignupPage({}: SignupPageProps) {
   const [message, setMessage] = useState("");
   const inviteCode = readInviteCode();
   const canSubmit = inviteCode.length > 0 && email.trim().length > 0 && password.length > 0 && fullName.trim().length > 0;
+  const googleSignupUrl = `${apiBaseUrl}/auth/google/invitation/start?code=${encodeURIComponent(inviteCode)}`;
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -125,10 +127,10 @@ export function SignupPage({}: SignupPageProps) {
             {submitting ? "Подождите..." : "Завершить регистрацию"}
           </button>
 
-          <button className="signup-google" type="button">
+          <a className="signup-google" href={googleSignupUrl}>
             <GoogleIcon />
             <span>Зарегистрироваться через Google</span>
-          </button>
+          </a>
 
           <div className="signup-invite-note">
             <ShieldCheck size={20} strokeWidth={1.7} />

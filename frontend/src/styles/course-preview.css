@@ -217,11 +217,11 @@
   position: sticky;
   top: 102px;
   width: 310px;
+  min-height: 0;
   max-height: calc(100vh - 126px);
   overflow-y: auto;
+  overscroll-behavior: contain;
   align-self: start;
-  display: grid;
-  gap: 20px;
   border: 1px solid rgba(213, 202, 190, 0.86);
   border-radius: 8px;
   padding: 22px;
@@ -229,6 +229,10 @@
   box-shadow: 0 20px 70px rgba(58, 50, 42, 0.045);
   scrollbar-color: rgba(169, 150, 130, 0.72) rgba(255, 253, 249, 0.52);
   scrollbar-width: thin;
+}
+
+.preview-curriculum > * + * {
+  margin-top: 20px;
 }
 
 .preview-curriculum::-webkit-scrollbar {

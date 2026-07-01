@@ -540,6 +540,11 @@
   cursor: pointer;
 }
 
+.landing-auth-switch {
+  justify-self: center;
+  text-align: center;
+}
+
 .landing-forgot-button {
   justify-self: center;
   margin-top: -4px;

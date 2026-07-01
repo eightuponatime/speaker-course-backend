@@ -2,24 +2,27 @@ import { RefreshCw, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { listAdminCourseUsers, updateAdminCourseUserRole } from "../api/courseDatasource";
-import type { AdminUserWithEnrollment, EnrollmentStatus } from "../entities/course/course";
+import type { AdminUserWithEnrollment } from "../entities/course/course";
 
 type PrivilegesPanelProps = {
   courseId: string;
   currentUserId: string;
+  currentUserRole: AdminUserWithEnrollment["role"];
 };
 
-type RoleFilter = "" | "admin" | "member";
-type EnrollmentFilter = "" | "none" | EnrollmentStatus;
+type RoleFilter = "" | "owner" | "admin" | "member";
 
-export function PrivilegesPanel({ courseId, currentUserId }: PrivilegesPanelProps) {
+export function PrivilegesPanel({ courseId, currentUserId, currentUserRole }: PrivilegesPanelProps) {
   const [users, setUsers] = useState<AdminUserWithEnrollment[]>([]);
   const [search, setSearch] = useState("");
   const [role, setRole] = useState<RoleFilter>("");
-  const [enrollmentStatus, setEnrollmentStatus] = useState<EnrollmentFilter>("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [savingUserId, setSavingUserId] = useState("");
+  const [roleConfirm, setRoleConfirm] = useState<{
+    user: AdminUserWithEnrollment;
+    nextRole: AdminUserWithEnrollment["role"];
+  } | null>(null);
 
   const filteredUsers = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -30,17 +33,10 @@ export function PrivilegesPanel({ courseId, currentUserId }: PrivilegesPanelProp
         user.email.toLowerCase().includes(normalizedSearch) ||
         user.full_name.toLowerCase().includes(normalizedSearch);
       const matchesRole = role === "" || user.role === role;
-      const userEnrollmentStatus = user.enrollment_status || "none";
-      const matchesEnrollment = enrollmentStatus === "" || userEnrollmentStatus === enrollmentStatus;
 
-      return matchesSearch && matchesRole && matchesEnrollment;
+      return matchesSearch && matchesRole;
     });
-  }, [enrollmentStatus, role, search, users]);
-
-  const pendingCount = useMemo(
-    () => filteredUsers.filter((user) => user.enrollment_status === "pending" && user.role !== "admin").length,
-    [filteredUsers]
-  );
+  }, [role, search, users]);
 
   useEffect(() => {
     void loadUsers();
@@ -59,15 +55,19 @@ export function PrivilegesPanel({ courseId, currentUserId }: PrivilegesPanelProp
     }
   }
 
-  async function changeRole(user: AdminUserWithEnrollment, nextRole: "admin" | "member") {
+  function requestRoleChange(user: AdminUserWithEnrollment, nextRole: AdminUserWithEnrollment["role"]) {
     if (user.role === nextRole) return;
+    setRoleConfirm({ user, nextRole });
+  }
 
+  async function changeRole(user: AdminUserWithEnrollment, nextRole: AdminUserWithEnrollment["role"]) {
     setSavingUserId(user.id);
     setMessage("");
     try {
       await updateAdminCourseUserRole({ courseId, userId: user.id, role: nextRole });
       await loadUsers();
-      setMessage(nextRole === "admin" ? "Пользователь назначен администратором." : "Пользователь переведен в ученики.");
+      setMessage(roleChangeMessage(nextRole));
+      setRoleConfirm(null);
     } catch (err) {
       setMessage(formatError(err));
     } finally {
@@ -81,7 +81,7 @@ export function PrivilegesPanel({ courseId, currentUserId }: PrivilegesPanelProp
         <div>
           <span>Права доступа</span>
           <h1>Пользователи и роли</h1>
-          <p>Администраторы получают доступ к курсу по роли. Заявка на курс для них не хранится.</p>
+          <p>Управляйте ролями пользователей и правами администраторов.</p>
         </div>
         <button type="button" onClick={() => void loadUsers()} disabled={loading}>
           <RefreshCw size={17} />
@@ -110,6 +110,7 @@ export function PrivilegesPanel({ courseId, currentUserId }: PrivilegesPanelProp
             </button>
           ))}
         </div>
+        {/* Заявки больше не используются: доступ выдается одноразовым кодом приглашения.
         <div className="privileges-chip-row" aria-label="Фильтр по заявке">
           {enrollmentFilters.map((item) => (
             <button
@@ -122,11 +123,11 @@ export function PrivilegesPanel({ courseId, currentUserId }: PrivilegesPanelProp
             </button>
           ))}
         </div>
+        */}
       </div>
 
       <div className="privileges-summary">
         <span>{filteredUsers.length} пользователей</span>
-        <span>{pendingCount} ожидают решения</span>
       </div>
 
       {message ? <div className="admin-inline-message">{message}</div> : null}
@@ -138,7 +139,6 @@ export function PrivilegesPanel({ courseId, currentUserId }: PrivilegesPanelProp
               <th>Пользователь</th>
               <th>Роль</th>
               <th>Вход</th>
-              <th>Заявка</th>
               <th>Дата</th>
               <th>Действия</th>
             </tr>
@@ -151,42 +151,73 @@ export function PrivilegesPanel({ courseId, currentUserId }: PrivilegesPanelProp
                   <span>{user.email}</span>
                 </td>
                 <td>
-                  <span className={user.role === "admin" ? "role-pill admin" : "role-pill"}>{roleLabel(user.role)}</span>
+                  <span className={rolePillClassName(user.role)}>{roleLabel(user.role)}</span>
                 </td>
                 <td>{authProviderLabel(user.auth_provider)}</td>
-                <td>{enrollmentLabel(user)}</td>
                 <td>{user.enrollment_requested_at ? formatDate(user.enrollment_requested_at) : formatDate(user.created_at)}</td>
                 <td>
                   <div className="privileges-actions">
-                    {user.role !== "admin" ? (
+                    {user.role === "member" ? (
+                      <>
+                        <button type="button" onClick={() => requestRoleChange(user, "admin")} disabled={savingUserId === user.id}>
+                          Сделать админом
+                        </button>
+                        {currentUserRole === "owner" ? (
+                          <button type="button" onClick={() => requestRoleChange(user, "owner")} disabled={savingUserId === user.id}>
+                            Сделать главным
+                          </button>
+                        ) : null}
+                      </>
+                    ) : null}
+                    {user.role === "admin" && currentUserRole === "owner" ? (
                       <button
                         type="button"
-                        onClick={() => void changeRole(user, "admin")}
-                        disabled={savingUserId === user.id}
-                      >
-                        Сделать админом
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => void changeRole(user, "member")}
+                        onClick={() => requestRoleChange(user, "member")}
                         disabled={savingUserId === user.id || user.id === currentUserId}
                       >
                         Сделать учеником
                       </button>
-                    )}
+                    ) : null}
+                    {user.role === "owner" && currentUserRole === "owner" && user.id !== currentUserId ? (
+                      <button type="button" onClick={() => requestRoleChange(user, "admin")} disabled={savingUserId === user.id}>
+                        Сделать админом
+                      </button>
+                    ) : null}
+                    {user.role !== "member" && currentUserRole !== "owner" ? <span className="privileges-action-note">Только главный админ</span> : null}
                   </div>
                 </td>
               </tr>
             ))}
             {filteredUsers.length === 0 ? (
               <tr>
-                <td colSpan={6}>Пользователи не найдены.</td>
+                <td colSpan={5}>Пользователи не найдены.</td>
               </tr>
             ) : null}
           </tbody>
         </table>
       </div>
+      {roleConfirm ? (
+        <div className="admin-dialog-backdrop" onMouseDown={() => setRoleConfirm(null)}>
+          <section className="admin-confirm-dialog" role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()}>
+            <header>
+              <div>
+                <h2>Изменить права?</h2>
+                <p>
+                  {roleConfirm.user.full_name || roleConfirm.user.email}: {roleLabel(roleConfirm.user.role)} {"->"} {roleLabel(roleConfirm.nextRole)}
+                </p>
+              </div>
+            </header>
+            <div className="admin-confirm-actions">
+              <button type="button" onClick={() => setRoleConfirm(null)}>
+                Отмена
+              </button>
+              <button className="primary" type="button" onClick={() => void changeRole(roleConfirm.user, roleConfirm.nextRole)}>
+                Подтвердить
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -194,35 +225,40 @@ export function PrivilegesPanel({ courseId, currentUserId }: PrivilegesPanelProp
 const roleFilters: Array<{ label: string; value: RoleFilter }> = [
   { label: "Все роли", value: "" },
   { label: "Ученики", value: "member" },
-  { label: "Админы", value: "admin" }
+  { label: "Админы", value: "admin" },
+  { label: "Главные", value: "owner" }
 ];
 
-const enrollmentFilters: Array<{ label: string; value: EnrollmentFilter }> = [
-  { label: "Все заявки", value: "" },
-  { label: "Ожидают", value: "pending" },
-  { label: "Одобрены", value: "approved" },
-  { label: "Отклонены", value: "rejected" },
-  { label: "Отозваны", value: "revoked" },
-  { label: "Без заявки", value: "none" }
-];
+// Заявки больше не используются: доступ выдается одноразовым кодом приглашения.
+// const enrollmentFilters: Array<{ label: string; value: EnrollmentFilter }> = [
+//   { label: "Все заявки", value: "" },
+//   { label: "Ожидают", value: "pending" },
+//   { label: "Одобрены", value: "approved" },
+//   { label: "Отклонены", value: "rejected" },
+//   { label: "Отозваны", value: "revoked" },
+//   { label: "Без заявки", value: "none" }
+// ];
 
 function roleLabel(role: AdminUserWithEnrollment["role"]): string {
+  if (role === "owner") return "Главный админ";
   return role === "admin" ? "Админ" : "Ученик";
+}
+
+function rolePillClassName(role: AdminUserWithEnrollment["role"]): string {
+  if (role === "owner") return "role-pill owner";
+  return role === "admin" ? "role-pill admin" : "role-pill";
+}
+
+function roleChangeMessage(role: AdminUserWithEnrollment["role"]): string {
+  if (role === "owner") return "Пользователь назначен главным администратором.";
+  if (role === "admin") return "Пользователь назначен администратором.";
+  return "Пользователь переведен в ученики.";
 }
 
 function authProviderLabel(provider: AdminUserWithEnrollment["auth_provider"]): string {
   if (provider === "google") return "Google";
   if (provider === "google_password") return "Google + пароль";
   return "Email";
-}
-
-function enrollmentLabel(user: AdminUserWithEnrollment): string {
-  if (user.role === "admin") return "Не требуется";
-  if (user.enrollment_status === "pending") return "Ожидает";
-  if (user.enrollment_status === "approved") return "Доступ открыт";
-  if (user.enrollment_status === "rejected") return "Отклонена";
-  if (user.enrollment_status === "revoked") return "Отозвана";
-  return "Нет заявки";
 }
 
 function formatDate(value: string): string {

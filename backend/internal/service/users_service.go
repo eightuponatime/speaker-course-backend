@@ -43,7 +43,7 @@ func (s *UsersService) Create(ctx context.Context, input domain.CreateUserInput)
 	if input.Role == "" {
 		input.Role = domain.UserRoleMember
 	}
-	if input.Role != domain.UserRoleAdmin && input.Role != domain.UserRoleMember {
+	if !isUserRole(input.Role) {
 		return nil, fmt.Errorf("%w: unsupported role %q", ErrInvalidUser, input.Role)
 	}
 
@@ -95,7 +95,7 @@ func (s *UsersService) ListForAdmin(
 	role = strings.TrimSpace(role)
 	enrollmentStatus = strings.TrimSpace(enrollmentStatus)
 
-	if role != "" && role != string(domain.UserRoleAdmin) && role != string(domain.UserRoleMember) {
+	if role != "" && !isUserRole(domain.UserRole(role)) {
 		return nil, fmt.Errorf("%w: unsupported role %q", ErrInvalidUser, role)
 	}
 	switch enrollmentStatus {
@@ -111,11 +111,20 @@ func (s *UsersService) UpdateRole(ctx context.Context, userID uuid.UUID, role do
 	if userID == uuid.Nil {
 		return nil, fmt.Errorf("%w: id is empty", ErrInvalidUser)
 	}
-	if role != domain.UserRoleAdmin && role != domain.UserRoleMember {
+	if !isUserRole(role) {
 		return nil, fmt.Errorf("%w: unsupported role %q", ErrInvalidUser, role)
 	}
 
 	return s.rp.UpdateRole(ctx, userID, role)
+}
+
+func isUserRole(role domain.UserRole) bool {
+	switch role {
+	case domain.UserRoleOwner, domain.UserRoleAdmin, domain.UserRoleMember:
+		return true
+	default:
+		return false
+	}
 }
 
 func (s *UsersService) UpdateGoogleSub(

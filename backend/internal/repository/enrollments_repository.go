@@ -37,6 +37,30 @@ func (r *EnrollmentsRepository) CreateRequest(
 	return &enrollment, nil
 }
 
+func (r *EnrollmentsRepository) GrantApprovedAccess(
+	ctx context.Context,
+	input domain.CreateCourseEnrollmentInput,
+) (*domain.CourseEnrollment, error) {
+	const query = `
+		insert into course_enrollments (course_id, user_id, status, reviewed_at, admin_note)
+		values ($1, $2, 'approved', now(), 'Access granted by invitation code.')
+		on conflict (course_id, user_id) do update
+		set status = 'approved',
+			reviewed_at = now(),
+			reviewed_by = null,
+			admin_note = 'Access granted by invitation code.'
+		returning id, course_id, user_id, status, requested_at, reviewed_at, reviewed_by, admin_note
+	`
+
+	q := extractTransaction(ctx, r.db)
+	var enrollment domain.CourseEnrollment
+	if err := sqlx.GetContext(ctx, q, &enrollment, query, input.CourseId, input.UserId); err != nil {
+		return nil, err
+	}
+
+	return &enrollment, nil
+}
+
 func (r *EnrollmentsRepository) GetByCourseAndUser(
 	ctx context.Context,
 	courseId uuid.UUID,

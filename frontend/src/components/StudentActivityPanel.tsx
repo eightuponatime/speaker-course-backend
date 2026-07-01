@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { RefreshCw, X } from "lucide-react";
+import { RefreshCw, Search, X } from "lucide-react";
 
 import { listCourseEnrollments, listCourseStudentActivity, listStudentLessonHistory } from "../api/courseDatasource";
 import type { CourseStudentActivity, LessonProgressHistoryItem } from "../entities/course/course";
@@ -14,6 +14,7 @@ type StudentActivityPanelProps = {
 export function StudentActivityPanel({ courseId, totalLessons, t }: StudentActivityPanelProps) {
   const [items, setItems] = useState<CourseStudentActivity[]>([]);
   const [message, setMessage] = useState("");
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [historyStudent, setHistoryStudent] = useState<CourseStudentActivity | null>(null);
   const [historyItems, setHistoryItems] = useState<LessonProgressHistoryItem[]>([]);
@@ -31,6 +32,19 @@ export function StudentActivityPanel({ courseId, totalLessons, t }: StudentActiv
   }, [courseId]);
 
   const onlineCount = useMemo(() => items.filter((item) => item.is_online).length, [items]);
+  const filteredItems = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return items;
+
+    return items.filter((item) => {
+      return [
+        item.user_full_name,
+        item.user_email,
+        item.current_lesson_title,
+        item.current_section_title
+      ].some((value) => value?.toLowerCase().includes(query));
+    });
+  }, [items, search]);
 
   async function loadActivity(showLoading = true) {
     if (showLoading) {
@@ -91,10 +105,18 @@ export function StudentActivityPanel({ courseId, totalLessons, t }: StudentActiv
       <div className="student-activity-header">
         <div>
           <h1>Активность учеников</h1>
-          <p>Последний урок, срок доступа и история внимания по каждому уроку.</p>
+          <p>Последний открытый урок, входы, действия в курсе и срок доступа.</p>
         </div>
+        <label className="student-activity-search">
+          <Search size={16} />
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Поиск по ученику, email или уроку"
+          />
+        </label>
         <div className="student-activity-summary">
-          <span>{items.length} с доступом</span>
+          <span>{filteredItems.length} / {items.length} с доступом</span>
           <span>{onlineCount} в сети</span>
         </div>
         <button className="secondary-button" type="button" onClick={() => void loadActivity()}>
@@ -113,14 +135,14 @@ export function StudentActivityPanel({ courseId, totalLessons, t }: StudentActiv
         <div className="student-activity-head">
           <span>Ученик</span>
           <span>Статус</span>
-          <span>Последний урок</span>
+          <span>Последний открытый урок</span>
           <span>Прогресс</span>
           <span>Доступ</span>
           <span>Последний вход</span>
-          <span>Активность</span>
+          <span>Последнее действие</span>
           <span />
         </div>
-        {items.map((item) => (
+        {filteredItems.map((item) => (
           <div className="student-activity-row" key={item.user_id}>
             <div>
               <strong>{item.user_full_name || item.user_email}</strong>
@@ -136,25 +158,28 @@ export function StudentActivityPanel({ courseId, totalLessons, t }: StudentActiv
               <span>{item.current_section_title || "Раздел не определен"}</span>
             </div>
             <div>
-              <strong>{item.viewed_lessons} / {item.total_lessons}</strong>
+              <span className={progressClassName(item)}>{item.viewed_lessons} / {item.total_lessons}</span>
               <span>{formatProgress(item)}</span>
             </div>
             <div>
-              <strong>{formatAccessState(item)}</strong>
+              <span className={accessClassName(item)}>{formatAccessState(item)}</span>
               <span>{item.access_expires_at ? `до ${formatDate(item.access_expires_at)}` : "отсчет не начался"}</span>
             </div>
             <div>
-              <strong>{item.last_login_at ? formatDateTime(item.last_login_at) : "нет входов"}</strong>
+              <span className="activity-muted-value">{item.last_login_at ? formatDateTime(item.last_login_at) : "нет входов"}</span>
             </div>
             <div>
-              <strong>{item.last_seen_at ? formatDateTime(item.last_seen_at) : "нет активности"}</strong>
-              <span>{item.is_online ? "сейчас в курсе" : "последнее внимание"}</span>
+              <span className="activity-muted-value">{item.last_seen_at ? formatDateTime(item.last_seen_at) : "нет активности"}</span>
+              <span>{item.is_online ? "сейчас в курсе" : "последнее действие в курсе"}</span>
             </div>
             <button className="secondary-button compact" type="button" onClick={() => void openHistory(item)}>
               История
             </button>
           </div>
         ))}
+        {!loading && items.length > 0 && filteredItems.length === 0 ? (
+          <div className="student-activity-empty-row">По этому поиску учеников не найдено.</div>
+        ) : null}
       </div>
 
       {historyStudent ? (
@@ -177,7 +202,7 @@ export function StudentActivityPanel({ courseId, totalLessons, t }: StudentActiv
               <div className="lesson-history-head">
                 <span>Урок</span>
                 <span>Первый просмотр</span>
-                <span>Последнее внимание</span>
+                <span>Последнее действие</span>
               </div>
               {historyGroups.map((group) => (
                 <section className="lesson-history-section" key={group.sectionId}>
@@ -206,6 +231,21 @@ function progressPercent(item: CourseStudentActivity): number {
 
 function formatProgress(item: CourseStudentActivity): string {
   return `${progressPercent(item)}% курса`;
+}
+
+function progressClassName(item: CourseStudentActivity): string {
+  const percent = progressPercent(item);
+  if (percent >= 80) return "progress-chip high";
+  if (percent >= 35) return "progress-chip mid";
+  return "progress-chip low";
+}
+
+function accessClassName(item: CourseStudentActivity): string {
+  if (item.is_access_expired) return "access-chip expired";
+  if (!item.access_expires_at) return "access-chip idle";
+  const daysLeft = Math.ceil((new Date(item.access_expires_at).getTime() - Date.now()) / 86_400_000);
+  if (daysLeft <= 7) return "access-chip soon";
+  return "access-chip active";
 }
 
 function formatAccessState(item: CourseStudentActivity): string {

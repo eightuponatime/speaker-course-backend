@@ -64,11 +64,21 @@ export function NotificationBell({ emptyLabel, onNotificationOpen }: Notificatio
     if (notification.read_at || markingReadRef.current.has(notification.id)) return;
 
     markingReadRef.current.add(notification.id);
+    const optimisticReadAt = new Date().toISOString();
+    setUnreadCount((current) => Math.max(0, current - 1));
+    setNotifications((current) =>
+      current.map((item) => (item.id === notification.id ? { ...item, read_at: optimisticReadAt } : item))
+    );
     const updated = await markNotificationRead(notification.id).catch(() => null);
     markingReadRef.current.delete(notification.id);
-    if (!updated) return;
+    if (!updated) {
+      setUnreadCount((current) => current + 1);
+      setNotifications((current) =>
+        current.map((item) => (item.id === notification.id ? { ...item, read_at: notification.read_at } : item))
+      );
+      return;
+    }
 
-    setUnreadCount((current) => Math.max(0, current - 1));
     setNotifications((current) => current.map((item) => (item.id === updated.id ? updated : item)));
   }
 

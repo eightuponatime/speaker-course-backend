@@ -9,9 +9,14 @@ import (
 type UserRole string
 
 const (
+	UserRoleOwner  UserRole = "owner"
 	UserRoleAdmin  UserRole = "admin"
 	UserRoleMember UserRole = "member"
 )
+
+func (r UserRole) IsAdmin() bool {
+	return r == UserRoleOwner || r == UserRoleAdmin
+}
 
 type User struct {
 	Id        uuid.UUID `db:"id" json:"id"`

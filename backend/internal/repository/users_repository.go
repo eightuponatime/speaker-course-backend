@@ -108,7 +108,7 @@ func (r *UsersRepository) ListAdmins(ctx context.Context) ([]domain.User, error)
 	const query = `
 		select id, google_sub, email, password, full_name, role, created_at
 		from users
-		where role = 'admin'
+		where role in ('owner', 'admin')
 		order by created_at asc
 	`
 

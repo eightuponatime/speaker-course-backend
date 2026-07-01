@@ -25,14 +25,15 @@ const googleOAuthModeLink = "link"
 const googleOAuthModeEnroll = "enroll"
 
 type AuthHandler struct {
-	cfg                  *config.Config
-	authService          *service.AuthService
-	sessionsService      *service.SessionsService
-	usersService         *service.UsersService
-	coursesService       *service.CoursesService
-	enrollmentsService   *service.EnrollmentsService
-	notificationsService *service.NotificationsService
-	emailService         *service.EmailService
+	cfg                    *config.Config
+	authService            *service.AuthService
+	sessionsService        *service.SessionsService
+	usersService           *service.UsersService
+	coursesService         *service.CoursesService
+	enrollmentsService     *service.EnrollmentsService
+	invitationCodesService *service.InvitationCodesService
+	notificationsService   *service.NotificationsService
+	emailService           *service.EmailService
 }
 
 type authUserResponse struct {
@@ -53,23 +54,27 @@ func NewAuthHandler(
 	usersService *service.UsersService,
 	coursesService *service.CoursesService,
 	enrollmentsService *service.EnrollmentsService,
+	invitationCodesService *service.InvitationCodesService,
 	notificationsService *service.NotificationsService,
 	emailService *service.EmailService,
 ) *AuthHandler {
 	return &AuthHandler{
-		cfg:                  cfg,
-		authService:          authService,
-		sessionsService:      sessionsService,
-		usersService:         usersService,
-		coursesService:       coursesService,
-		enrollmentsService:   enrollmentsService,
-		notificationsService: notificationsService,
-		emailService:         emailService,
+		cfg:                    cfg,
+		authService:            authService,
+		sessionsService:        sessionsService,
+		usersService:           usersService,
+		coursesService:         coursesService,
+		enrollmentsService:     enrollmentsService,
+		invitationCodesService: invitationCodesService,
+		notificationsService:   notificationsService,
+		emailService:           emailService,
 	}
 }
 
 func (h *AuthHandler) RegisterRoutes(r chi.Router, authMiddleware *middlewarego.AuthMiddleware) {
-	r.Post("/auth/register", h.Register)
+	// Public registration is disabled. New users must register through a one-time invitation code.
+	// r.Post("/auth/register", h.Register)
+	r.Post("/auth/register/invitation", h.RegisterWithInvitationCode)
 	r.Post("/auth/login", h.Login)
 	r.Post("/auth/forgot-password", h.ForgotPassword)
 	r.Get("/auth/google/start", h.GoogleStart)
@@ -100,6 +105,44 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result, err := h.authService.RegisterWithPassword(r.Context(), service.RegisterWithPasswordInput{
+		Email:    request.Email,
+		Password: request.Password,
+		FullName: request.FullName,
+	})
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	h.setSessionCookie(w, result.Session.Id.String(), result.Session.ExpiresAt)
+	writeJSON(w, http.StatusCreated, buildAuthUserResponse(result.User))
+}
+
+func (h *AuthHandler) RegisterWithInvitationCode(w http.ResponseWriter, r *http.Request) {
+	var request struct {
+		Code     string `json:"code"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
+		FullName string `json:"full_name"`
+	}
+	if err := decodeJSON(r, &request); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	course, err := h.coursesService.GetPrimaryCourse(r.Context())
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	if course == nil {
+		writeError(w, http.StatusNotFound, nil)
+		return
+	}
+
+	result, err := h.invitationCodesService.RegisterWithCode(r.Context(), domain.RegisterWithInvitationCodeInput{
+		CourseId: course.Id,
+		Code:     request.Code,
 		Email:    request.Email,
 		Password: request.Password,
 		FullName: request.FullName,
@@ -528,7 +571,8 @@ func (h *AuthHandler) requestPrimaryCourseEnrollment(ctx context.Context, userID
 
 	if existingEnrollment == nil {
 		h.notifyAdminsAboutEnrollmentRequest(ctx, userID, course.Id, enrollment.Id, course.Title)
-		h.emailCourseAccessRequested(ctx, userID, course.Title)
+		// Email requests are disabled: registration now happens through one-time invitation codes.
+		// h.emailCourseAccessRequested(ctx, userID, course.Title)
 	}
 
 	return nil
@@ -580,14 +624,15 @@ func (h *AuthHandler) notifyAdminsAboutEnrollmentRequest(
 			Title:        "Новая заявка на курс",
 			Body:         studentLabel + " отправил(а) заявку на " + courseTitle + ".",
 		})
-		_ = h.emailService.Send(ctx, service.AdminEnrollmentRequestedEmail(
-			admin.Email,
-			admin.FullName,
-			studentName,
-			studentEmail,
-			courseTitle,
-			h.cfg.FrontendURL+"/admin",
-		))
+		// Email requests are disabled: registration now happens through one-time invitation codes.
+		// _ = h.emailService.Send(ctx, service.AdminEnrollmentRequestedEmail(
+		// 	admin.Email,
+		// 	admin.FullName,
+		// 	studentName,
+		// 	studentEmail,
+		// 	courseTitle,
+		// 	h.cfg.FrontendURL+"/admin",
+		// ))
 	}
 }
 

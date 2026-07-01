@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"speaker_course/internal/domain"
 	"speaker_course/internal/service"
 
 	"github.com/google/uuid"
@@ -78,7 +77,7 @@ func (am *AuthMiddleware) RequireAdmin() func(http.Handler) http.Handler {
 				return
 			}
 
-			if user.Role != domain.UserRoleAdmin {
+			if !user.Role.IsAdmin() {
 				writeForbidden(w)
 				return
 			}

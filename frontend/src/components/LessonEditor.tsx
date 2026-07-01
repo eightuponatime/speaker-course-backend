@@ -66,6 +66,7 @@ export function LessonEditor({
           class: VideoUrlTool,
           config: {
             uploadVideo: onUploadVideo,
+            onChange,
             onDebug
           }
         },
@@ -73,6 +74,7 @@ export function LessonEditor({
           class: ImageUrlTool,
           config: {
             uploadImage: onUploadImage,
+            onChange,
             onDebug
           }
         },
@@ -80,6 +82,7 @@ export function LessonEditor({
           class: PdfUrlTool,
           config: {
             uploadPdf: onUploadPdf,
+            onChange,
             onDebug
           }
         }

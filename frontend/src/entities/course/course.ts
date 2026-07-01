@@ -113,7 +113,7 @@ export type User = {
   id: string;
   email: string;
   full_name: string;
-  role: "admin" | "member";
+  role: "owner" | "admin" | "member";
   auth_provider?: "password" | "google" | "google_password";
   can_change_email?: boolean;
   can_change_password?: boolean;
@@ -124,11 +124,25 @@ export type AdminUserWithEnrollment = {
   id: string;
   email: string;
   full_name: string;
-  role: "admin" | "member";
+  role: "owner" | "admin" | "member";
   created_at: string;
   auth_provider: "password" | "google" | "google_password";
   enrollment_id?: string;
   enrollment_status?: EnrollmentStatus;
   enrollment_requested_at?: string;
   enrollment_reviewed_at?: string;
+};
+
+export type InvitationCodeStatus = "active" | "used" | "expired";
+
+export type CourseInvitationCode = {
+  id: string;
+  course_id: string;
+  code: string;
+  status: InvitationCodeStatus;
+  created_by?: string;
+  used_by?: string;
+  created_at: string;
+  expires_at: string;
+  used_at?: string;
 };

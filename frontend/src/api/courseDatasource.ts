@@ -2,6 +2,7 @@ import type {
   Course,
   CourseAccessWindow,
   AdminUserWithEnrollment,
+  CourseInvitationCode,
   CourseCurriculum,
   CourseEnrollment,
   CourseStudentActivity,
@@ -256,6 +257,16 @@ export function listCourseEnrollments(courseId: string, status: EnrollmentStatus
   return request<CourseEnrollment[]>(`/admin/courses/${courseId}/enrollments?status=${status}`);
 }
 
+export function listInvitationCodes(courseId: string): Promise<CourseInvitationCode[]> {
+  return request<CourseInvitationCode[]>(`/admin/courses/${courseId}/invitation-codes`);
+}
+
+export function generateInvitationCode(courseId: string): Promise<CourseInvitationCode> {
+  return request<CourseInvitationCode>(`/admin/courses/${courseId}/invitation-codes`, {
+    method: "POST"
+  });
+}
+
 export function listCourseStudentActivity(courseId: string): Promise<CourseStudentActivity[]> {
   return request<CourseStudentActivity[]>(`/admin/courses/${courseId}/student-activity`);
 }
@@ -305,7 +316,7 @@ export function reviewEnrollment(input: {
 export function listAdminCourseUsers(input: {
   courseId: string;
   search?: string;
-  role?: "" | "admin" | "member";
+  role?: "" | "owner" | "admin" | "member";
   enrollmentStatus?: "" | "none" | EnrollmentStatus;
 }): Promise<AdminUserWithEnrollment[]> {
   const params = new URLSearchParams();
@@ -322,7 +333,7 @@ export function listAdminCourseUsers(input: {
 export function updateAdminCourseUserRole(input: {
   courseId: string;
   userId: string;
-  role: "admin" | "member";
+  role: "owner" | "admin" | "member";
 }): Promise<User> {
   return request<User>(`/admin/courses/${input.courseId}/users/${input.userId}/role`, {
     method: "PATCH",

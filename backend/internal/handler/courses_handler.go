@@ -17,20 +17,22 @@ import (
 )
 
 type CoursesHandler struct {
-	cfg                  *config.Config
-	coursesService       *service.CoursesService
-	enrollmentsService   *service.EnrollmentsService
-	notificationsService *service.NotificationsService
-	quizResponsesService *service.QuizResponsesService
-	activityService      *service.ActivityService
-	usersService         *service.UsersService
-	emailService         *service.EmailService
+	cfg                    *config.Config
+	coursesService         *service.CoursesService
+	enrollmentsService     *service.EnrollmentsService
+	invitationCodesService *service.InvitationCodesService
+	notificationsService   *service.NotificationsService
+	quizResponsesService   *service.QuizResponsesService
+	activityService        *service.ActivityService
+	usersService           *service.UsersService
+	emailService           *service.EmailService
 }
 
 func NewCoursesHandler(
 	cfg *config.Config,
 	coursesService *service.CoursesService,
 	enrollmentsService *service.EnrollmentsService,
+	invitationCodesService *service.InvitationCodesService,
 	notificationsService *service.NotificationsService,
 	quizResponsesService *service.QuizResponsesService,
 	activityService *service.ActivityService,
@@ -38,14 +40,15 @@ func NewCoursesHandler(
 	emailService *service.EmailService,
 ) *CoursesHandler {
 	return &CoursesHandler{
-		cfg:                  cfg,
-		coursesService:       coursesService,
-		enrollmentsService:   enrollmentsService,
-		notificationsService: notificationsService,
-		quizResponsesService: quizResponsesService,
-		activityService:      activityService,
-		usersService:         usersService,
-		emailService:         emailService,
+		cfg:                    cfg,
+		coursesService:         coursesService,
+		enrollmentsService:     enrollmentsService,
+		invitationCodesService: invitationCodesService,
+		notificationsService:   notificationsService,
+		quizResponsesService:   quizResponsesService,
+		activityService:        activityService,
+		usersService:           usersService,
+		emailService:           emailService,
 	}
 }
 
@@ -81,6 +84,8 @@ func (h *CoursesHandler) RegisterRoutes(r chi.Router, authMiddleware *middleware
 		admin.Post("/admin/courses/{courseID}/sections/{sectionID}/lessons", h.CreateLesson)
 		admin.Patch("/admin/courses/{courseID}/lessons/reorder", h.ReorderLessons)
 		admin.Get("/admin/courses/{courseID}/enrollments", h.ListEnrollments)
+		admin.Get("/admin/courses/{courseID}/invitation-codes", h.ListInvitationCodes)
+		admin.Post("/admin/courses/{courseID}/invitation-codes", h.GenerateInvitationCode)
 		admin.Get("/admin/courses/{courseID}/student-activity", h.ListCourseStudentActivity)
 		admin.Get("/admin/courses/{courseID}/students/{userID}/lesson-history", h.ListStudentLessonHistory)
 		admin.Patch("/admin/courses/{courseID}/students/{userID}/access", h.ExtendStudentCourseAccess)
@@ -632,9 +637,10 @@ func (h *CoursesHandler) requestEnrollmentForCourse(w http.ResponseWriter, r *ht
 	if existingEnrollment == nil && err == nil && course != nil {
 		h.notifyAdminsAboutEnrollmentRequest(r.Context(), userID, courseID, enrollment.Id, course.Title)
 	}
-	if existingEnrollment == nil && err == nil && course != nil {
-		h.emailCourseAccessRequested(r.Context(), userID, course.Title)
-	}
+	// Email requests are disabled: registration now happens through one-time invitation codes.
+	// if existingEnrollment == nil && err == nil && course != nil {
+	// 	h.emailCourseAccessRequested(r.Context(), userID, course.Title)
+	// }
 
 	writeJSON(w, http.StatusCreated, enrollment)
 }
@@ -983,6 +989,41 @@ func (h *CoursesHandler) ListEnrollments(w http.ResponseWriter, r *http.Request)
 	writeJSON(w, http.StatusOK, enrollments)
 }
 
+func (h *CoursesHandler) ListInvitationCodes(w http.ResponseWriter, r *http.Request) {
+	courseID, ok := parseUUIDParam(w, r, "courseID")
+	if !ok {
+		return
+	}
+
+	codes, err := h.invitationCodesService.ListByCourse(r.Context(), courseID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, codes)
+}
+
+func (h *CoursesHandler) GenerateInvitationCode(w http.ResponseWriter, r *http.Request) {
+	courseID, ok := parseUUIDParam(w, r, "courseID")
+	if !ok {
+		return
+	}
+	userID, ok := middlewarego.UserIDFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, nil)
+		return
+	}
+
+	code, err := h.invitationCodesService.Generate(r.Context(), courseID, userID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, code)
+}
+
 func (h *CoursesHandler) ListCourseUsers(w http.ResponseWriter, r *http.Request) {
 	courseID, ok := parseUUIDParam(w, r, "courseID")
 	if !ok {
@@ -1022,6 +1063,38 @@ func (h *CoursesHandler) UpdateCourseUserRole(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	adminID, ok := middlewarego.UserIDFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, nil)
+		return
+	}
+	adminUser, err := h.usersService.GetByID(r.Context(), adminID)
+	if err != nil || adminUser == nil {
+		writeError(w, http.StatusUnauthorized, err)
+		return
+	}
+	targetUser, err := h.usersService.GetByID(r.Context(), userID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	if targetUser == nil {
+		writeError(w, http.StatusNotFound, nil)
+		return
+	}
+	if request.Role == domain.UserRoleOwner && adminUser.Role != domain.UserRoleOwner {
+		writeError(w, http.StatusForbidden, nil)
+		return
+	}
+	if targetUser.Role.IsAdmin() && request.Role == domain.UserRoleMember && adminUser.Role != domain.UserRoleOwner {
+		writeError(w, http.StatusForbidden, nil)
+		return
+	}
+	if targetUser.Id == adminUser.Id && targetUser.Role == domain.UserRoleOwner && request.Role != domain.UserRoleOwner {
+		writeError(w, http.StatusForbidden, nil)
+		return
+	}
+
 	user, err := h.usersService.UpdateRole(r.Context(), userID, request.Role)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err)
@@ -1032,7 +1105,7 @@ func (h *CoursesHandler) UpdateCourseUserRole(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	if user.Role == domain.UserRoleAdmin {
+	if user.Role.IsAdmin() {
 		_ = h.enrollmentsService.DeleteByCourseAndUser(r.Context(), courseID, userID)
 	}
 
@@ -1100,7 +1173,8 @@ func (h *CoursesHandler) ReviewEnrollment(w http.ResponseWriter, r *http.Request
 			Title:        title,
 			Body:         body,
 		})
-		h.emailCourseAccessReviewed(r.Context(), enrollment.UserId, course.Title, enrollment.Status)
+		// Email requests are disabled: registration now happens through one-time invitation codes.
+		// h.emailCourseAccessReviewed(r.Context(), enrollment.UserId, course.Title, enrollment.Status)
 	}
 
 	writeJSON(w, http.StatusOK, enrollment)
@@ -1183,14 +1257,15 @@ func (h *CoursesHandler) notifyAdminsAboutEnrollmentRequest(
 			Title:        "Новая заявка на курс",
 			Body:         studentLabel + " отправил(а) заявку на " + courseTitle + ".",
 		})
-		_ = h.emailService.Send(ctx, service.AdminEnrollmentRequestedEmail(
-			admin.Email,
-			admin.FullName,
-			studentName,
-			studentEmail,
-			courseTitle,
-			h.cfg.FrontendURL+"/admin",
-		))
+		// Email requests are disabled: registration now happens through one-time invitation codes.
+		// _ = h.emailService.Send(ctx, service.AdminEnrollmentRequestedEmail(
+		// 	admin.Email,
+		// 	admin.FullName,
+		// 	studentName,
+		// 	studentEmail,
+		// 	courseTitle,
+		// 	h.cfg.FrontendURL+"/admin",
+		// ))
 	}
 }
 
@@ -1225,7 +1300,7 @@ func (h *CoursesHandler) emailCourseAccessExtended(
 		return
 	}
 
-	_ = h.emailService.Send(ctx, service.CourseAccessExtendedEmail(user.Email, user.FullName, courseTitle, *accessExpiresAt))
+	_ = h.emailService.Send(ctx, service.CourseAccessExtendedEmail(user.Email, user.FullName, courseTitle, *accessExpiresAt, h.cfg.FrontendURL))
 }
 
 func (h *CoursesHandler) primaryCourse(w http.ResponseWriter, r *http.Request) (*domain.Course, bool) {

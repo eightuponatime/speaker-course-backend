@@ -1,4 +1,4 @@
-import { CheckCircle2, Eye, Menu, X } from "lucide-react";
+import { CheckCircle2, ExternalLink, Eye, LogOut, Menu, X } from "lucide-react";
 import { useState } from "react";
 
 import type { Course } from "../entities/course/course";
@@ -8,12 +8,12 @@ import { NotificationBell } from "./NotificationBell";
 
 type CourseTopbarProps = {
   course: Course;
-  activeTab: "curriculum" | "activity" | "requests" | "privileges";
+  activeTab: "curriculum" | "activity" | "access" | "invitations" | "privileges";
   hasUnpublishedChanges: boolean;
   pendingRequestsCount: number;
   publishStatus: string;
   isPublishing: boolean;
-  onTabChange: (tab: "curriculum" | "activity" | "requests" | "privileges") => void;
+  onTabChange: (tab: "curriculum" | "activity" | "access" | "invitations" | "privileges") => void;
   t: (key: TranslationKey) => string;
   onLogout: () => void;
   onLandingOpen: () => void;
@@ -40,6 +40,7 @@ export function CourseTopbar({
   onNotificationOpen
 }: CourseTopbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const statusText = activeTab === "curriculum" ? publishStatus || t("saved") : t("saved");
 
   function selectTab(tab: CourseTopbarProps["activeTab"]) {
@@ -73,6 +74,16 @@ export function CourseTopbar({
         <div className="mobile-notification-slot">
           <NotificationBell emptyLabel={t("noNotifications")} onNotificationOpen={onNotificationOpen} />
         </div>
+        <div className="topbar-platform-actions">
+          <button type="button" onClick={onLandingOpen}>
+            <ExternalLink size={15} />
+            На лендинг
+          </button>
+          <button className="danger" type="button" onClick={() => setLogoutConfirmOpen(true)}>
+            <LogOut size={16} />
+            Выйти
+          </button>
+        </div>
       </div>
 
       <div className="course-topbar-bottom-row">
@@ -92,6 +103,15 @@ export function CourseTopbar({
             Активность
           </button>
           <button
+            className={activeTab === "access" ? "active" : ""}
+            type="button"
+            onClick={() => onTabChange("access")}
+          >
+            Доступ
+          </button>
+          {/*
+          Requests tab is disabled. Registration now happens through one-time invitation codes.
+          <button
             className={activeTab === "requests" ? "active" : ""}
             type="button"
             onClick={() => onTabChange("requests")}
@@ -100,6 +120,14 @@ export function CourseTopbar({
             <span className={pendingRequestsCount > 0 ? "tab-count active" : "tab-count"}>
               {pendingRequestsCount}
             </span>
+          </button>
+          */}
+          <button
+            className={activeTab === "invitations" ? "active" : ""}
+            type="button"
+            onClick={() => onTabChange("invitations")}
+          >
+            Приглашения
           </button>
           <button
             className={activeTab === "privileges" ? "active" : ""}
@@ -111,9 +139,6 @@ export function CourseTopbar({
         </nav>
 
         <div className="course-actions">
-          <button className="preview-button" type="button" onClick={onLandingOpen}>
-            {t("backToLanding")}
-          </button>
           <NotificationBell emptyLabel={t("noNotifications")} onNotificationOpen={onNotificationOpen} />
           <span className="save-indicator">
             <CheckCircle2 size={16} />
@@ -133,9 +158,6 @@ export function CourseTopbar({
             onClick={onPublish}
           >
             {isPublishing ? t("publishing") : t("publish")}
-          </button>
-          <button className="preview-button" type="button" onClick={onLogout}>
-            {t("logout")}
           </button>
         </div>
       </div>
@@ -160,9 +182,18 @@ export function CourseTopbar({
               <button className={activeTab === "activity" ? "active" : ""} type="button" onClick={() => selectTab("activity")}>
                 Активность
               </button>
+              <button className={activeTab === "access" ? "active" : ""} type="button" onClick={() => selectTab("access")}>
+                Доступ
+              </button>
+              {/*
+              Requests tab is disabled. Registration now happens through one-time invitation codes.
               <button className={activeTab === "requests" ? "active" : ""} type="button" onClick={() => selectTab("requests")}>
                 {t("requests")}
                 {pendingRequestsCount > 0 ? <span>{pendingRequestsCount}</span> : null}
+              </button>
+              */}
+              <button className={activeTab === "invitations" ? "active" : ""} type="button" onClick={() => selectTab("invitations")}>
+                Приглашения
               </button>
               <button className={activeTab === "privileges" ? "active" : ""} type="button" onClick={() => selectTab("privileges")}>
                 Права
@@ -186,11 +217,36 @@ export function CourseTopbar({
               >
                 {isPublishing ? t("publishing") : t("publish")}
               </button>
-              <button type="button" onClick={() => runMobileAction(onLogout)}>
-                {t("logout")}
+              <button type="button" onClick={() => {
+                setMobileMenuOpen(false);
+                setLogoutConfirmOpen(true);
+              }}>
+                Выйти из системы
               </button>
             </div>
           </aside>
+        </div>
+      ) : null}
+
+      {logoutConfirmOpen ? (
+        <div className="admin-dialog-backdrop" onMouseDown={() => setLogoutConfirmOpen(false)}>
+          <section className="admin-confirm-dialog" role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()}>
+            <header>
+              <LogOut size={20} />
+              <div>
+                <h2>Выйти из системы?</h2>
+                <p>Текущая админ-сессия будет завершена.</p>
+              </div>
+            </header>
+            <div className="admin-confirm-actions">
+              <button type="button" onClick={() => setLogoutConfirmOpen(false)}>
+                Остаться
+              </button>
+              <button className="danger" type="button" onClick={onLogout}>
+                Выйти
+              </button>
+            </div>
+          </section>
         </div>
       ) : null}
     </header>

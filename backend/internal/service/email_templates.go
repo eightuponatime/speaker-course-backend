@@ -135,16 +135,18 @@ func EnrollmentReviewedEmail(to string, fullName string, courseTitle string, sta
 	})
 }
 
-func CourseAccessExtendedEmail(to string, fullName string, courseTitle string, accessExpiresAt time.Time) SendEmailInput {
+func CourseAccessExtendedEmail(to string, fullName string, courseTitle string, accessExpiresAt time.Time, siteURL string) SendEmailInput {
 	date := accessExpiresAt.Format("02.01.2006")
 	body := `Доступ к курсу "` + courseTitle + `" продлен до ` + date + `.`
 	return templatedEmail(to, emailTemplateData{
-		Subject:   uniqueEmailSubject("Доступ продлен", fullName, to),
-		Title:     "Доступ к курсу продлен",
-		Preheader: body,
-		Greeting:  greetingFor(fullName),
-		Body:      body,
-		Note:      "Дата окончания доступа также отображается в верхней панели курса.",
+		Subject:     uniqueEmailSubject("Доступ продлен", fullName, to),
+		Title:       "Доступ к курсу продлен",
+		Preheader:   body,
+		Greeting:    greetingFor(fullName),
+		Body:        body,
+		Note:        "Дата окончания доступа также отображается в верхней панели курса.",
+		ButtonLabel: "Перейти на сайт",
+		ButtonURL:   siteURL,
 	})
 }
 

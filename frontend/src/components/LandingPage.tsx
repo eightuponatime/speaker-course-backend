@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import type { CSSProperties, FormEvent } from "react";
+import type { FormEvent } from "react";
 import {
   Gauge,
-  CheckCircle2,
+  Download,
   Eye,
   EyeOff,
   Instagram,
@@ -23,12 +23,14 @@ import { forgotPassword } from "../api/authDatasource";
 import { apiBaseUrl } from "../api/http";
 import logosVoiceLogo from "../../assets/images/transparent_logo.png";
 import mainSectionBannerImage from "../../assets/images/main_section_banner.png";
+import newCourseProgramBannerImage from "../../assets/images/new_course_program_banner.png";
+import siteEndImage from "../../assets/images/site_end.png";
 import type { CourseProgramSection } from "../api/courseDatasource";
 import type { Course, CourseEnrollment, User } from "../entities/course/course";
 import type { Notification } from "../entities/notification/notification";
 import type { TranslationKey } from "../i18n";
 import { NotificationBell } from "./NotificationBell";
-import aboutProgramImage from "../../assets/images/about_program.png";
+import newAboutCourseImage from "../../assets/images/new_about_course.png";
 import affectionIcon from "../../assets/images/affection.png";
 import clearSpeechIcon from "../../assets/images/clear_speach.png";
 import confidenceIcon from "../../assets/images/confidence.png";
@@ -36,12 +38,13 @@ import professionalGrowthIcon from "../../assets/images/prof_grow.png";
 import durationIcon from "../../assets/images/duration.png";
 import experienceIcon from "../../assets/images/experience.png";
 import liveLessonsIcon from "../../assets/images/live_lessons.png";
+import markIcon from "../../assets/images/mark.png";
+import pdfIcon from "../../assets/images/pdf_icon.png";
 
 type LandingPageProps = {
   error: string;
   t: (key: TranslationKey) => string;
   onLogin: (email: string, password: string) => Promise<void>;
-  onRegister: (input: { email: string; password: string; fullName: string }) => Promise<User>;
   currentUser?: User | null;
   onAdminOpen?: () => void;
   onLogout?: () => void;
@@ -55,7 +58,6 @@ export function LandingPage({
   error,
   t,
   onLogin,
-  onRegister,
   currentUser,
   onAdminOpen,
   onLogout,
@@ -118,8 +120,8 @@ export function LandingPage({
   useEffect(() => {
     if (!isGoogleAccountNotFoundError(error)) return;
 
-    setMode("register");
-    setAuthNotice("Такой Google-аккаунт еще не зарегистрирован. Запишитесь на курс через эту вкладку.");
+    setMode("login");
+    setAuthNotice("Такой Google-аккаунт еще не зарегистрирован. Регистрация теперь доступна только по персональной ссылке.");
     setAuthNoticeDialogOpen(true);
     onClearError?.();
     setLoginDialogOpen(false);
@@ -133,7 +135,7 @@ export function LandingPage({
     let cancelled = false;
 
     async function loadEnrollment() {
-      if (!currentUser || currentUser.role === "admin") {
+      if (!currentUser || isAdminUser(currentUser)) {
         setEnrollment(null);
         return;
       }
@@ -191,14 +193,16 @@ export function LandingPage({
     event.preventDefault();
     setSubmitting(true);
     try {
-      if (mode === "login") {
-        await onLogin(loginEmail, loginPassword);
-      } else {
-        await onRegister({ email: registerEmail, password: registerPassword, fullName: registerFullName });
-        setAccessError("");
-        const nextEnrollment = await requestPrimaryCourseEnrollment();
-        setEnrollment(nextEnrollment);
-      }
+      await onLogin(loginEmail, loginPassword);
+      /*
+      Registration on the landing page is disabled.
+      New users should register through a one-time invitation link on /signup.
+
+      await onRegister({ email: registerEmail, password: registerPassword, fullName: registerFullName });
+      setAccessError("");
+      const nextEnrollment = await requestPrimaryCourseEnrollment();
+      setEnrollment(nextEnrollment);
+      */
     } catch (err) {
       setAccessError(formatError(err));
     } finally {
@@ -274,7 +278,7 @@ export function LandingPage({
   }
 
   function scrollToRegistration() {
-    setMode("register");
+    setMode("login");
     setAuthNotice("");
     setAuthNoticeDialogOpen(false);
     onClearError?.();
@@ -287,10 +291,7 @@ export function LandingPage({
   const courseTitle = "Курсы ораторского мастерства";
   const courseDescription = "Риторика • Влияние • Публичная речь";
   const currentYear = new Date().getFullYear();
-  const canSubmitAuth =
-    mode === "login"
-      ? loginEmail.trim().length > 0 && loginPassword.length > 0
-      : registerEmail.trim().length > 0 && registerPassword.length > 0 && registerFullName.trim().length > 0;
+  const canSubmitAuth = loginEmail.trim().length > 0 && loginPassword.length > 0;
   const canSubmitDialogLogin = dialogEmail.trim().length > 0 && dialogPassword.length > 0;
   const authError = authNotice || formatUserFacingError(error);
   const accessDisplayError = formatUserFacingError(accessError);
@@ -313,13 +314,13 @@ export function LandingPage({
   const authForm = (
     <>
       <div className="landing-auth-header">
-        <strong>{mode === "login" ? "Войти в кабинет" : "Начните обучение сегодня"}</strong>
-        <span>
-          {mode === "login"
-            ? "Введите данные, чтобы вернуться к материалам"
-            : ""}
-        </span>
+        <strong>Войти в кабинет</strong>
+        <span>Введите данные, чтобы вернуться к материалам</span>
       </div>
+
+      {/*
+      Registration tabs are disabled on the landing page.
+      Users register only through a personal one-time /signup invitation link.
 
       <div className="landing-auth-tabs">
         <button
@@ -347,19 +348,16 @@ export function LandingPage({
           {t("requestAccess")}
         </button>
       </div>
+      */}
 
       <div className="landing-field-stack">
         <label>
           <span>{t("email")}</span>
           <input
             autoComplete="email"
-            value={mode === "login" ? loginEmail : registerEmail}
+            value={loginEmail}
             onChange={(event) => {
-              if (mode === "login") {
-                setLoginEmail(event.target.value);
-              } else {
-                setRegisterEmail(event.target.value);
-              }
+              setLoginEmail(event.target.value);
               setAuthNotice("");
               setAuthNoticeDialogOpen(false);
               onClearError?.();
@@ -371,29 +369,23 @@ export function LandingPage({
         <label>
           <span>{t("password")}</span>
           <PasswordInput
-            autoComplete={mode === "login" ? "current-password" : "new-password"}
-            value={mode === "login" ? loginPassword : registerPassword}
+            autoComplete="current-password"
+            value={loginPassword}
             onChange={(value) => {
-              if (mode === "login") {
-                setLoginPassword(value);
-              } else {
-                setRegisterPassword(value);
-              }
+              setLoginPassword(value);
               setAuthNotice("");
               setAuthNoticeDialogOpen(false);
               onClearError?.();
             }}
-            visible={mode === "login" ? showLoginPassword : showRegisterPassword}
+            visible={showLoginPassword}
             onToggle={() => {
-              if (mode === "login") {
-                setShowLoginPassword((value) => !value);
-              } else {
-                setShowRegisterPassword((value) => !value);
-              }
+              setShowLoginPassword((value) => !value);
             }}
           />
         </label>
 
+        {/*
+        Registration name field is disabled on the landing page.
         <label className="landing-name-field">
           <span>{t("name")}</span>
           <input
@@ -408,22 +400,18 @@ export function LandingPage({
             }}
           />
         </label>
+        */}
       </div>
 
       <button type="submit" disabled={submitting || !canSubmitAuth}>
-        {submitting ? t("wait") : mode === "login" ? t("enterCourse") : "Оставить заявку"}
+        {submitting ? t("wait") : t("enterCourse")}
       </button>
-      {mode === "login" ? (
-        <button className="landing-forgot-button" type="button" onClick={() => openForgotPassword(loginEmail)}>
-          Забыли пароль?
-        </button>
-      ) : null}
-      <a
-        className="landing-google"
-        href={`${apiBaseUrl}${mode === "register" ? "/auth/google/enroll/start" : "/auth/google/start"}`}
-      >
+      <button className="landing-forgot-button" type="button" onClick={() => openForgotPassword(loginEmail)}>
+        Забыли пароль?
+      </button>
+      <a className="landing-google" href={`${apiBaseUrl}/auth/google/start`}>
         <GoogleIcon />
-        {mode === "register" ? "Записаться через Google" : t("continueWithGoogle")}
+        {t("continueWithGoogle")}
       </a>
       {authError ? <AuthAlert message={authError} /> : null}
     </>
@@ -478,9 +466,11 @@ export function LandingPage({
         <GoogleIcon />
         {t("continueWithGoogle")}
       </a>
+      {/*
       <button className="landing-auth-switch" type="button" onClick={scrollToRegistration}>
         Нет аккаунта? Запишитесь на курс
       </button>
+      */}
       {authError ? <AuthAlert message={authError} /> : null}
     </>
   );
@@ -567,7 +557,7 @@ export function LandingPage({
 
         {currentUser ? (
           <section className="landing-auth landing-status-card" id="landing-application">
-            {currentUser.role === "admin" ? (
+            {isAdminUser(currentUser) ? (
               <>
                 <div className="landing-auth-header">
                   <span>{currentUser.email}</span>
@@ -699,7 +689,7 @@ export function LandingPage({
             </button>
             <div className="landing-auth-header">
               <strong>Google-аккаунт не найден</strong>
-              <span>Сначала запишитесь на курс через Google. После этого аккаунт появится в системе.</span>
+              <span>Регистрация доступна только по персональной ссылке. Обратитесь к администратору курса.</span>
             </div>
             <button type="button" onClick={() => setAuthNoticeDialogOpen(false)}>
               Перейти к записи
@@ -732,60 +722,59 @@ export function LandingPage({
             {["Индивидуальные занятия", "Разбор выступлений и обратная связь", "Поддержка куратора и сообщества"].map(
               (item) => (
                 <li key={item}>
-                  <CheckCircle2 size={20} strokeWidth={1.7} />
+                  <img src={markIcon} alt="" />
                   {item}
                 </li>
               )
             )}
           </ul>
         </div>
+        <figure className="landing-about-video-card">
+          <div className="landing-about-video-frame">
+            <iframe
+              src={aboutCourseVideoUrl}
+              title="Пример выступления автора курса"
+              loading="lazy"
+              allow="accelerometer; gyroscope; encrypted-media; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+          <figcaption>Пример выступления автора курса</figcaption>
+          <CoursePresentationLink variant="compact" />
+        </figure>
+        {/*
         <div className="landing-about-art" aria-hidden="true">
           <img src={aboutProgramImage} alt="" />
         </div>
+        */}
       </section>
 
       <section
         className="landing-program-showcase"
         id="program"
-        style={{ "--program-count": Math.max(programSections.length, 1) } as CSSProperties}
       >
-        <div className="landing-program-intro">
-          <span className="landing-kicker">Программа курса</span>
-          <h2 data-section-heading>
-            {programSections.length > 0 ? (
-              <>
-                <span>
-                  {programSections.length} {formatStageCount(programSections.length)}
-                </span>{" "}
-                <span>
-                  к <em>уверенной</em> речи и <em>сильному</em> выступлению
-                </span>
-              </>
-            ) : (
-              "Программа курса"
-            )}
-          </h2>
+        <div className="landing-program-content">
+          <span className="landing-kicker">Программа</span>
+          <h2 data-section-heading>Получите подробную программу курса</h2>
+          <p>
+            Мы отправим программу в WhatsApp: формат занятий, расписание, стоимость и условия участия. Также
+            подскажем, подойдет ли курс под ваш уровень и цель.
+          </p>
+
+          <a className="landing-program-whatsapp" href="https://wa.me/77080088807" target="_blank" rel="noreferrer">
+            <MessageCircle size={28} strokeWidth={1.9} />
+            <span>Получить программу в WhatsApp</span>
+          </a>
+          <CoursePresentationLink />
+          <small>Ответим на ваши вопросы и отправим детали</small>
         </div>
 
-        {programSections.length > 0 ? (
-          <div className="landing-program-flow">
-            <div className="landing-program-cards">
-              {programSections.map((section, index) => (
-                <article className="landing-program-card" key={section.id}>
-                  <span>{String(index + 1).padStart(2, "0")}</span>
-                  <strong>{section.title}</strong>
-                </article>
-              ))}
-            </div>
-            <div className="landing-program-track" aria-hidden="true">
-              {programSections.map((section) => (
-                <span className="landing-program-dot" key={section.id} />
-              ))}
-            </div>
-          </div>
-        ) : (
-          <p className="landing-program-empty">Программа скоро появится.</p>
-        )}
+        {/*
+        <div className="landing-program-intro">
+          <h2 data-section-heading>Программа курса</h2>
+        </div>
+        <p className="landing-program-empty">Узнать подробнее</p>
+        */}
       </section>
 
       <footer className="landing-contact">
@@ -809,6 +798,28 @@ export function LandingPage({
   );
 }
 
+function CoursePresentationLink({ variant }: { variant?: "compact" }) {
+  return (
+    <a
+      className={variant === "compact" ? "landing-presentation-card compact" : "landing-presentation-card"}
+      href={coursePresentationUrl}
+      target="_blank"
+      rel="noreferrer"
+    >
+      <img src={pdfIcon} alt="" />
+      <span>
+        <strong>Скачать презентацию курса</strong>
+        <small>PDF · методология, форматы и стоимость участия</small>
+      </span>
+      <Download size={24} strokeWidth={1.65} />
+    </a>
+  );
+}
+
+function isAdminUser(user?: { role?: string } | null): boolean {
+  return user?.role === "owner" || user?.role === "admin";
+}
+
 const heroMetrics = [
   { title: "4 недели практики", icon: durationIcon },
   { title: "Подходит для новичков и профи", icon: experienceIcon },
@@ -818,10 +829,17 @@ const heroMetrics = [
 const landingCriticalImages = [
   logosVoiceLogo,
   mainSectionBannerImage,
+  newAboutCourseImage,
+  newCourseProgramBannerImage,
+  siteEndImage,
   durationIcon,
   experienceIcon,
-  liveLessonsIcon
+  liveLessonsIcon,
+  markIcon
 ];
+
+const aboutCourseVideoUrl = "https://player.mediadelivery.net/play/673250/519e82d9-d077-433e-a4ee-8cbd6466cae9";
+const coursePresentationUrl = "https://logos-voice.b-cdn.net/landing/%D0%9F%D1%80%D0%B5%D0%B7%D0%B5%D0%BD%D1%82%D0%B0%D1%86%D0%B8%D1%8F%20Logos%20Voice.pdf";
 
 const benefits = [
   {

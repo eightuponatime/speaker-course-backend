@@ -25,6 +25,26 @@ export function register(input: { email: string; password: string; fullName: str
   });
 }
 
+export function registerWithInvitationCode(input: {
+  code: string;
+  email: string;
+  password: string;
+  fullName: string;
+}): Promise<User> {
+  return request<User>("/auth/register/invitation", {
+    method: "POST",
+    body: JSON.stringify({
+      code: input.code,
+      email: input.email,
+      password: input.password,
+      full_name: input.fullName
+    }),
+    headers: {
+      "Content-Type": "application/json"
+    }
+  });
+}
+
 export function getMe(): Promise<User> {
   return request<User>("/auth/me");
 }

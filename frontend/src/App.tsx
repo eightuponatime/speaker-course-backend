@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import EditorJS from "@editorjs/editorjs";
+import EditorJS, { type OutputData } from "@editorjs/editorjs";
 import * as tus from "tus-js-client";
 
 import { getMe, login, logout as logoutUser, register } from "./api/authDatasource";
@@ -25,14 +25,17 @@ import {
   uploadStorageAsset
 } from "./api/mediaDatasource";
 import { CourseTopbar } from "./components/CourseTopbar";
+import { AccessManagementPanel } from "./components/AccessManagementPanel";
 import { CourseAccessPage } from "./components/CourseAccessPage";
 import { CoursePreviewPage } from "./components/CoursePreviewPage";
 import { CurriculumSidebar } from "./components/CurriculumSidebar";
 import { EnrollmentRequestsPanel } from "./components/EnrollmentRequestsPanel";
 import { LessonWorkspace } from "./components/LessonWorkspace";
 import { LandingPage } from "./components/LandingPage";
+import { InvitationCodesPanel } from "./components/InvitationCodesPanel";
 import { ProfileSettingsModal } from "./components/ProfileSettingsModal";
 import { PrivilegesPanel } from "./components/PrivilegesPanel";
+import { SignupPage } from "./components/SignupPage";
 import { StudentActivityPanel } from "./components/StudentActivityPanel";
 import type { BlockType } from "./components/BlockToolbar";
 import type { CourseCurriculum, EditorContent, Lesson, User } from "./entities/course/course";
@@ -45,6 +48,7 @@ export default function App() {
   const [path, setPath] = useState(window.location.pathname);
   const isAdminRoute = path.startsWith("/admin");
   const isCourseRoute = path.startsWith("/course");
+  const isSignupRoute = path.startsWith("/signup");
   const [curriculum, setCurriculum] = useState<CourseCurriculum | null>(null);
   const [activeLessonId, setActiveLessonId] = useState("");
   const [error, setError] = useState(() => readAuthErrorFromURL());
@@ -54,13 +58,26 @@ export default function App() {
   const [password, setPassword] = useState("");
   const [publishStatus, setPublishStatus] = useState("");
   const [isPublishing, setIsPublishing] = useState(false);
-  const [activeTab, setActiveTab] = useState<"curriculum" | "activity" | "requests" | "privileges">("curriculum");
+  const [activeTab, setActiveTab] = useState<"curriculum" | "activity" | "access" | "invitations" | "privileges">("curriculum");
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isLessonPickerOpen, setIsLessonPickerOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    type: "lesson" | "section";
+    id: string;
+    title: string;
+    message: string;
+  } | null>(null);
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const editorRef = useRef<EditorJS | null>(null);
   const autosaveTimerRef = useRef<number | null>(null);
+  const historyRef = useRef<{ past: EditorContent[]; future: EditorContent[]; current: EditorContent | null; restoring: boolean }>({
+    past: [],
+    future: [],
+    current: null,
+    restoring: false
+  });
+  const [historyState, setHistoryState] = useState({ canUndo: false, canRedo: false });
 
   const addDebug = useCallback((message: string) => {
     console.log(`[course-builder] ${message}`);
@@ -72,7 +89,24 @@ export default function App() {
     setPath(nextPath);
   }, []);
 
-  function loadCurriculum(preferredLessonId?: string, forceAdminAccess = currentUser?.role === "admin") {
+  function resetEditorHistory(content?: EditorContent) {
+    historyRef.current = {
+      past: [],
+      future: [],
+      current: content ? cloneEditorContent(content) : null,
+      restoring: false
+    };
+    updateHistoryState();
+  }
+
+  function updateHistoryState() {
+    setHistoryState({
+      canUndo: historyRef.current.past.length > 0,
+      canRedo: historyRef.current.future.length > 0
+    });
+  }
+
+  function loadCurriculum(preferredLessonId?: string, forceAdminAccess = isAdminUser(currentUser)) {
     const shouldUseAdminAccess = isAdminRoute || forceAdminAccess;
 
     getAdminPrimaryCourseCurriculum()
@@ -120,7 +154,7 @@ export default function App() {
       const user = await getMe();
       setCurrentUser(user);
       setError("");
-      if (user.role === "admin") {
+      if (isAdminUser(user)) {
         loadCurriculum(undefined, true);
       } else {
         setCurriculum(null);
@@ -161,6 +195,7 @@ export default function App() {
       window.clearTimeout(autosaveTimerRef.current);
       autosaveTimerRef.current = null;
     }
+    resetEditorHistory(activeLesson?.draft_content as EditorContent | undefined);
   }, [activeLessonId]);
 
   useEffect(() => {
@@ -243,7 +278,16 @@ export default function App() {
 
     const lesson = curriculum.sections.flatMap((section) => safeLessons(section.lessons)).find((item) => item.id === lessonId);
     if (!lesson) return;
-    if (!window.confirm(`Удалить урок "${lesson.title}"? Материалы и ответы внутри урока будут удалены.`)) return;
+    setDeleteConfirm({
+      type: "lesson",
+      id: lessonId,
+      title: lesson.title,
+      message: "Материалы и ответы внутри урока будут удалены."
+    });
+  }
+
+  async function deleteLessonConfirmed(lessonId: string) {
+    if (!curriculum) return;
 
     const remainingLessons = curriculum.sections.flatMap((section) => safeLessons(section.lessons)).filter((item) => item.id !== lessonId);
     const nextActiveLessonId =
@@ -265,11 +309,23 @@ export default function App() {
     const section = curriculum.sections.find((item) => item.id === sectionId);
     if (!section) return;
     const sectionLessons = safeLessons(section.lessons);
-    const message =
-      sectionLessons.length > 0
-        ? `Удалить раздел "${section.title}" и ${sectionLessons.length} урок(ов) внутри него?`
-        : `Удалить раздел "${section.title}"?`;
-    if (!window.confirm(message)) return;
+    setDeleteConfirm({
+      type: "section",
+      id: sectionId,
+      title: section.title,
+      message:
+        sectionLessons.length > 0
+          ? `Будет удалено уроков внутри раздела: ${sectionLessons.length}.`
+          : "Пустой раздел будет удален."
+    });
+  }
+
+  async function deleteSectionConfirmed(sectionId: string) {
+    if (!curriculum) return;
+
+    const section = curriculum.sections.find((item) => item.id === sectionId);
+    if (!section) return;
+    const sectionLessons = safeLessons(section.lessons);
 
     const removedLessonIds = new Set(sectionLessons.map((lesson) => lesson.id));
     const remainingLessons = curriculum.sections
@@ -285,6 +341,18 @@ export default function App() {
     } catch (err) {
       setPublishStatus(formatError(err));
     }
+  }
+
+  async function confirmDeletePending() {
+    const pending = deleteConfirm;
+    if (!pending) return;
+
+    setDeleteConfirm(null);
+    if (pending.type === "lesson") {
+      await deleteLessonConfirmed(pending.id);
+      return;
+    }
+    await deleteSectionConfirmed(pending.id);
   }
 
   async function handleMoveLesson(lessonId: string, toSectionId: string, beforeLessonId: string | null) {
@@ -411,6 +479,97 @@ export default function App() {
     }, 1200);
   }, [activeLesson]);
 
+  async function saveCurrentLessonDraft() {
+    const editor = editorRef.current;
+    if (!activeLesson || !editor) return;
+
+    await editor.isReady;
+    const content = (await editor.save()) as unknown as EditorContent;
+    if (hasPendingMedia(content)) {
+      setPublishStatus("Waiting for media processing");
+      return;
+    }
+
+    await saveLessonDraft(activeLesson.id, content);
+    historyRef.current.current = cloneEditorContent(content);
+    setPublishStatus("Draft saved");
+  }
+
+  const handleEditorChange = useCallback(() => {
+    void recordEditorHistory();
+    scheduleAutosave();
+  }, [scheduleAutosave]);
+
+  async function recordEditorHistory() {
+    const editor = editorRef.current;
+    if (!editor || historyRef.current.restoring) return;
+
+    try {
+      await editor.isReady;
+      const content = (await editor.save()) as unknown as EditorContent;
+      const current = historyRef.current.current;
+      if (!current) {
+        historyRef.current.current = cloneEditorContent(content);
+        updateHistoryState();
+        return;
+      }
+      if (sameEditorContent(current, content)) return;
+
+      historyRef.current.past = [...historyRef.current.past.slice(-29), cloneEditorContent(current)];
+      historyRef.current.future = [];
+      historyRef.current.current = cloneEditorContent(content);
+      updateHistoryState();
+    } catch (err) {
+      addDebug(`history record skipped: ${formatError(err)}`);
+    }
+  }
+
+  async function handleUndo() {
+    const editor = editorRef.current;
+    const previous = historyRef.current.past.pop();
+    if (!editor || !previous) return;
+
+    try {
+      await editor.isReady;
+      const current = (await editor.save()) as unknown as EditorContent;
+      historyRef.current.future.unshift(cloneEditorContent(current));
+      historyRef.current.restoring = true;
+      await editor.blocks.render(previous as unknown as OutputData);
+      historyRef.current.current = cloneEditorContent(previous);
+      markUnpublishedChanges();
+      setPublishStatus("Unsaved changes");
+      scheduleAutosave();
+    } catch (err) {
+      setPublishStatus(formatError(err));
+    } finally {
+      historyRef.current.restoring = false;
+      updateHistoryState();
+    }
+  }
+
+  async function handleRedo() {
+    const editor = editorRef.current;
+    const next = historyRef.current.future.shift();
+    if (!editor || !next) return;
+
+    try {
+      await editor.isReady;
+      const current = (await editor.save()) as unknown as EditorContent;
+      historyRef.current.past.push(cloneEditorContent(current));
+      historyRef.current.restoring = true;
+      await editor.blocks.render(next as unknown as OutputData);
+      historyRef.current.current = cloneEditorContent(next);
+      markUnpublishedChanges();
+      setPublishStatus("Unsaved changes");
+      scheduleAutosave();
+    } catch (err) {
+      setPublishStatus(formatError(err));
+    } finally {
+      historyRef.current.restoring = false;
+      updateHistoryState();
+    }
+  }
+
   const handleInlineImageUpload = useCallback(
     async (file: File) => {
       if (!curriculum || !activeLesson) {
@@ -443,7 +602,7 @@ export default function App() {
       addDebug("inline pdf upload started");
       const asset = await uploadStorageAsset({
         file,
-        kind: "pdf",
+        kind: storageKindForFile(file),
         courseId: curriculum.course.id,
         lessonId: activeLesson.id
       });
@@ -524,6 +683,7 @@ export default function App() {
         const text = `New text block ${editor.blocks.getBlocksCount()}`;
         insertEditorBlock(editor, "paragraph", { text });
         revealInsertedBlock(addDebug, text);
+        await saveCurrentLessonDraft();
       }
       if (blockType === "video") {
         if (!curriculum || !activeLesson) {
@@ -563,6 +723,7 @@ export default function App() {
             };
             await editor.blocks.update(videoBlock.id, nextVideoData);
             await replaceEditorBlockDataAndRender(editor, videoBlock.id, nextVideoData);
+            await saveCurrentLessonDraft();
             addDebug("video block rendered");
           }
         } catch (err) {
@@ -608,6 +769,7 @@ export default function App() {
             width: 80
           });
           URL.revokeObjectURL(previewURL);
+          await saveCurrentLessonDraft();
         } catch (err) {
           await editor.blocks.update(imageBlock.id, {
             url: previewURL,
@@ -625,6 +787,7 @@ export default function App() {
           options: ["Option 1", "Option 2"]
         });
         revealInsertedBlock(addDebug, "Question");
+        await saveCurrentLessonDraft();
       }
       if (blockType === "pdf") {
         if (!curriculum || !activeLesson) {
@@ -632,23 +795,40 @@ export default function App() {
           return;
         }
 
-        const file = await pickFile("application/pdf");
+        const file = await pickFile("*/*");
         if (!file) return;
 
-        addDebug("toolbar pdf upload started");
-        const asset = await uploadStorageAsset({
-          file,
-          kind: "pdf",
-          courseId: curriculum.course.id,
-          lessonId: activeLesson.id
-        });
-
-        insertEditorBlock(editor, "pdfUrl", {
-          url: asset.public_url,
+        const fileBlock = insertEditorBlock(editor, "pdfUrl", {
           name: file.name,
-          sizeBytes: file.size
+          sizeBytes: file.size,
+          uploading: true
         });
         revealInsertedBlock(addDebug, file.name);
+
+        addDebug("toolbar file upload started");
+        try {
+          const asset = await uploadStorageAsset({
+            file,
+            kind: storageKindForFile(file),
+            courseId: curriculum.course.id,
+            lessonId: activeLesson.id
+          });
+
+          await editor.blocks.update(fileBlock.id, {
+            url: asset.public_url,
+            name: file.name,
+            sizeBytes: file.size,
+            uploading: false
+          });
+          await saveCurrentLessonDraft();
+        } catch (err) {
+          await editor.blocks.update(fileBlock.id, {
+            name: `${file.name} - upload failed`,
+            sizeBytes: file.size,
+            uploading: false
+          });
+          throw err;
+        }
       }
 
       addDebug(`done ${blockType}, blocks=${editor.blocks.getBlocksCount()}, domBlocks=${countVisibleEditorBlocks()}`);
@@ -662,7 +842,7 @@ export default function App() {
     const user = await login(nextEmail, nextPassword);
     setCurrentUser(user);
     setError("");
-    if (user.role === "admin") {
+    if (isAdminUser(user)) {
       loadCurriculum(undefined, true);
     }
     notifyAuthChanged("login");
@@ -686,7 +866,7 @@ export default function App() {
       const user = await register(input);
       setCurrentUser(user);
       setError("");
-      if (user.role === "admin") {
+      if (isAdminUser(user)) {
         loadCurriculum(undefined, true);
       }
       notifyAuthChanged("login");
@@ -783,7 +963,7 @@ export default function App() {
 
   function handleNotificationOpen(notification: Notification) {
     if (notification.type === "course_enrollment_requested") {
-      setActiveTab("requests");
+      setActiveTab("invitations");
       if (!window.location.pathname.startsWith("/admin")) {
         navigate("/admin");
       }
@@ -799,13 +979,16 @@ export default function App() {
     return <main className="auth-check-screen" aria-hidden="true" />;
   }
 
+  if (isSignupRoute) {
+    return <SignupPage onLoginOpen={() => navigate("/")} />;
+  }
+
   if (!currentUser && !isAdminRoute) {
     return (
       <LandingPage
         error={error}
         t={t}
         onLogin={handleLandingLogin}
-        onRegister={handleLandingRegister}
         onClearError={() => setError("")}
       />
     );
@@ -849,9 +1032,8 @@ export default function App() {
           error={error}
           t={t}
           onLogin={handleLandingLogin}
-          onRegister={handleLandingRegister}
           currentUser={authenticatedUser}
-          onAdminOpen={authenticatedUser.role === "admin" ? () => navigate("/admin") : undefined}
+          onAdminOpen={isAdminUser(authenticatedUser) ? () => navigate("/admin") : undefined}
           onLogout={handleLogout}
           onOpenCourse={() => navigate("/course")}
           onProfileOpen={() => setIsProfileOpen(true)}
@@ -863,7 +1045,7 @@ export default function App() {
     );
   }
 
-  if (authenticatedUser.role !== "admin" && isCourseRoute) {
+  if (!isAdminUser(authenticatedUser) && isCourseRoute) {
     return (
       <>
         <CourseAccessPage
@@ -878,7 +1060,7 @@ export default function App() {
     );
   }
 
-  if (authenticatedUser.role !== "admin" && isAdminRoute) {
+  if (!isAdminUser(authenticatedUser) && isAdminRoute) {
     return (
       <main className="admin-auth-page">
         <section className="admin-auth-card">
@@ -919,14 +1101,14 @@ export default function App() {
           t={t}
           onLogout={handleLogout}
           onAdminOpen={
-            !isAdminRoute && currentUser?.role === "admin"
+            !isAdminRoute && isAdminUser(currentUser)
               ? () => navigate("/admin")
               : undefined
           }
           onLandingOpen={() => navigate("/")}
           onBack={isPreviewing ? () => setIsPreviewing(false) : undefined}
           onProfileOpen={() => setIsProfileOpen(true)}
-          enableQuizStats={currentUser?.role === "admin"}
+          enableQuizStats={isAdminUser(currentUser)}
           storageScope={currentUser?.id || "admin-preview"}
           isPreviewMode={isPreviewing}
         />
@@ -980,9 +1162,13 @@ export default function App() {
                 onUploadImage={handleInlineImageUpload}
                 onUploadPdf={handleInlinePdfUpload}
                 onUploadVideo={handleInlineVideoUpload}
-                onEditorChange={scheduleAutosave}
+                onEditorChange={handleEditorChange}
                 onRenameLesson={handleRenameLesson}
                 onInsertBlock={handleInsertBlock}
+                canUndo={historyState.canUndo}
+                canRedo={historyState.canRedo}
+                onUndo={handleUndo}
+                onRedo={handleRedo}
                 t={t}
               />
             </div>
@@ -1023,6 +1209,11 @@ export default function App() {
             t={t}
           />
         ) : null}
+        {activeTab === "access" ? (
+          <AccessManagementPanel courseId={curriculum.course.id} />
+        ) : null}
+        {/*
+        Requests panel is disabled. Registration now happens through one-time invitation codes.
         {activeTab === "requests" ? (
           <EnrollmentRequestsPanel
             courseId={curriculum.course.id}
@@ -1030,10 +1221,42 @@ export default function App() {
             t={t}
           />
         ) : null}
+        */}
+        {activeTab === "invitations" ? (
+          <InvitationCodesPanel courseId={curriculum.course.id} />
+        ) : null}
         {activeTab === "privileges" ? (
-          <PrivilegesPanel courseId={curriculum.course.id} currentUserId={authenticatedUser.id} />
+          <PrivilegesPanel
+            courseId={curriculum.course.id}
+            currentUserId={authenticatedUser.id}
+            currentUserRole={authenticatedUser.role}
+          />
         ) : null}
       </main>
+      {deleteConfirm ? (
+        <div className="admin-dialog-backdrop" onMouseDown={() => setDeleteConfirm(null)}>
+          <section className="admin-confirm-dialog" role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()}>
+            <header>
+              <div>
+                <h2>Удалить {deleteConfirm.type === "lesson" ? "урок" : "раздел"}?</h2>
+                <p>
+                  <strong>{deleteConfirm.title}</strong>
+                  <br />
+                  {deleteConfirm.message}
+                </p>
+              </div>
+            </header>
+            <div className="admin-confirm-actions">
+              <button type="button" onClick={() => setDeleteConfirm(null)}>
+                Отмена
+              </button>
+              <button className="danger" type="button" onClick={() => void confirmDeletePending()}>
+                Удалить
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
       {renderProfileModal()}
     </>
   );
@@ -1327,6 +1550,10 @@ function inferVideoMimeType(fileName: string): string {
   return "video/mp4";
 }
 
+function storageKindForFile(file: File): "pdf" | "file" {
+  return file.type === "application/pdf" ? "pdf" : "file";
+}
+
 function formatTusError(error: unknown): string {
   if (error instanceof Error) {
     if (error.message === "Failed to fetch") {
@@ -1386,10 +1613,22 @@ function hasPendingMedia(content: EditorContent): boolean {
   });
 }
 
+function cloneEditorContent(content: EditorContent): EditorContent {
+  return JSON.parse(JSON.stringify(content)) as EditorContent;
+}
+
+function sameEditorContent(left: EditorContent, right: EditorContent): boolean {
+  return JSON.stringify(left.blocks || []) === JSON.stringify(right.blocks || []);
+}
+
 function createClientId(prefix: string): string {
   if (crypto.randomUUID) {
     return `${prefix}_${crypto.randomUUID()}`;
   }
 
   return `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
+
+function isAdminUser(user?: User | null): boolean {
+  return user?.role === "owner" || user?.role === "admin";
 }

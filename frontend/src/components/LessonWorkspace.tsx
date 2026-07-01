@@ -1,4 +1,4 @@
-import { Pencil } from "lucide-react";
+import { Pencil, Redo2, Undo2 } from "lucide-react";
 import EditorJS from "@editorjs/editorjs";
 import { useEffect, useState } from "react";
 
@@ -20,6 +20,10 @@ type LessonWorkspaceProps = {
   onEditorChange: () => void;
   onRenameLesson: (lessonId: string, title: string) => Promise<void>;
   onInsertBlock: (blockType: BlockType) => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
   t: (key: TranslationKey) => string;
 };
 
@@ -33,6 +37,10 @@ export function LessonWorkspace({
   onEditorChange,
   onRenameLesson,
   onInsertBlock,
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
   t
 }: LessonWorkspaceProps) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -84,9 +92,17 @@ export function LessonWorkspace({
             <h1>{lesson?.title ?? t("selectLesson")}</h1>
           )}
           {lesson && (
-            <button onClick={() => setIsEditingTitle(true)} type="button" title="Edit title">
-              <Pencil size={17} />
-            </button>
+            <div className="lesson-title-actions">
+              <button onClick={onUndo} type="button" title="Отменить" disabled={!canUndo}>
+                <Undo2 size={17} />
+              </button>
+              <button onClick={onRedo} type="button" title="Повторить" disabled={!canRedo}>
+                <Redo2 size={17} />
+              </button>
+              <button onClick={() => setIsEditingTitle(true)} type="button" title="Edit title">
+                <Pencil size={17} />
+              </button>
+            </div>
           )}
         </header>
 

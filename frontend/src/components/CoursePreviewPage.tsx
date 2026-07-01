@@ -551,7 +551,7 @@ function LessonViewer({
           return (
             <a className="preview-file" href={String(data.url || "#")} key={index} download>
               <FileText size={24} />
-              <span>{String(data.name || "Course file.pdf")}</span>
+              <span>{String(data.name || "Course file")}</span>
               <Download size={18} />
             </a>
           );

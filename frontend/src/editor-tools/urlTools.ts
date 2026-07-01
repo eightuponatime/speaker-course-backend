@@ -60,6 +60,7 @@ type UrlToolParams<TData> = {
     uploadImage?: (file: File) => Promise<ImageUploadResult>;
     uploadPdf?: (file: File) => Promise<FileUploadResult>;
     uploadVideo?: (file: File, onState: (state: VideoUploadState) => void) => Promise<VideoUploadResult>;
+    onChange?: () => void;
     onDebug?: (message: string) => void;
   };
 };
@@ -117,6 +118,7 @@ export class VideoUrlTool {
   private data: VideoToolData;
   private uploadVideo?: (file: File, onState: (state: VideoUploadState) => void) => Promise<VideoUploadResult>;
   private onDebug?: (message: string) => void;
+  private onChange?: () => void;
   private wrapper?: HTMLDivElement;
 
   static get toolbox() {
@@ -129,6 +131,7 @@ export class VideoUrlTool {
   constructor({ data = {}, config = {} }: UrlToolParams<VideoToolData> = {}) {
     this.data = data;
     this.uploadVideo = config.uploadVideo;
+    this.onChange = config.onChange;
     this.onDebug = config.onDebug;
   }
 
@@ -275,6 +278,11 @@ export class VideoUrlTool {
     }
 
     this.renderContent();
+    this.notifyChange();
+  }
+
+  private notifyChange() {
+    window.setTimeout(() => this.onChange?.(), 0);
   }
 }
 
@@ -282,6 +290,7 @@ export class ImageUrlTool {
   private data: MediaToolData;
   private uploadImage?: (file: File) => Promise<ImageUploadResult>;
   private onDebug?: (message: string) => void;
+  private onChange?: () => void;
   private wrapper?: HTMLDivElement;
   private resizeStart?: {
     pointerId: number;
@@ -302,6 +311,7 @@ export class ImageUrlTool {
       ...data
     };
     this.uploadImage = config.uploadImage;
+    this.onChange = config.onChange;
     this.onDebug = config.onDebug;
   }
 
@@ -459,6 +469,11 @@ export class ImageUrlTool {
     }
 
     this.renderContent();
+    this.notifyChange();
+  }
+
+  private notifyChange() {
+    window.setTimeout(() => this.onChange?.(), 0);
   }
 }
 
@@ -466,11 +481,12 @@ export class PdfUrlTool {
   private data: PdfToolData;
   private uploadPdf?: (file: File) => Promise<FileUploadResult>;
   private onDebug?: (message: string) => void;
+  private onChange?: () => void;
   private wrapper?: HTMLDivElement;
 
   static get toolbox() {
     return {
-      title: "PDF",
+      title: "File",
       icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M7 3H14L19 8V21H7V3Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M14 3V8H19" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8.5 16H15.5M8.5 13H15.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`
     };
   }
@@ -478,6 +494,7 @@ export class PdfUrlTool {
   constructor({ data = {}, config = {} }: UrlToolParams<PdfToolData> = {}) {
     this.data = data;
     this.uploadPdf = config.uploadPdf;
+    this.onChange = config.onChange;
     this.onDebug = config.onDebug;
   }
 
@@ -509,13 +526,13 @@ export class PdfUrlTool {
 
       const button = document.createElement("button");
       button.type = "button";
-      button.textContent = "Choose PDF";
+      button.textContent = "Choose file";
       button.onclick = () => {
         void this.selectAndUploadPdf();
       };
 
       const hint = document.createElement("span");
-      hint.textContent = "Upload a PDF file";
+      hint.textContent = "Upload PDF, EPUB, DOCX, PPTX or any course file";
 
       emptyState.append(button, hint);
       this.wrapper.append(emptyState);
@@ -527,7 +544,7 @@ export class PdfUrlTool {
 
     const icon = document.createElement("div");
     icon.className = "pdf-tool-icon";
-    icon.textContent = "PDF";
+    icon.textContent = fileExtensionLabel(this.data.name);
 
     const meta = document.createElement("div");
     meta.className = "pdf-tool-meta";
@@ -546,7 +563,7 @@ export class PdfUrlTool {
     action.href = this.data.url || "#";
     action.target = "_blank";
     action.rel = "noreferrer";
-    action.download = this.data.name || "document.pdf";
+    action.download = this.data.name || "course-file";
     if (this.data.uploading) {
       action.setAttribute("aria-disabled", "true");
       action.onclick = (event) => event.preventDefault();
@@ -569,7 +586,7 @@ export class PdfUrlTool {
       return;
     }
 
-    const file = await pickFile("application/pdf");
+    const file = await pickFile("*/*");
     if (!file) return;
 
     this.data = {
@@ -599,6 +616,11 @@ export class PdfUrlTool {
     }
 
     this.renderContent();
+    this.notifyChange();
+  }
+
+  private notifyChange() {
+    window.setTimeout(() => this.onChange?.(), 0);
   }
 }
 
@@ -743,7 +765,7 @@ function formatToolError(err: unknown): string {
 
 function formatFileSize(sizeBytes?: number): string {
   if (!sizeBytes || sizeBytes <= 0) {
-    return "PDF document";
+    return "Course file";
   }
 
   if (sizeBytes < 1024 * 1024) {
@@ -751,4 +773,10 @@ function formatFileSize(sizeBytes?: number): string {
   }
 
   return `${(sizeBytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function fileExtensionLabel(fileName?: string): string {
+  const extension = fileName?.split(".").pop()?.trim().toUpperCase();
+  if (!extension || extension.length > 5) return "FILE";
+  return extension;
 }

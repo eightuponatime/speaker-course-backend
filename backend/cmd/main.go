@@ -45,6 +45,7 @@ func main() {
 	sessionsRepository := repository.NewSessionsRepository(db)
 	coursesRepository := repository.NewCoursesRepository(db)
 	enrollmentsRepository := repository.NewEnrollmentsRepository(db)
+	invitationCodesRepository := repository.NewInvitationCodesRepository(db)
 	activityRepository := repository.NewActivityRepository(db)
 	mediaAssetsRepository := repository.NewMediaAssetsRepository(db)
 	notificationsRepository := repository.NewNotificationsRepository(db)
@@ -57,6 +58,13 @@ func main() {
 	authService := service.NewAuthService(cfg, usersService, sessionsService)
 	coursesService := service.NewCoursesService(coursesRepository, txManager)
 	enrollmentsService := service.NewEnrollmentsService(enrollmentsRepository)
+	invitationCodesService := service.NewInvitationCodesService(
+		cfg,
+		invitationCodesRepository,
+		enrollmentsRepository,
+		txManager,
+		authService,
+	)
 	activityService := service.NewActivityService(activityRepository)
 	mediaService := service.NewMediaService(cfg, mediaAssetsRepository)
 	notificationsService := service.NewNotificationsService(notificationsRepository)
@@ -71,6 +79,7 @@ func main() {
 		usersService,
 		coursesService,
 		enrollmentsService,
+		invitationCodesService,
 		notificationsService,
 		emailService,
 	)
@@ -78,6 +87,7 @@ func main() {
 		cfg,
 		coursesService,
 		enrollmentsService,
+		invitationCodesService,
 		notificationsService,
 		quizResponsesService,
 		activityService,

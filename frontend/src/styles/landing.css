@@ -380,7 +380,7 @@
   box-shadow: 0 26px 80px rgba(58, 50, 42, 0.08);
 }
 
-.landing-hero > .landing-auth {
+.landing-hero>.landing-auth {
   position: absolute;
   top: 50%;
   right: clamp(48px, 7vw, 130px);
@@ -511,7 +511,7 @@
   box-shadow: 0 0 0 3px rgba(169, 150, 130, 0.16);
 }
 
-.landing-auth > button:not(.landing-auth-dialog-close):not(.landing-auth-switch):not(.landing-forgot-button) {
+.landing-auth>button:not(.landing-auth-dialog-close):not(.landing-auth-switch):not(.landing-forgot-button) {
   height: 48px;
   border: 0;
   border-radius: 4px;
@@ -521,7 +521,7 @@
   cursor: pointer;
 }
 
-.landing-auth > button:not(.landing-auth-dialog-close):not(.landing-auth-switch):not(.landing-forgot-button):disabled {
+.landing-auth>button:not(.landing-auth-dialog-close):not(.landing-auth-switch):not(.landing-forgot-button):disabled {
   opacity: 0.65;
   cursor: default;
 }
@@ -583,7 +583,7 @@
   line-height: 1.45;
 }
 
-.landing-status-card > p {
+.landing-status-card>p {
   color: #5d554d;
   font-size: 15px;
 }
@@ -661,8 +661,8 @@
   box-shadow: 0 0 0 3px rgba(169, 150, 130, 0.16);
 }
 
-.landing-forgot-dialog > button[type="submit"],
-.landing-forgot-dialog > button:not(.landing-auth-dialog-close) {
+.landing-forgot-dialog>button[type="submit"],
+.landing-forgot-dialog>button:not(.landing-auth-dialog-close) {
   height: 48px;
   border: 0;
   border-radius: 4px;
@@ -672,8 +672,8 @@
   cursor: pointer;
 }
 
-.landing-forgot-dialog > button[type="submit"]:disabled,
-.landing-forgot-dialog > button:not(.landing-auth-dialog-close):disabled {
+.landing-forgot-dialog>button[type="submit"]:disabled,
+.landing-forgot-dialog>button:not(.landing-auth-dialog-close):disabled {
   opacity: 0.62;
   cursor: default;
 }
@@ -785,17 +785,21 @@
 .landing-about-panel {
   position: relative;
   isolation: isolate;
-  min-height: clamp(360px, 28vw, 430px);
+  min-height: clamp(410px, 32vw, 500px);
   display: grid;
-  grid-template-columns: minmax(460px, 0.48fr) minmax(0, 1fr);
+  grid-template-columns: minmax(350px, 0.72fr) minmax(430px, 1fr);
   align-items: center;
+  gap: clamp(34px, 5vw, 76px);
   overflow: hidden;
-  border: 1px solid rgba(199, 183, 161, 0.68);
+  border: 1px solid rgba(221, 204, 181, 0.82);
   border-radius: 12px;
   margin-top: 24px;
-  padding: clamp(28px, 3.4vw, 44px) clamp(36px, 5vw, 64px);
-  background: #f3eee7;
-  box-shadow: 0 22px 70px rgba(58, 50, 42, 0.045);
+  padding: clamp(34px, 4vw, 52px) clamp(42px, 5vw, 72px) clamp(30px, 3.4vw, 44px) clamp(120px, 9vw, 160px);
+  background:
+    linear-gradient(90deg, rgba(255, 248, 237, 0.18), rgba(255, 248, 237, 0.3) 42%, rgba(255, 248, 237, 0.12)),
+    url("../../assets/images/new_about_course.png") center / cover no-repeat,
+    #f3eee7;
+  box-shadow: 0 20px 70px rgba(58, 50, 42, 0.055);
 }
 
 .landing-about-copy {
@@ -804,20 +808,21 @@
 }
 
 .landing-about-copy h2 {
-  max-width: 560px;
+  max-width: 430px;
   margin: 0;
-  color: #7d674f;
-  font-size: clamp(36px, 3.5vw, 48px);
+  color: #2f2d2a;
+  font-size: clamp(35px, 3vw, 48px);
   font-weight: 500;
-  line-height: 1.05;
+  line-height: 1.02;
 }
 
 .landing-about-copy p {
-  max-width: 500px;
+  max-width: 455px;
   margin: 18px 0 0;
-  color: #7d674f;
-  font-size: 16px;
-  line-height: 1.62;
+  color: #5a554f;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.55;
 }
 
 .landing-about-art {
@@ -848,57 +853,228 @@
 
 .landing-check-list {
   display: grid;
-  gap: 14px;
-  margin: 26px 0 0;
+  gap: 12px;
+  margin: 28px 0 0;
   padding: 0;
-  color: #7d674f;
-  font-size: 16px;
-  font-weight: 850;
+  color: #5b5148;
+  font-size: 14px;
+  font-weight: 900;
   list-style: none;
 }
 
 .landing-check-list li {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
-.landing-check-list svg {
-  flex: 0 0 auto;
-  color: #b08e67;
+.landing-check-list img {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  object-fit: contain;
+}
+
+.landing-about-video-card {
+  position: relative;
+  z-index: 2;
+  align-self: center;
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(185, 159, 129, 0.42);
+  border-radius: 14px;
+  margin: 0;
+  padding: 18px 18px 10px;
+  background:
+    linear-gradient(180deg, rgba(255, 253, 249, 0.58), rgba(255, 248, 237, 0.36)),
+    rgba(255, 253, 249, 0.34);
+  box-shadow:
+    inset 0 0 0 6px rgba(255, 253, 249, 0.24),
+    0 18px 50px rgba(58, 50, 42, 0.09);
+  transform: translateY(-14px);
+}
+
+.landing-about-video-frame {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(98, 80, 61, 0.25);
+  border-radius: 8px;
+  background: #2b2118;
+  aspect-ratio: 16 / 9;
+}
+
+.landing-about-video-frame video,
+.landing-about-video-frame iframe {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border: 0;
+  object-fit: cover;
+}
+
+.landing-about-video-card figcaption {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  color: #9a7d5d;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.landing-about-video-card figcaption::before,
+.landing-about-video-card figcaption::after {
+  width: 72px;
+  height: 21px;
+  flex: 0 1 72px;
+  background: center / contain no-repeat;
+  content: "";
+  opacity: 0.75;
+}
+
+.landing-about-video-card figcaption::before {
+  background-image: url("../../assets/images/laurel-left.png");
+}
+
+.landing-about-video-card figcaption::after {
+  background-image: url("../../assets/images/laurel-right.png");
+}
+
+.landing-presentation-card {
+  width: min(590px, 100%);
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) 24px;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid rgba(190, 164, 133, 0.46);
+  border-radius: 10px;
+  justify-self: center;
+  margin-top: 14px;
+  padding: 8px 14px;
+  color: #4d443a;
+  background:
+    linear-gradient(180deg, rgba(255, 253, 249, 0.58), rgba(255, 248, 237, 0.34)),
+    rgba(255, 253, 249, 0.36);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.38),
+    0 12px 30px rgba(58, 50, 42, 0.055);
+  text-decoration: none;
+}
+
+.landing-presentation-card img {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+}
+
+.landing-presentation-card span {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.landing-presentation-card strong {
+  overflow: hidden;
+  color: #4a4036;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.landing-presentation-card small {
+  overflow: hidden;
+  color: #9b7b58;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.landing-presentation-card svg {
+  justify-self: end;
+  color: #b3916a;
+}
+
+.landing-presentation-card.compact {
+  min-height: 68px;
+  grid-template-columns: 54px minmax(0, 1fr) 24px;
+  gap: 13px;
+  margin-top: 6px;
+  padding: 10px 14px;
+}
+
+.landing-presentation-card.compact img {
+  width: 48px;
+  height: 48px;
+}
+
+.landing-presentation-card.compact strong {
+  font-family: Montserrat, ui-sans-serif, system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.landing-presentation-card.compact small {
+  font-size: 12px;
+  white-space: normal;
 }
 
 .landing-program-showcase {
   position: relative;
   isolation: isolate;
-  display: grid;
-  grid-template-columns: 1fr;
-  align-items: start;
-  gap: 22px;
+  min-height: clamp(430px, 47vw, 580px);
+  display: flex;
+  align-items: center;
   overflow: hidden;
-  border: 1px solid rgba(190, 150, 92, 0.52);
+  border: 1px solid rgba(221, 204, 181, 0.82);
   border-radius: 12px;
   margin-top: 24px;
-  padding: clamp(28px, 3vw, 38px) clamp(24px, 3.2vw, 44px) clamp(22px, 2.6vw, 32px);
-  color: #3a322b;
+  padding: clamp(42px, 5vw, 64px) clamp(34px, 5vw, 70px) clamp(38px, 4vw, 54px) clamp(260px, 24vw, 330px);
+  color: #4b4741;
   background:
-    linear-gradient(180deg, rgba(255, 253, 249, 0.46), rgba(255, 253, 249, 0.2)),
-    url("../../assets/images/course_program_banner.png") center / 100% 100% no-repeat,
+    linear-gradient(90deg, rgba(255, 248, 237, 0.08), rgba(255, 248, 237, 0.36) 32%, rgba(255, 248, 237, 0.16) 63%, rgba(255, 248, 237, 0)),
+    url("../../assets/images/new_course_program_banner.png") center / cover no-repeat,
     #f3eee7;
   box-shadow:
-    0 24px 80px rgba(58, 50, 42, 0.08),
-    inset 0 0 0 6px rgba(255, 253, 249, 0.18);
+    0 20px 70px rgba(58, 50, 42, 0.055),
+    inset 0 0 0 5px rgba(255, 253, 249, 0.38);
+}
+
+.landing-program-content {
+  width: min(620px, 100%);
+  display: grid;
+  gap: 0;
 }
 
 .landing-program-showcase .landing-kicker {
-  color: #b08e67;
+  margin-bottom: 14px;
+  color: #9a8776;
 }
 
 .landing-program-showcase h2 {
-  max-width: none;
-  color: #7d674f;
-  font-size: clamp(30px, 2.8vw, 44px);
-  text-align: center;
+  max-width: 590px;
+  color: #4b4741;
+  font-size: clamp(40px, 3.8vw, 57px);
+  font-weight: 500;
+  line-height: 1.05;
+  text-align: left;
+}
+
+.landing-program-content>p {
+  max-width: 600px;
+  margin: 28px 0 0;
+  color: #514d48;
+  font-size: 17px;
+  font-weight: 650;
+  line-height: 1.55;
 }
 
 .landing-program-showcase h2 span,
@@ -915,6 +1091,72 @@
 .landing-program-intro {
   display: grid;
   justify-items: center;
+  text-align: center;
+}
+
+.landing-program-metrics {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-top: 40px;
+}
+
+.landing-program-metrics div {
+  display: inline-grid;
+  grid-template-columns: 48px minmax(0, 118px);
+  align-items: center;
+  gap: 14px;
+  color: #5a5148;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.25;
+}
+
+.landing-program-metrics svg {
+  width: 48px;
+  height: 48px;
+  border: 1px solid rgba(172, 151, 126, 0.36);
+  border-radius: 50%;
+  padding: 10px;
+  color: #8a765f;
+  background: rgba(255, 253, 249, 0.34);
+}
+
+.landing-program-whatsapp {
+  width: min(640px, 100%);
+  min-height: 68px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  border: 1px solid rgba(255, 253, 249, 0.22);
+  border-radius: 14px;
+  margin-top: 44px;
+  padding: 18px 28px;
+  color: #fffdf9;
+  background: #242321;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 18px 40px rgba(45, 41, 36, 0.16);
+  font-size: 19px;
+  font-weight: 950;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+}
+
+.landing-program-whatsapp svg {
+  flex: 0 0 auto;
+}
+
+.landing-program-content>small {
+  justify-self: center;
+  margin-top: 18px;
+  color: #83766a;
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.35;
   text-align: center;
 }
 
@@ -999,7 +1241,8 @@
   border: 1px solid rgba(224, 203, 178, 0.36);
   border-radius: 9px;
   padding: 18px;
-  color: rgba(255, 249, 240, 0.78);
+  color: #867a6f;
+  /* color: rgba(224, 203, 178, 0.78); */
   background: rgba(255, 253, 249, 0.045);
   font-size: 14px;
   font-weight: 700;
@@ -1007,14 +1250,28 @@
 }
 
 .landing-contact {
-  width: min(1240px, calc(100% - 64px));
-  display: flex;
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  min-height: 240px;
+  display: grid;
+  grid-template-columns: minmax(340px, 420px) 1fr minmax(340px, 420px);
   align-items: center;
-  justify-content: space-between;
-  gap: 28px;
-  margin: 0 auto;
-  border-top: 1px solid rgba(213, 202, 190, 0.78);
-  padding: 26px 0 34px;
+  column-gap: 28px;
+  overflow: hidden;
+  margin: 18px 0 0;
+  border-top: 1px solid rgba(181, 164, 145, 0.34);
+  padding: 32px max(32px, calc((100vw - 1680px) / 2 + 72px)) 44px;
+  background:
+    linear-gradient(90deg, #f3eee7 0%, rgba(243, 238, 231, 0.96) 29%, rgba(243, 238, 231, 0.58) 55%, rgba(243, 238, 231, 0.08) 78%),
+    linear-gradient(180deg, #f3eee7 0%, rgba(243, 238, 231, 0.5) 20%, rgba(243, 238, 231, 0.02) 54%),
+    url("../../assets/images/site_end.png") right bottom / auto 112% no-repeat,
+    #f3eee7;
+}
+
+.landing-contact>div {
+  position: relative;
+  z-index: 1;
 }
 
 .landing-contact h2 {
@@ -1038,8 +1295,9 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 12px;
+  grid-column: 2;
 }
 
 .landing-contact-links a {
@@ -1081,7 +1339,7 @@
     transform: none;
   }
 
-  .landing-hero > .landing-auth {
+  .landing-hero>.landing-auth {
     width: 360px;
   }
 
@@ -1090,16 +1348,30 @@
   }
 
   .landing-about-panel {
-    grid-template-columns: minmax(0, 0.72fr) minmax(280px, 1fr);
+    grid-template-columns: minmax(320px, 0.72fr) minmax(360px, 1fr);
+    gap: 30px;
+    padding-left: clamp(92px, 8vw, 120px);
+  }
+
+  .landing-about-video-card {
+    padding: 14px 14px 9px;
+  }
+
+  .landing-about-video-card figcaption::before,
+  .landing-about-video-card figcaption::after {
+    width: 48px;
+    height: 14px;
+    flex-basis: 48px;
   }
 
   .landing-program-showcase {
-    grid-template-columns: 1fr;
-    align-items: start;
+    min-height: 480px;
+    padding-left: clamp(220px, 21vw, 260px);
   }
 
   .landing-program-showcase h2 {
-    max-width: 620px;
+    max-width: 520px;
+    font-size: clamp(36px, 4vw, 48px);
   }
 
 }
@@ -1137,10 +1409,13 @@
 
   .landing-hero,
   .landing-about-panel,
-  .landing-program-showcase,
-  .landing-contact {
+  .landing-program-showcase {
     width: min(100% - 24px, 560px);
     grid-template-columns: 1fr;
+  }
+
+  .landing-contact {
+    width: 100%;
   }
 
   .landing-hero {
@@ -1172,7 +1447,7 @@
     display: none;
   }
 
-  .landing-hero > .landing-auth {
+  .landing-hero>.landing-auth {
     position: relative;
     top: auto;
     right: auto;
@@ -1200,7 +1475,12 @@
   .landing-about-panel {
     min-height: 0;
     margin-top: 18px;
-    padding: 26px 22px 210px;
+    gap: 24px;
+    background:
+      linear-gradient(90deg, rgba(255, 248, 237, 0.82), rgba(255, 248, 237, 0.74)),
+      url("../../assets/images/new_about_course.png") center / cover no-repeat,
+      #f3eee7;
+    padding: 26px 22px 24px;
   }
 
   .landing-about-copy h2 {
@@ -1213,29 +1493,104 @@
     font-size: 14px;
   }
 
-  .landing-about-art {
-    inset: auto 0 0 0;
-    height: 235px;
+  .landing-about-video-card {
+    padding: 12px 12px 8px;
+    transform: none;
   }
 
-  .landing-about-art::before {
-    background:
-      linear-gradient(180deg, rgba(243, 238, 231, 0.98), rgba(243, 238, 231, 0.56) 30%, rgba(243, 238, 231, 0.06) 62%),
-      linear-gradient(90deg, rgba(243, 238, 231, 0.32), rgba(243, 238, 231, 0));
+  .landing-about-video-card figcaption {
+    gap: 10px;
+    font-size: 13px;
   }
 
-  .landing-about-art img {
-    object-position: 58% bottom;
+  .landing-about-video-card figcaption::before,
+  .landing-about-video-card figcaption::after {
+    width: 34px;
+    height: 10px;
+    flex-basis: 34px;
   }
 
   .landing-program-showcase {
-    gap: 24px;
+    min-height: 0;
+    align-items: stretch;
+    background:
+      linear-gradient(90deg, rgba(255, 248, 237, 0.78), rgba(255, 248, 237, 0.72)),
+      url("../../assets/images/new_course_program_banner.png") center / cover no-repeat,
+      #f3eee7;
     padding: 28px 18px 24px;
   }
 
   .landing-program-showcase h2 {
     font-size: clamp(28px, 7.8vw, 38px);
     line-height: 1.12;
+  }
+
+  .landing-program-content {
+    border: 1px solid rgba(221, 204, 181, 0.46);
+    border-radius: 10px;
+    padding: 22px 18px;
+    background: rgba(255, 253, 249, 0.62);
+    backdrop-filter: blur(2px);
+  }
+
+  .landing-program-content>p {
+    margin-top: 18px;
+    font-size: 15px;
+  }
+
+  .landing-program-metrics {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-top: 24px;
+  }
+
+  .landing-program-metrics div {
+    grid-template-columns: 44px minmax(0, 1fr);
+    font-size: 14px;
+  }
+
+  .landing-program-metrics svg {
+    width: 44px;
+    height: 44px;
+    padding: 9px;
+  }
+
+  .landing-program-whatsapp {
+    min-height: 56px;
+    gap: 12px;
+    margin-top: 26px;
+    padding: 14px 16px;
+    border-radius: 10px;
+    font-size: 15px;
+  }
+
+  .landing-presentation-card {
+    min-height: 58px;
+    grid-template-columns: 44px minmax(0, 1fr) 22px;
+    gap: 12px;
+    margin-top: 14px;
+    padding: 8px 10px;
+  }
+
+  .landing-presentation-card img {
+    width: 42px;
+    height: 42px;
+  }
+
+  .landing-presentation-card strong {
+    font-size: 15px;
+    white-space: normal;
+  }
+
+  .landing-presentation-card small {
+    font-size: 12px;
+    white-space: normal;
+  }
+
+  .landing-program-content>small {
+    margin-top: 13px;
+    font-size: 13px;
   }
 
   .landing-program-showcase h2 span,
@@ -1278,11 +1633,20 @@
 
   .landing-contact {
     align-items: flex-start;
-    flex-direction: column;
+    grid-template-columns: 1fr;
+    min-height: 280px;
+    row-gap: 24px;
+    background:
+      linear-gradient(180deg, #f3eee7 0%, rgba(243, 238, 231, 0.92) 42%, rgba(243, 238, 231, 0.42) 74%, rgba(243, 238, 231, 0.1)),
+      linear-gradient(90deg, #f3eee7 0%, rgba(243, 238, 231, 0.86) 28%, rgba(243, 238, 231, 0.25) 74%),
+      url("../../assets/images/site_end.png") right bottom / auto 68% no-repeat,
+      #f3eee7;
+    padding: 24px 22px 128px;
   }
 
   .landing-contact-links {
     justify-content: flex-start;
+    grid-column: auto;
   }
 
 }
@@ -1339,7 +1703,7 @@
     grid-template-columns: 44px minmax(0, 1fr);
   }
 
-  .landing-hero > .landing-auth {
+  .landing-hero>.landing-auth {
     padding: 18px;
   }
 

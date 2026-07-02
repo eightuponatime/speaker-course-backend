@@ -20,6 +20,15 @@ func NewMediaHandler(mediaService *service.MediaService) *MediaHandler {
 }
 
 func (h *MediaHandler) RegisterRoutes(r chi.Router, authMiddleware *middlewarego.AuthMiddleware) {
+	r.Route("/media", func(r chi.Router) {
+		r.Use(authMiddleware.RequireAuth())
+
+		r.Post("/storage", h.UploadStorageAsset)
+		r.Post("/stream/tus", h.CreateStreamUpload)
+		r.Post("/stream/complete", h.CompleteStreamUpload)
+		r.Get("/stream/videos/{videoID}/status", h.GetStreamVideoStatus)
+	})
+
 	r.Route("/admin/media", func(r chi.Router) {
 		r.Use(authMiddleware.RequireAuth())
 		r.Use(authMiddleware.RequireAdmin())

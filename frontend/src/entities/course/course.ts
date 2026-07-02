@@ -109,6 +109,73 @@ export type LessonQuizResponseWithUser = LessonQuizResponse & {
   user_full_name?: string;
 };
 
+export type SubmissionStatus = "pending" | "accepted" | "needs_revision";
+
+export type SubmissionAttachment = {
+  kind: string;
+  name: string;
+  url: string;
+  mime_type?: string;
+  size_bytes?: number;
+};
+
+export type LessonSubmission = {
+  id: string;
+  lesson_id: string;
+  course_id: string;
+  user_id: string;
+  status: SubmissionStatus;
+  body: string;
+  attachments: SubmissionAttachment[];
+  viewed_by_admin_at?: string;
+  viewed_by_student_at?: string;
+  submitted_at: string;
+  reviewed_at?: string;
+  reviewed_by?: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type LessonSubmissionComment = {
+  id: string;
+  submission_id: string;
+  author_id: string;
+  body: string;
+  attachments: SubmissionAttachment[];
+  created_at: string;
+  author_email: string;
+  author_full_name: string;
+  author_role: "owner" | "admin" | "member";
+};
+
+export type LessonSubmissionSummary = {
+  id: string;
+  lesson_id: string;
+  course_id: string;
+  user_id: string;
+  status: SubmissionStatus;
+  updated_at: string;
+  reviewed_at?: string;
+  viewed_by_admin_at?: string;
+  viewed_by_student_at?: string;
+  is_unread_for_admin: boolean;
+  comment_count: number;
+};
+
+export type AdminLessonSubmissionListItem = LessonSubmissionSummary & {
+  lesson_title: string;
+  section_title: string;
+  user_email: string;
+  user_full_name: string;
+  body_preview: string;
+  attachment_count: number;
+};
+
+export type LessonSubmissionDetail = {
+  submission: LessonSubmission;
+  comments: LessonSubmissionComment[];
+};
+
 export type User = {
   id: string;
   email: string;

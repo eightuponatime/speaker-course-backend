@@ -9,6 +9,7 @@ import {
   deleteLesson,
   deleteSection,
   getAdminPrimaryCourseCurriculum,
+  countAdminUnreadSubmissions,
   listCourseEnrollments,
   publishCourse,
   publishLesson,
@@ -33,6 +34,7 @@ import { EnrollmentRequestsPanel } from "./components/EnrollmentRequestsPanel";
 import { LessonWorkspace } from "./components/LessonWorkspace";
 import { LandingPage } from "./components/LandingPage";
 import { InvitationCodesPanel } from "./components/InvitationCodesPanel";
+import { AssignmentSubmissionsPanel } from "./components/AssignmentSubmissionsPanel";
 import { PreloadScreen } from "./components/PreloadScreen";
 import { ProfileSettingsModal } from "./components/ProfileSettingsModal";
 import { PrivilegesPanel } from "./components/PrivilegesPanel";
@@ -48,7 +50,7 @@ import { useAssetPreload } from "./utils/preload";
 import logosVoiceLogo from "../assets/images/transparent_logo.png";
 
 export default function App() {
-  const [path, setPath] = useState(window.location.pathname);
+  const [path, setPath] = useState(() => readAppRouteFromURL() || window.location.pathname);
   const isAdminRoute = path.startsWith("/admin");
   const isCourseRoute = path.startsWith("/course");
   const isSignupRoute = path.startsWith("/signup");
@@ -67,7 +69,7 @@ export default function App() {
   const [password, setPassword] = useState("");
   const [publishStatus, setPublishStatus] = useState("");
   const [isPublishing, setIsPublishing] = useState(false);
-  const [activeTab, setActiveTab] = useState<"curriculum" | "activity" | "access" | "invitations" | "privileges">("curriculum");
+  const [activeTab, setActiveTab] = useState<"curriculum" | "activity" | "assignments" | "access" | "invitations" | "privileges">("curriculum");
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isLessonPickerOpen, setIsLessonPickerOpen] = useState(false);
@@ -78,6 +80,7 @@ export default function App() {
     message: string;
   } | null>(null);
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
+  const [unreadSubmissionsCount, setUnreadSubmissionsCount] = useState(0);
   const editorRef = useRef<EditorJS | null>(null);
   const autosaveTimerRef = useRef<number | null>(null);
   const historyRef = useRef<{ past: EditorContent[]; future: EditorContent[]; current: EditorContent | null; restoring: boolean }>({
@@ -131,6 +134,7 @@ export default function App() {
         setActiveLessonId(nextActiveLessonId);
         if (shouldUseAdminAccess) {
           loadPendingRequestsCount(normalizedData.course.id);
+          loadUnreadSubmissionsCount(normalizedData.course.id);
         }
         setError("");
       })
@@ -145,6 +149,15 @@ export default function App() {
       setPendingRequestsCount(Array.isArray(pending) ? pending.length : 0);
     } catch (err) {
       addDebug(`pending requests count failed: ${formatError(err)}`);
+    }
+  }
+
+  async function loadUnreadSubmissionsCount(nextCourseId: string) {
+    try {
+      const result = await countAdminUnreadSubmissions(nextCourseId);
+      setUnreadSubmissionsCount(result.count);
+    } catch (err) {
+      addDebug(`unread submissions count failed: ${formatError(err)}`);
     }
   }
 
@@ -179,6 +192,10 @@ export default function App() {
   useEffect(() => {
     const onPopState = () => setPath(window.location.pathname);
     window.addEventListener("popstate", onPopState);
+    const appRoute = readAppRouteFromURL();
+    if (appRoute) {
+      window.history.replaceState(null, "", appRoute);
+    }
     clearAuthErrorFromURL();
 
     return () => {
@@ -1130,6 +1147,7 @@ export default function App() {
           activeTab={activeTab}
           hasUnpublishedChanges={curriculum.has_unpublished_changes}
           pendingRequestsCount={pendingRequestsCount}
+          unreadSubmissionsCount={unreadSubmissionsCount}
           publishStatus={publishStatus}
           isPublishing={isPublishing}
           onTabChange={setActiveTab}
@@ -1212,6 +1230,12 @@ export default function App() {
             courseId={curriculum.course.id}
             totalLessons={curriculum.sections.reduce((count, section) => count + safeLessons(section.lessons).length, 0)}
             t={t}
+          />
+        ) : null}
+        {activeTab === "assignments" ? (
+          <AssignmentSubmissionsPanel
+            courseId={curriculum.course.id}
+            onUnreadCountChange={setUnreadSubmissionsCount}
           />
         ) : null}
         {activeTab === "access" ? (
@@ -1448,17 +1472,29 @@ function readAuthErrorFromURL(): string {
   const params = new URLSearchParams(window.location.search);
   const authError = params.get("auth_error");
   if (authError === "google_account_not_found") {
-    return "Аккаунт с таким Google еще не зарегистрирован. Чтобы отправить заявку, используйте «Записаться через Google».";
+    return "Аккаунт с таким Google еще не зарегистрирован. Регистрация доступна только по персональной ссылке приглашения.";
+  }
+  if (authError === "invitation_required") {
+    return "Для регистрации нужна персональная ссылка приглашения. Посмотрите программу курса и свяжитесь с нами в WhatsApp.";
   }
 
   return "";
 }
 
+function readAppRouteFromURL(): string {
+  const route = new URLSearchParams(window.location.search).get("app_route") || "";
+  if (route === "/course" || route === "/admin") {
+    return route;
+  }
+  return "";
+}
+
 function clearAuthErrorFromURL() {
   const params = new URLSearchParams(window.location.search);
-  if (!params.has("auth_error")) return;
+  if (!params.has("auth_error") && !params.has("app_route")) return;
 
   params.delete("auth_error");
+  params.delete("app_route");
   const nextSearch = params.toString();
   const nextURL = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`;
   window.history.replaceState(null, "", nextURL);

@@ -80,7 +80,8 @@ func (h *AuthHandler) RegisterRoutes(r chi.Router, authMiddleware *middlewarego.
 	r.Post("/auth/login", h.Login)
 	r.Post("/auth/forgot-password", h.ForgotPassword)
 	r.Get("/auth/google/start", h.GoogleStart)
-	r.Get("/auth/google/enroll/start", h.GoogleEnrollStart)
+	// Public Google enrollment is disabled. New users register only through one-time invitation links.
+	// r.Get("/auth/google/enroll/start", h.GoogleEnrollStart)
 	r.Get("/auth/google/invitation/start", h.GoogleInvitationStart)
 	r.Get("/auth/google/callback", h.GoogleCallback)
 
@@ -353,21 +354,7 @@ func (h *AuthHandler) GoogleLinkStart(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) GoogleEnrollStart(w http.ResponseWriter, r *http.Request) {
-	state, err := randomState()
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-
-	authURL, err := h.authService.GoogleAuthURL(state)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, err)
-		return
-	}
-
-	h.setOAuthStateCookie(w, state)
-	h.setOAuthModeCookie(w, googleOAuthModeEnroll)
-	http.Redirect(w, r, authURL, http.StatusFound)
+	http.Redirect(w, r, h.frontendURLWithError("invitation_required"), http.StatusFound)
 }
 
 func (h *AuthHandler) GoogleInvitationStart(w http.ResponseWriter, r *http.Request) {
@@ -438,7 +425,9 @@ func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 
 	var result *service.AuthResult
 	if modeCookie != nil && modeCookie.Value == googleOAuthModeEnroll {
-		result, err = h.authService.RegisterOrLoginWithGoogleCode(r.Context(), code)
+		h.clearOAuthModeCookie(w)
+		http.Redirect(w, r, h.frontendURLWithError("invitation_required"), http.StatusFound)
+		return
 	} else if modeCookie != nil && modeCookie.Value == googleOAuthModeInvitation {
 		result, err = h.authService.RegisterOrLoginWithGoogleCode(r.Context(), code)
 	} else {
@@ -462,11 +451,8 @@ func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 
 	if modeCookie != nil && modeCookie.Value == googleOAuthModeEnroll {
 		h.clearOAuthModeCookie(w)
-		if err := h.requestPrimaryCourseEnrollment(r.Context(), result.User.Id); err != nil {
-			writeError(w, http.StatusBadRequest, err)
-			return
-		}
-		h.setSessionCookie(w, result.Session.Id.String(), result.Session.ExpiresAt)
+		http.Redirect(w, r, h.frontendURLWithError("invitation_required"), http.StatusFound)
+		return
 	} else if modeCookie != nil && modeCookie.Value == googleOAuthModeInvitation {
 		h.clearOAuthModeCookie(w)
 		inviteCodeCookie, err := r.Cookie(googleOAuthInviteCodeCookieName)
@@ -492,7 +478,7 @@ func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 
 		h.clearCurrentSession(w, r)
 		h.setSessionCookie(w, result.Session.Id.String(), result.Session.ExpiresAt)
-		http.Redirect(w, r, h.cfg.FrontendURL+"/course", http.StatusFound)
+		http.Redirect(w, r, h.frontendURLWithAppRoute("/course"), http.StatusFound)
 		return
 	} else {
 		h.setSessionCookie(w, result.Session.Id.String(), result.Session.ExpiresAt)
@@ -615,6 +601,19 @@ func (h *AuthHandler) frontendURLWithError(code string) string {
 
 	query := parsedURL.Query()
 	query.Set("auth_error", code)
+	parsedURL.RawQuery = query.Encode()
+	return parsedURL.String()
+}
+
+func (h *AuthHandler) frontendURLWithAppRoute(route string) string {
+	frontendURL := h.cfg.FrontendURL
+	parsedURL, err := url.Parse(frontendURL)
+	if err != nil {
+		return frontendURL
+	}
+
+	query := parsedURL.Query()
+	query.Set("app_route", route)
 	parsedURL.RawQuery = query.Encode()
 	return parsedURL.String()
 }

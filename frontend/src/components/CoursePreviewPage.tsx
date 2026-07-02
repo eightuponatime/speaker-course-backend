@@ -1,17 +1,22 @@
-import { ArrowLeft, CalendarDays, Check, Download, FileText, Gauge, LogOut, Menu, Play, UserRound, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CalendarDays, Check, Download, FileText, Gauge, LogOut, Menu, Paperclip, Play, Send, Upload, UserRound, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   listLessonQuizResponses,
   listMyLessonQuizResponses,
+  listMyLessonSubmissions,
   markCourseActivityOffline,
   markCourseActivityOfflineKeepalive,
+  addSubmissionComment,
+  getMyLessonSubmission,
   saveMyLessonQuizResponse,
+  submitLessonSubmission,
   trackCourseActivity
 } from "../api/courseDatasource";
+import { uploadUserSubmissionAsset } from "../api/mediaDatasource";
 import { isExternalAuthSyncActive } from "../authSync";
 import logosVoiceLogo from "../../assets/images/transparent_logo.png";
-import type { CourseCurriculum, EditorContent, Lesson, LessonQuizResponseWithUser } from "../entities/course/course";
+import type { CourseCurriculum, EditorContent, Lesson, LessonQuizResponseWithUser, LessonSubmissionDetail, LessonSubmissionSummary, SubmissionAttachment } from "../entities/course/course";
 import type { TranslationKey } from "../i18n";
 
 type CoursePreviewPageProps = {
@@ -67,9 +72,11 @@ export function CoursePreviewPage({
     activeLessonIndex >= 0 && activeLessonIndex < lessons.length - 1 ? lessons[activeLessonIndex + 1] : undefined;
   const [quizResponses, setQuizResponses] = useState<Record<string, number>>({});
   const [quizStatsResponses, setQuizStatsResponses] = useState<LessonQuizResponseWithUser[]>([]);
+  const [submissionSummaries, setSubmissionSummaries] = useState<Record<string, LessonSubmissionSummary>>({});
   const [toastMessage, setToastMessage] = useState("");
   const [isCurriculumOpen, setIsCurriculumOpen] = useState(false);
   const [isAccessPopoverOpen, setIsAccessPopoverOpen] = useState(false);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const toastTimerRef = useRef<number | null>(null);
   const curriculumRef = useRef<HTMLElement | null>(null);
   const activeLessonButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -98,6 +105,24 @@ export function CoursePreviewPage({
       cancelled = true;
     };
   }, [activeLesson?.id, enableQuizResponses]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadSubmissions() {
+      if (!enableQuizResponses) {
+        setSubmissionSummaries({});
+        return;
+      }
+      const items = await listMyLessonSubmissions(curriculum.course.id);
+      if (!cancelled) {
+        setSubmissionSummaries(Object.fromEntries(items.map((item) => [item.lesson_id, item])));
+      }
+    }
+    void loadSubmissions().catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [curriculum.course.id, enableQuizResponses]);
 
   useEffect(() => {
     let cancelled = false;
@@ -323,7 +348,7 @@ export function CoursePreviewPage({
               <span>Профиль</span>
             </button>
           ) : null}
-          <button className="preview-action-button" type="button" onClick={handleLogoutClick} aria-label={t("logout")}>
+          <button className="preview-action-button" type="button" onClick={() => setLogoutConfirmOpen(true)} aria-label={t("logout")}>
             <LogOut size={17} />
             <span>{t("logout")}</span>
           </button>
@@ -371,6 +396,9 @@ export function CoursePreviewPage({
                   onClick={() => selectLesson(lesson.id)}
                 >
                   <span>{lesson.title}</span>
+                  {submissionSummaries[lesson.id] ? (
+                    <i className={`preview-submission-dot ${submissionSummaries[lesson.id].status}`} aria-label={submissionStatusLabel(submissionSummaries[lesson.id].status)} />
+                  ) : null}
                 </button>
               ))}
             </div>
@@ -410,6 +438,17 @@ export function CoursePreviewPage({
                     : undefined
                 }
               />
+              {enableQuizResponses ? (
+                <LessonAssignmentPanel
+                  lesson={activeLesson}
+                  courseId={curriculum.course.id}
+                  summary={submissionSummaries[activeLesson.id]}
+                  onSummaryChange={(summary) => {
+                    setSubmissionSummaries((current) => ({ ...current, [summary.lesson_id]: summary }));
+                  }}
+                  showToast={showToast}
+                />
+              ) : null}
               <LessonNavigation
                 previousLesson={previousLesson}
                 nextLesson={nextLesson}
@@ -423,6 +462,23 @@ export function CoursePreviewPage({
         </article>
       </section>
       {toastMessage ? <div className="preview-toast">{toastMessage}</div> : null}
+      {logoutConfirmOpen ? (
+        <div className="preview-confirm-backdrop" onMouseDown={() => setLogoutConfirmOpen(false)}>
+          <section className="preview-confirm-dialog" role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()}>
+            <header>
+              <AlertTriangle size={20} />
+              <div>
+                <h2>Выйти из аккаунта?</h2>
+                <p>Текущая сессия будет завершена.</p>
+              </div>
+            </header>
+            <div>
+              <button type="button" onClick={() => setLogoutConfirmOpen(false)}>Остаться</button>
+              <button className="danger" type="button" onClick={() => void handleLogoutClick()}>Выйти</button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </main>
   );
 }
@@ -578,6 +634,214 @@ function LessonViewer({
       })}
     </div>
   );
+}
+
+function LessonAssignmentPanel({
+  lesson,
+  courseId,
+  summary,
+  onSummaryChange,
+  showToast
+}: {
+  lesson: Lesson;
+  courseId: string;
+  summary?: LessonSubmissionSummary;
+  onSummaryChange: (summary: LessonSubmissionSummary) => void;
+  showToast: (message: string) => void;
+}) {
+  const [detail, setDetail] = useState<LessonSubmissionDetail | null>(null);
+  const [body, setBody] = useState("");
+  const [attachments, setAttachments] = useState<SubmissionAttachment[]>([]);
+  const [commentBody, setCommentBody] = useState("");
+  const [commentAttachments, setCommentAttachments] = useState<SubmissionAttachment[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setDetail(null);
+    setBody("");
+    setAttachments([]);
+
+    async function loadDetail() {
+      setLoading(true);
+      try {
+        const nextDetail = await getMyLessonSubmission(lesson.id);
+        if (!cancelled && nextDetail) {
+          setDetail(nextDetail);
+          setBody(nextDetail.submission.body || "");
+          setAttachments(Array.isArray(nextDetail.submission.attachments) ? nextDetail.submission.attachments : []);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    if (summary) {
+      void loadDetail().catch(() => undefined);
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [lesson.id, summary?.id, summary?.updated_at]);
+
+  async function uploadAttachment(target: "submission" | "comment") {
+    const file = await pickLocalFile();
+    if (!file) return;
+    const asset = await uploadUserSubmissionAsset({
+      file,
+      kind: file.type.startsWith("image/") ? "image" : "file",
+      courseId,
+      lessonId: lesson.id
+    });
+    const attachment: SubmissionAttachment = {
+      kind: asset.kind,
+      name: asset.original_name,
+      url: asset.public_url,
+      mime_type: asset.mime_type,
+      size_bytes: asset.size_bytes
+    };
+    if (target === "submission") {
+      setAttachments((current) => [...current, attachment]);
+    } else {
+      setCommentAttachments((current) => [...current, attachment]);
+    }
+  }
+
+  async function submitAssignment() {
+    setSubmitting(true);
+    try {
+      const submission = await submitLessonSubmission({ lessonId: lesson.id, body, attachments });
+      setDetail({ submission, comments: detail?.comments ?? [] });
+      onSummaryChange({
+        id: submission.id,
+        lesson_id: submission.lesson_id,
+        course_id: submission.course_id,
+        user_id: submission.user_id,
+        status: submission.status,
+        updated_at: submission.updated_at,
+        reviewed_at: submission.reviewed_at,
+        viewed_by_admin_at: submission.viewed_by_admin_at,
+        viewed_by_student_at: submission.viewed_by_student_at,
+        is_unread_for_admin: false,
+        comment_count: detail?.comments.length ?? 0
+      });
+      showToast("Задание отправлено");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function submitComment() {
+    if (!detail) return;
+    setSubmitting(true);
+    try {
+      const comment = await addSubmissionComment({
+        submissionId: detail.submission.id,
+        body: commentBody,
+        attachments: commentAttachments
+      });
+      setDetail({ ...detail, comments: [...detail.comments, comment] });
+      setCommentBody("");
+      setCommentAttachments([]);
+      showToast("Комментарий отправлен");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <section className="lesson-assignment">
+      <header>
+        <div>
+          <span>Задание</span>
+          <h3>Отправьте работу по уроку</h3>
+        </div>
+        {summary ? <strong className={`assignment-status ${summary.status}`}>{submissionStatusLabel(summary.status)}</strong> : null}
+      </header>
+
+      {loading ? <p className="assignment-muted">Загрузка задания...</p> : null}
+      <textarea
+        value={body}
+        onChange={(event) => setBody(event.target.value)}
+        placeholder="Опишите выполненное задание, приложите материалы или задайте вопрос преподавателю."
+      />
+      <AttachmentList attachments={attachments} onRemove={(index) => setAttachments((current) => current.filter((_, itemIndex) => itemIndex !== index))} />
+      <div className="assignment-actions">
+        <button type="button" onClick={() => void uploadAttachment("submission")} disabled={submitting}>
+          <Upload size={17} />
+          Прикрепить файл
+        </button>
+        <button className="dark" type="button" onClick={() => void submitAssignment()} disabled={submitting || (!body.trim() && attachments.length === 0)}>
+          <Send size={17} />
+          {summary ? "Отправить заново" : "Отправить задание"}
+        </button>
+      </div>
+
+      {detail ? (
+        <div className="assignment-comments">
+          <h4>Комментарии</h4>
+          {detail.comments.length === 0 ? <p className="assignment-muted">Комментариев пока нет.</p> : null}
+          {detail.comments.map((comment) => (
+            <article className={comment.author_role === "member" ? "student" : "teacher"} key={comment.id}>
+              <strong>{comment.author_role === "member" ? "Вы" : comment.author_full_name || "Преподаватель"}</strong>
+              {comment.body ? <p>{comment.body}</p> : null}
+              <AttachmentList attachments={comment.attachments} />
+            </article>
+          ))}
+          <textarea
+            value={commentBody}
+            onChange={(event) => setCommentBody(event.target.value)}
+            placeholder="Напишите комментарий преподавателю"
+          />
+          <AttachmentList attachments={commentAttachments} onRemove={(index) => setCommentAttachments((current) => current.filter((_, itemIndex) => itemIndex !== index))} />
+          <div className="assignment-actions">
+            <button type="button" onClick={() => void uploadAttachment("comment")} disabled={submitting}>
+              <Paperclip size={17} />
+              Файл
+            </button>
+            <button className="dark" type="button" onClick={() => void submitComment()} disabled={submitting || (!commentBody.trim() && commentAttachments.length === 0)}>
+              Отправить комментарий
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function AttachmentList({ attachments, onRemove }: { attachments: SubmissionAttachment[]; onRemove?: (index: number) => void }) {
+  if (!attachments.length) return null;
+  return (
+    <div className="assignment-attachments">
+      {attachments.map((attachment, index) => (
+        <a className={`attachment-preview ${attachmentPreviewKind(attachment)}`} href={attachment.url} target="_blank" rel="noreferrer" key={`${attachment.url}-${index}`}>
+          {attachmentPreviewKind(attachment) === "image" ? <img src={attachment.url} alt="" /> : null}
+          {attachmentPreviewKind(attachment) === "video" ? <Play size={16} /> : null}
+          {attachmentPreviewKind(attachment) === "document" ? <FileText size={16} /> : null}
+          <span>{attachment.name}</span>
+          {onRemove ? (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.preventDefault();
+                onRemove(index);
+              }}
+            >
+              <X size={14} />
+            </button>
+          ) : null}
+        </a>
+      ))}
+    </div>
+  );
+}
+
+function attachmentPreviewKind(attachment: SubmissionAttachment): "image" | "video" | "document" {
+  if (attachment.kind === "image" || attachment.mime_type?.startsWith("image/")) return "image";
+  if (attachment.kind === "video" || attachment.mime_type?.startsWith("video/")) return "video";
+  return "document";
 }
 
 function PersistentVideo({
@@ -943,6 +1207,22 @@ function stableStoragePart(value: string): string {
   }
 
   return hash.toString(36);
+}
+
+function submissionStatusLabel(status: string): string {
+  if (status === "accepted") return "Принято";
+  if (status === "needs_revision") return "На доработку";
+  return "На рассмотрении";
+}
+
+function pickLocalFile(): Promise<File | null> {
+  return new Promise((resolve) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*,audio/*,video/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.epub,.fb2,*/*";
+    input.onchange = () => resolve(input.files?.[0] ?? null);
+    input.click();
+  });
 }
 
 function readJSONStorage<T>(storageKey: string, fallback: T): T {

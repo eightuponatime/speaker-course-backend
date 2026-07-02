@@ -23,6 +23,7 @@ type CoursesHandler struct {
 	invitationCodesService *service.InvitationCodesService
 	notificationsService   *service.NotificationsService
 	quizResponsesService   *service.QuizResponsesService
+	submissionsService     *service.SubmissionsService
 	activityService        *service.ActivityService
 	usersService           *service.UsersService
 	emailService           *service.EmailService
@@ -35,6 +36,7 @@ func NewCoursesHandler(
 	invitationCodesService *service.InvitationCodesService,
 	notificationsService *service.NotificationsService,
 	quizResponsesService *service.QuizResponsesService,
+	submissionsService *service.SubmissionsService,
 	activityService *service.ActivityService,
 	usersService *service.UsersService,
 	emailService *service.EmailService,
@@ -46,6 +48,7 @@ func NewCoursesHandler(
 		invitationCodesService: invitationCodesService,
 		notificationsService:   notificationsService,
 		quizResponsesService:   quizResponsesService,
+		submissionsService:     submissionsService,
 		activityService:        activityService,
 		usersService:           usersService,
 		emailService:           emailService,
@@ -71,6 +74,10 @@ func (h *CoursesHandler) RegisterRoutes(r chi.Router, authMiddleware *middleware
 		r.Post("/courses/{courseID}/activity/offline", h.MarkCourseActivityOffline)
 		r.Get("/lessons/{lessonID}/quiz-responses", h.ListMyLessonQuizResponses)
 		r.Post("/lessons/{lessonID}/quiz-responses", h.SaveMyLessonQuizResponse)
+		r.Get("/courses/{courseID}/submissions/me", h.ListMyLessonSubmissions)
+		r.Get("/lessons/{lessonID}/submission", h.GetMyLessonSubmission)
+		r.Post("/lessons/{lessonID}/submission", h.SubmitLessonSubmission)
+		r.Post("/submissions/{submissionID}/comments", h.AddMySubmissionComment)
 
 		admin := r.With(authMiddleware.RequireAdmin())
 		admin.Post("/admin/courses", h.CreateCourse)
@@ -96,6 +103,11 @@ func (h *CoursesHandler) RegisterRoutes(r chi.Router, authMiddleware *middleware
 		admin.Patch("/admin/lessons/{lessonID}/draft", h.SaveLessonDraft)
 		admin.Post("/admin/lessons/{lessonID}/publish", h.PublishLesson)
 		admin.Get("/admin/lessons/{lessonID}/quiz-responses", h.ListLessonQuizResponses)
+		admin.Get("/admin/courses/{courseID}/submissions", h.ListAdminLessonSubmissions)
+		admin.Get("/admin/courses/{courseID}/submissions/unread-count", h.CountAdminUnreadSubmissions)
+		admin.Get("/admin/submissions/{submissionID}", h.GetAdminLessonSubmission)
+		admin.Patch("/admin/submissions/{submissionID}/status", h.UpdateLessonSubmissionStatus)
+		admin.Post("/admin/submissions/{submissionID}/comments", h.AddAdminSubmissionComment)
 		admin.Patch("/admin/enrollments/{enrollmentID}/review", h.ReviewEnrollment)
 	})
 }
@@ -930,6 +942,192 @@ func (h *CoursesHandler) ListLessonQuizResponses(w http.ResponseWriter, r *http.
 	}
 
 	writeJSON(w, http.StatusOK, responses)
+}
+
+func (h *CoursesHandler) ListMyLessonSubmissions(w http.ResponseWriter, r *http.Request) {
+	courseID, ok := parseUUIDParam(w, r, "courseID")
+	if !ok {
+		return
+	}
+	userID, ok := middlewarego.UserIDFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, nil)
+		return
+	}
+
+	items, err := h.submissionsService.ListMineByCourse(r.Context(), courseID, userID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, items)
+}
+
+func (h *CoursesHandler) GetMyLessonSubmission(w http.ResponseWriter, r *http.Request) {
+	lessonID, ok := parseUUIDParam(w, r, "lessonID")
+	if !ok {
+		return
+	}
+	userID, ok := middlewarego.UserIDFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, nil)
+		return
+	}
+	if !h.ensureLessonAccess(w, r, lessonID, userID) {
+		return
+	}
+
+	detail, err := h.submissionsService.GetMineByLesson(r.Context(), lessonID, userID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, detail)
+}
+
+func (h *CoursesHandler) SubmitLessonSubmission(w http.ResponseWriter, r *http.Request) {
+	lessonID, ok := parseUUIDParam(w, r, "lessonID")
+	if !ok {
+		return
+	}
+	userID, ok := middlewarego.UserIDFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, nil)
+		return
+	}
+	if !h.ensureLessonAccess(w, r, lessonID, userID) {
+		return
+	}
+
+	var request lessonSubmissionRequest
+	if err := decodeJSON(r, &request); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	submission, err := h.submissionsService.Submit(r.Context(), lessonID, userID, request.Body, request.Attachments)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, submission)
+}
+
+func (h *CoursesHandler) AddMySubmissionComment(w http.ResponseWriter, r *http.Request) {
+	submissionID, ok := parseUUIDParam(w, r, "submissionID")
+	if !ok {
+		return
+	}
+	userID, ok := middlewarego.UserIDFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, nil)
+		return
+	}
+
+	var request lessonSubmissionRequest
+	if err := decodeJSON(r, &request); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	comment, err := h.submissionsService.AddComment(r.Context(), submissionID, userID, false, request.Body, request.Attachments)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, comment)
+}
+
+func (h *CoursesHandler) ListAdminLessonSubmissions(w http.ResponseWriter, r *http.Request) {
+	courseID, ok := parseUUIDParam(w, r, "courseID")
+	if !ok {
+		return
+	}
+	items, err := h.submissionsService.ListAdminByCourse(r.Context(), courseID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, items)
+}
+
+func (h *CoursesHandler) CountAdminUnreadSubmissions(w http.ResponseWriter, r *http.Request) {
+	courseID, ok := parseUUIDParam(w, r, "courseID")
+	if !ok {
+		return
+	}
+	count, err := h.submissionsService.CountUnreadForAdmin(r.Context(), courseID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]int{"count": count})
+}
+
+func (h *CoursesHandler) GetAdminLessonSubmission(w http.ResponseWriter, r *http.Request) {
+	submissionID, ok := parseUUIDParam(w, r, "submissionID")
+	if !ok {
+		return
+	}
+	detail, err := h.submissionsService.GetAdminDetail(r.Context(), submissionID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, detail)
+}
+
+func (h *CoursesHandler) UpdateLessonSubmissionStatus(w http.ResponseWriter, r *http.Request) {
+	submissionID, ok := parseUUIDParam(w, r, "submissionID")
+	if !ok {
+		return
+	}
+	adminID, ok := middlewarego.UserIDFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, nil)
+		return
+	}
+	var request struct {
+		Status domain.LessonSubmissionStatus `json:"status"`
+	}
+	if err := decodeJSON(r, &request); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	submission, err := h.submissionsService.UpdateStatus(r.Context(), submissionID, request.Status, adminID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, submission)
+}
+
+func (h *CoursesHandler) AddAdminSubmissionComment(w http.ResponseWriter, r *http.Request) {
+	submissionID, ok := parseUUIDParam(w, r, "submissionID")
+	if !ok {
+		return
+	}
+	adminID, ok := middlewarego.UserIDFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, nil)
+		return
+	}
+	var request lessonSubmissionRequest
+	if err := decodeJSON(r, &request); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	comment, err := h.submissionsService.AddComment(r.Context(), submissionID, adminID, true, request.Body, request.Attachments)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, comment)
+}
+
+type lessonSubmissionRequest struct {
+	Body        string                        `json:"body"`
+	Attachments []domain.SubmissionAttachment `json:"attachments"`
 }
 
 func (h *CoursesHandler) ensureLessonAccess(w http.ResponseWriter, r *http.Request, lessonID uuid.UUID, userID uuid.UUID) bool {

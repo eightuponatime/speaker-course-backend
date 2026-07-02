@@ -8,12 +8,13 @@ import { NotificationBell } from "./NotificationBell";
 
 type CourseTopbarProps = {
   course: Course;
-  activeTab: "curriculum" | "activity" | "access" | "invitations" | "privileges";
+  activeTab: "curriculum" | "activity" | "assignments" | "access" | "invitations" | "privileges";
   hasUnpublishedChanges: boolean;
   pendingRequestsCount: number;
+  unreadSubmissionsCount: number;
   publishStatus: string;
   isPublishing: boolean;
-  onTabChange: (tab: "curriculum" | "activity" | "access" | "invitations" | "privileges") => void;
+  onTabChange: (tab: "curriculum" | "activity" | "assignments" | "access" | "invitations" | "privileges") => void;
   t: (key: TranslationKey) => string;
   onLogout: () => void;
   onLandingOpen: () => void;
@@ -28,6 +29,7 @@ export function CourseTopbar({
   activeTab,
   hasUnpublishedChanges,
   pendingRequestsCount,
+  unreadSubmissionsCount,
   publishStatus,
   isPublishing,
   onTabChange,
@@ -101,6 +103,16 @@ export function CourseTopbar({
             onClick={() => onTabChange("activity")}
           >
             Активность
+          </button>
+          <button
+            className={activeTab === "assignments" ? "active" : ""}
+            type="button"
+            onClick={() => onTabChange("assignments")}
+          >
+            Задания
+            <span className={unreadSubmissionsCount > 0 ? "tab-count active" : "tab-count"}>
+              {unreadSubmissionsCount}
+            </span>
           </button>
           <button
             className={activeTab === "access" ? "active" : ""}
@@ -181,6 +193,10 @@ export function CourseTopbar({
               </button>
               <button className={activeTab === "activity" ? "active" : ""} type="button" onClick={() => selectTab("activity")}>
                 Активность
+              </button>
+              <button className={activeTab === "assignments" ? "active" : ""} type="button" onClick={() => selectTab("assignments")}>
+                Задания
+                {unreadSubmissionsCount > 0 ? <span>{unreadSubmissionsCount}</span> : null}
               </button>
               <button className={activeTab === "access" ? "active" : ""} type="button" onClick={() => selectTab("access")}>
                 Доступ

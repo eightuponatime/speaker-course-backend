@@ -16,8 +16,7 @@ import {
 import {
   getMyPrimaryCourseEnrollment,
   getPrimaryCourse,
-  getPrimaryCourseProgram,
-  requestPrimaryCourseEnrollment
+  getPrimaryCourseProgram
 } from "../api/courseDatasource";
 import { forgotPassword } from "../api/authDatasource";
 import { apiBaseUrl } from "../api/http";
@@ -71,7 +70,6 @@ export function LandingPage({
   const [course, setCourse] = useState<Course | null>(null);
   const [enrollment, setEnrollment] = useState<CourseEnrollment | null>(null);
   const [accessLoading, setAccessLoading] = useState(false);
-  const [accessSubmitting, setAccessSubmitting] = useState(false);
   const [accessError, setAccessError] = useState("");
   const [mode, setMode] = useState<"login" | "register">("login");
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
@@ -209,6 +207,10 @@ export function LandingPage({
     }
   }
 
+  /*
+  Public course access requests are disabled.
+  Registration and access are issued only through personal one-time invitation links.
+
   async function handleRequestAccess() {
     setAccessSubmitting(true);
     setAccessError("");
@@ -222,6 +224,7 @@ export function LandingPage({
       setAccessSubmitting(false);
     }
   }
+  */
 
   function openForgotPassword(initialEmail = "") {
     setForgotEmail(initialEmail);
@@ -391,7 +394,7 @@ export function LandingPage({
         {t("continueWithGoogle")}
       </a>
       <button className="landing-auth-switch" type="button" onClick={scrollToProgramFromLogin}>
-        Еще нет доступа? Посмотрите программу курса
+        Еще нет доступа? Запишитесь на программу
       </button>
       {authError ? <AuthAlert message={authError} /> : null}
     </>
@@ -566,11 +569,14 @@ export function LandingPage({
                       {t("enterCourse")}
                     </button>
                   ) : null}
+                  {/*
+                  Public request button is disabled. Access is granted through invitation codes.
                   {!enrollment ? (
                     <button type="button" onClick={handleRequestAccess} disabled={accessSubmitting || accessLoading}>
                       {accessSubmitting ? t("wait") : t("requestAccess")}
                     </button>
                   ) : null}
+                  */}
                   {enrollment?.status !== "approved" && enrollment ? (
                     <button className="secondary" type="button" onClick={onOpenCourse}>
                       {t("details")}

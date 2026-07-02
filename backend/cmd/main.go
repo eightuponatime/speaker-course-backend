@@ -50,6 +50,7 @@ func main() {
 	mediaAssetsRepository := repository.NewMediaAssetsRepository(db)
 	notificationsRepository := repository.NewNotificationsRepository(db)
 	quizResponsesRepository := repository.NewQuizResponsesRepository(db)
+	submissionsRepository := repository.NewSubmissionsRepository(db)
 	txManager := repository.NewTransactionManager(db)
 
 	// ==== service ====
@@ -69,6 +70,7 @@ func main() {
 	mediaService := service.NewMediaService(cfg, mediaAssetsRepository)
 	notificationsService := service.NewNotificationsService(notificationsRepository)
 	quizResponsesService := service.NewQuizResponsesService(quizResponsesRepository)
+	submissionsService := service.NewSubmissionsService(submissionsRepository)
 	emailService := service.NewEmailService(cfg)
 
 	// ==== handler ====
@@ -90,6 +92,7 @@ func main() {
 		invitationCodesService,
 		notificationsService,
 		quizResponsesService,
+		submissionsService,
 		activityService,
 		usersService,
 		emailService,

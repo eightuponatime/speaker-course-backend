@@ -10,9 +10,16 @@ import type {
   EditorContent,
   EnrollmentStatus,
   LessonProgressHistoryItem,
+  LessonSubmission,
+  LessonSubmissionComment,
+  LessonSubmissionDetail,
+  LessonSubmissionSummary,
   LessonQuizResponse,
   LessonQuizResponseWithUser,
   Lesson,
+  AdminLessonSubmissionListItem,
+  SubmissionAttachment,
+  SubmissionStatus,
   User
 } from "../entities/course/course";
 import { apiBaseUrl, request } from "./http";
@@ -102,6 +109,73 @@ export function saveMyLessonQuizResponse(input: {
 
 export function listLessonQuizResponses(lessonId: string): Promise<LessonQuizResponseWithUser[]> {
   return request<LessonQuizResponseWithUser[]>(`/admin/lessons/${lessonId}/quiz-responses`);
+}
+
+export function listMyLessonSubmissions(courseId: string): Promise<LessonSubmissionSummary[]> {
+  return request<LessonSubmissionSummary[]>(`/courses/${courseId}/submissions/me`);
+}
+
+export function getMyLessonSubmission(lessonId: string): Promise<LessonSubmissionDetail | null> {
+  return request<LessonSubmissionDetail | null>(`/lessons/${lessonId}/submission`);
+}
+
+export function submitLessonSubmission(input: {
+  lessonId: string;
+  body: string;
+  attachments: SubmissionAttachment[];
+}): Promise<LessonSubmission> {
+  return request<LessonSubmission>(`/lessons/${input.lessonId}/submission`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ body: input.body, attachments: input.attachments })
+  });
+}
+
+export function addSubmissionComment(input: {
+  submissionId: string;
+  body: string;
+  attachments: SubmissionAttachment[];
+}): Promise<LessonSubmissionComment> {
+  return request<LessonSubmissionComment>(`/submissions/${input.submissionId}/comments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ body: input.body, attachments: input.attachments })
+  });
+}
+
+export function listAdminLessonSubmissions(courseId: string): Promise<AdminLessonSubmissionListItem[]> {
+  return request<AdminLessonSubmissionListItem[]>(`/admin/courses/${courseId}/submissions`);
+}
+
+export function countAdminUnreadSubmissions(courseId: string): Promise<{ count: number }> {
+  return request<{ count: number }>(`/admin/courses/${courseId}/submissions/unread-count`);
+}
+
+export function getAdminLessonSubmission(submissionId: string): Promise<LessonSubmissionDetail> {
+  return request<LessonSubmissionDetail>(`/admin/submissions/${submissionId}`);
+}
+
+export function updateLessonSubmissionStatus(input: {
+  submissionId: string;
+  status: SubmissionStatus;
+}): Promise<LessonSubmission> {
+  return request<LessonSubmission>(`/admin/submissions/${input.submissionId}/status`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status: input.status })
+  });
+}
+
+export function addAdminSubmissionComment(input: {
+  submissionId: string;
+  body: string;
+  attachments: SubmissionAttachment[];
+}): Promise<LessonSubmissionComment> {
+  return request<LessonSubmissionComment>(`/admin/submissions/${input.submissionId}/comments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ body: input.body, attachments: input.attachments })
+  });
 }
 
 export function getCourseBySlug(slug: string): Promise<Course> {

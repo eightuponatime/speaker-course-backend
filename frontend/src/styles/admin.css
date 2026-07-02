@@ -917,6 +917,344 @@
   white-space: nowrap;
 }
 
+.assignments-panel {
+  display: grid;
+  gap: 16px;
+  padding: 18px 24px 42px;
+}
+
+.assignments-table-wrap {
+  min-width: 0;
+  overflow-x: auto;
+  border: 1px solid #d8dee8;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.assignments-table {
+  width: 100%;
+  min-width: 1040px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.assignments-table th {
+  padding: 10px 12px;
+  color: #667185;
+  background: #f2f5f9;
+  font-size: 11px;
+  font-weight: 800;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.assignments-table td {
+  border-top: 1px solid #e4e9f1;
+  padding: 10px 12px;
+  color: #3f4652;
+  vertical-align: top;
+}
+
+.assignments-table tr.unread td {
+  background: #fff8e6;
+}
+
+.assignments-table strong,
+.assignments-table small {
+  display: block;
+}
+
+.assignments-table small {
+  color: #69758a;
+  font-weight: 600;
+}
+
+.assignments-table button,
+.assignment-status-actions button,
+.assignment-detail header button {
+  border: 1px solid #cdd5e0;
+  border-radius: 5px;
+  padding: 7px 10px;
+  color: #22314a;
+  background: #fff;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.file-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #7a4d00;
+  font-weight: 800;
+}
+
+.assignment-detail-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(18, 25, 38, 0.22);
+}
+
+.assignment-detail {
+  width: min(620px, 100vw);
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  overflow-y: auto;
+  padding: 22px;
+  background: #fff;
+  box-shadow: -18px 0 50px rgba(18, 25, 38, 0.18);
+}
+
+.assignment-detail header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.assignment-detail header span {
+  color: #667185;
+  font-size: 11px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.assignment-detail h3,
+.assignment-detail p {
+  margin: 0;
+}
+
+.assignment-status-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.assignment-status-actions button:nth-child(2) {
+  border-color: #f0b4aa;
+  color: #9e3428;
+  background: #fff1ef;
+}
+
+.assignment-status-actions button:nth-child(3) {
+  border-color: #add7bd;
+  color: #1f6a3e;
+  background: #edf9f1;
+}
+
+.assignment-admin-comments {
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid #e4e9f1;
+  padding-top: 14px;
+}
+
+.assignment-admin-comments h4 {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  color: #22314a;
+}
+
+.assignment-admin-comments article {
+  display: grid;
+  gap: 6px;
+  border-left: 3px solid #2f6fdd;
+  border-radius: 5px;
+  padding: 10px 12px;
+  background: #f7f9fc;
+}
+
+.assignment-admin-comments article.student {
+  border-left-color: #d89b2d;
+}
+
+.assignment-admin-comments textarea {
+  min-height: 96px;
+  resize: vertical;
+  border: 1px solid #ccd5e0;
+  border-radius: 5px;
+  padding: 10px 12px;
+  font: inherit;
+}
+
+.admin-assignment-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-assignment-attachments a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #d8dee8;
+  border-radius: 999px;
+  padding: 6px 9px;
+  color: #334155;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.assignments-toolbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.assignments-toolbar h2,
+.assignments-toolbar p {
+  margin: 0;
+}
+
+.assignments-toolbar h2 {
+  color: #10223d;
+  font-size: 22px;
+  line-height: 1.15;
+}
+
+.assignments-toolbar > div > span,
+.assignments-toolbar label span {
+  color: #69758a;
+  font-size: 11px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.assignments-toolbar-actions {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+}
+
+.assignments-toolbar label {
+  display: grid;
+  gap: 5px;
+}
+
+.assignments-toolbar select {
+  height: 34px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 0 30px 0 10px;
+  color: #22314a;
+  background: #fff;
+  font-weight: 750;
+}
+
+.assignments-toolbar button {
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 0 12px;
+  color: #22314a;
+  background: #fff;
+  font-weight: 800;
+}
+
+.assignment-detail-backdrop {
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+  background: rgba(15, 23, 42, 0.42);
+}
+
+.assignment-detail {
+  width: min(980px, calc(100vw - 56px));
+  max-height: min(820px, calc(100vh - 56px));
+  border: 1px solid #d8dee8;
+  border-radius: 10px;
+  box-shadow: 0 28px 90px rgba(15, 23, 42, 0.28);
+}
+
+.assignment-status-control {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+  border: 1px solid #e4e9f1;
+  border-radius: 8px;
+  padding: 12px;
+  background: #f8fafc;
+}
+
+.assignment-status-control label {
+  position: relative;
+  display: grid;
+  gap: 5px;
+}
+
+.assignment-status-control label span {
+  color: #69758a;
+  font-size: 11px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.assignment-status-control select {
+  height: 38px;
+  appearance: none;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 0 36px 0 12px;
+  color: #10223d;
+  background: #fff;
+  font-weight: 850;
+}
+
+.assignment-status-control label svg {
+  position: absolute;
+  right: 11px;
+  bottom: 11px;
+  pointer-events: none;
+}
+
+.assignment-status-control > button {
+  height: 38px;
+  border: 0;
+  border-radius: 6px;
+  padding: 0 14px;
+  color: #fff;
+  background: #2f5bd4;
+  font-weight: 850;
+}
+
+.assignment-status-control > button:disabled {
+  opacity: 0.5;
+}
+
+.attachment-preview.image {
+  border-radius: 8px;
+  padding: 6px 9px 6px 6px;
+}
+
+.attachment-preview.image img {
+  width: 42px;
+  height: 32px;
+  border-radius: 5px;
+  object-fit: cover;
+}
+
+.attachment-preview.video .attachment-preview-icon,
+.attachment-preview.document .attachment-preview-icon {
+  width: 30px;
+  height: 30px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 6px;
+  background: #eef2f7;
+}
+
 .enrollment-actions button,
 .secondary-button {
   height: 38px;

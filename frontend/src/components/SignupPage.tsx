@@ -51,8 +51,7 @@ export function SignupPage({}: SignupPageProps) {
         password,
         fullName
       });
-      window.history.pushState(null, "", "/course");
-      window.location.assign("/course");
+      window.location.assign("/?app_route=%2Fcourse");
     } catch (err) {
       setMessage(formatSignupError(err));
     } finally {

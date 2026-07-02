@@ -9,6 +9,7 @@ import {
 import type { Course, CourseCurriculum, CourseEnrollment, User } from "../entities/course/course";
 import type { TranslationKey } from "../i18n";
 import { CoursePreviewPage } from "./CoursePreviewPage";
+import { PreloadScreen } from "./PreloadScreen";
 
 type CourseAccessPageProps = {
   currentUser: User;
@@ -92,14 +93,7 @@ export function CourseAccessPage({
   }
 
   if (loading) {
-    return (
-      <main className="course-access-page">
-        <AccessHeader t={t} onLogout={onLogout} onLandingOpen={onLandingOpen} onProfileOpen={onProfileOpen} />
-        <section className="course-access-card">
-          <span>{t("loadingCourse")}</span>
-        </section>
-      </main>
-    );
+    return <PreloadScreen label={t("loadingCourse")} />;
   }
 
   if (curriculum && enrollment?.status === "approved") {

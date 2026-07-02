@@ -148,6 +148,10 @@ func (s *AuthService) LoginWithPassword(
 }
 
 func (s *AuthService) GoogleAuthURL(state string) (string, error) {
+	return s.GoogleAuthURLWithPrompt(state, "")
+}
+
+func (s *AuthService) GoogleAuthURLWithPrompt(state string, prompt string) (string, error) {
 	if s.cfg.GoogleClientID == "" || s.cfg.GoogleRedirectURL == "" {
 		return "", fmt.Errorf("%w: google oauth is not configured", ErrInvalidAuth)
 	}
@@ -161,6 +165,9 @@ func (s *AuthService) GoogleAuthURL(state string) (string, error) {
 	params.Set("response_type", "code")
 	params.Set("scope", "openid email profile")
 	params.Set("state", state)
+	if strings.TrimSpace(prompt) != "" {
+		params.Set("prompt", strings.TrimSpace(prompt))
+	}
 
 	return "https://accounts.google.com/o/oauth2/v2/auth?" + params.Encode(), nil
 }

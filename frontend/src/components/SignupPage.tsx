@@ -4,8 +4,13 @@ import { Eye, EyeOff, ShieldCheck } from "lucide-react";
 
 import { registerWithInvitationCode } from "../api/authDatasource";
 import { apiBaseUrl } from "../api/http";
+import { useAssetPreload } from "../utils/preload";
+import { PreloadScreen } from "./PreloadScreen";
 import logosVoiceLogo from "../../assets/images/transparent_logo.png";
 import signUpBackground from "../../assets/images/sign_up_screen_background.png";
+import signUpUpperLaurel from "../../assets/images/sign_up_upper_laurel.png";
+import laurelLeft from "../../assets/images/laurel-left.png";
+import laurelRight from "../../assets/images/laurel-right.png";
 
 type SignupPageProps = {
   onLoginOpen?: () => void;
@@ -21,6 +26,14 @@ export function SignupPage({}: SignupPageProps) {
   const inviteCode = readInviteCode();
   const canSubmit = inviteCode.length > 0 && email.trim().length > 0 && password.length > 0 && fullName.trim().length > 0;
   const googleSignupUrl = `${apiBaseUrl}/auth/google/invitation/start?code=${encodeURIComponent(inviteCode)}`;
+  const criticalAssetsReady = useAssetPreload(signupCriticalImages, {
+    minDelayMs: 300,
+    timeoutMs: 2500
+  });
+
+  if (!criticalAssetsReady) {
+    return <PreloadScreen label="Загрузка регистрации" />;
+  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -143,6 +156,14 @@ export function SignupPage({}: SignupPageProps) {
     </main>
   );
 }
+
+const signupCriticalImages = [
+  logosVoiceLogo,
+  signUpBackground,
+  signUpUpperLaurel,
+  laurelLeft,
+  laurelRight
+];
 
 function readInviteCode(): string {
   const pathParts = window.location.pathname.split("/").filter(Boolean);

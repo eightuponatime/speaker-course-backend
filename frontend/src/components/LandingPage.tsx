@@ -30,6 +30,8 @@ import type { Course, CourseEnrollment, User } from "../entities/course/course";
 import type { Notification } from "../entities/notification/notification";
 import type { TranslationKey } from "../i18n";
 import { NotificationBell } from "./NotificationBell";
+import { PreloadScreen } from "./PreloadScreen";
+import { useAssetPreload } from "../utils/preload";
 import newAboutCourseImage from "../../assets/images/new_about_course.png";
 import affectionIcon from "../../assets/images/affection.png";
 import clearSpeechIcon from "../../assets/images/clear_speach.png";
@@ -92,24 +94,10 @@ export function LandingPage({
   const [authNotice, setAuthNotice] = useState("");
   const [authNoticeDialogOpen, setAuthNoticeDialogOpen] = useState(false);
   const [programSections, setProgramSections] = useState<CourseProgramSection[]>([]);
-  const [criticalAssetsReady, setCriticalAssetsReady] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-
-    preloadImages(landingCriticalImages, {
-      minDelayMs: 450,
-      timeoutMs: 3500
-    }).then(() => {
-      if (active) {
-        setCriticalAssetsReady(true);
-      }
-    });
-
-    return () => {
-      active = false;
-    };
-  }, []);
+  const criticalAssetsReady = useAssetPreload(landingCriticalImages, {
+    minDelayMs: 450,
+    timeoutMs: 3500
+  });
 
   useEffect(() => {
     getPrimaryCourse()
@@ -297,18 +285,7 @@ export function LandingPage({
   const accessDisplayError = formatUserFacingError(accessError);
 
   if (!criticalAssetsReady) {
-    return (
-      <main className="landing-preload-screen" aria-busy="true" aria-label="Загрузка сайта">
-        <div className="landing-preload-brand">
-          <img src={logosVoiceLogo} alt="" />
-          <span>
-            <strong>LOGOS</strong>
-            <small>VOICE</small>
-          </span>
-        </div>
-        <div className="landing-preload-bar" aria-hidden="true" />
-      </main>
-    );
+    return <PreloadScreen label="Загрузка сайта" />;
   }
 
   const authForm = (
@@ -931,32 +908,6 @@ function extractServerError(message: string): string {
 
 function isGoogleAccountNotFoundError(error: string): boolean {
   return error.includes("Аккаунт с таким Google еще не зарегистрирован");
-}
-
-async function preloadImages(srcList: string[], options: { minDelayMs: number; timeoutMs: number }): Promise<void> {
-  await Promise.race([
-    Promise.allSettled(srcList.map((src) => preloadImage(src))),
-    delay(options.timeoutMs)
-  ]);
-  await delay(options.minDelayMs);
-}
-
-async function preloadImage(src: string): Promise<void> {
-  const image = new Image();
-
-  await new Promise<void>((resolve) => {
-    image.onload = () => resolve();
-    image.onerror = () => resolve();
-    image.src = src;
-  });
-
-  if ("decode" in image) {
-    await image.decode().catch(() => undefined);
-  }
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
 function PasswordInput({

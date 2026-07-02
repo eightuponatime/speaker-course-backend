@@ -33,6 +33,7 @@ import { EnrollmentRequestsPanel } from "./components/EnrollmentRequestsPanel";
 import { LessonWorkspace } from "./components/LessonWorkspace";
 import { LandingPage } from "./components/LandingPage";
 import { InvitationCodesPanel } from "./components/InvitationCodesPanel";
+import { PreloadScreen } from "./components/PreloadScreen";
 import { ProfileSettingsModal } from "./components/ProfileSettingsModal";
 import { PrivilegesPanel } from "./components/PrivilegesPanel";
 import { SignupPage } from "./components/SignupPage";
@@ -43,12 +44,20 @@ import type { StreamVideoStatus } from "./entities/media/media";
 import type { Notification } from "./entities/notification/notification";
 import { translate } from "./i18n";
 import { markExternalAuthSyncActive, notifyAuthChanged, subscribeToAuthChanges } from "./authSync";
+import { useAssetPreload } from "./utils/preload";
+import logosVoiceLogo from "../assets/images/transparent_logo.png";
 
 export default function App() {
   const [path, setPath] = useState(window.location.pathname);
   const isAdminRoute = path.startsWith("/admin");
   const isCourseRoute = path.startsWith("/course");
   const isSignupRoute = path.startsWith("/signup");
+  const routePreloadKey = isCourseRoute ? "course" : isAdminRoute ? "admin" : "default";
+  const routeAssetsReady = useAssetPreload(routePreloadAssets[routePreloadKey], {
+    cacheKey: routePreloadKey,
+    minDelayMs: routePreloadKey === "default" ? 0 : 260,
+    timeoutMs: 1600
+  });
   const [curriculum, setCurriculum] = useState<CourseCurriculum | null>(null);
   const [activeLessonId, setActiveLessonId] = useState("");
   const [error, setError] = useState(() => readAuthErrorFromURL());
@@ -975,8 +984,8 @@ export default function App() {
     }
   }
 
-  if (!authChecked) {
-    return <main className="auth-check-screen" aria-hidden="true" />;
+  if (!authChecked || !routeAssetsReady) {
+    return <PreloadScreen label="Загрузка сайта" />;
   }
 
   if (isSignupRoute) {
@@ -1083,11 +1092,7 @@ export default function App() {
   }
 
   if (!curriculum) {
-    return (
-      <main className="page">
-        <div className="loading-box">{t("loadingCourse")}</div>
-      </main>
-    );
+    return <PreloadScreen label={t("loadingCourse")} />;
   }
 
   const isAdminMode = isAdminRoute;
@@ -1458,6 +1463,12 @@ function clearAuthErrorFromURL() {
   const nextURL = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`;
   window.history.replaceState(null, "", nextURL);
 }
+
+const routePreloadAssets: Record<"course" | "admin" | "default", string[]> = {
+  course: [logosVoiceLogo],
+  admin: [logosVoiceLogo],
+  default: []
+};
 
 function GoogleIcon() {
   return (

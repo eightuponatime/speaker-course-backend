@@ -122,6 +122,8 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) RegisterWithInvitationCode(w http.ResponseWriter, r *http.Request) {
+	h.clearCurrentSession(w, r)
+
 	var request struct {
 		Code     string `json:"code"`
 		Email    string `json:"email"`
@@ -381,12 +383,13 @@ func (h *AuthHandler) GoogleInvitationStart(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	authURL, err := h.authService.GoogleAuthURL(state)
+	authURL, err := h.authService.GoogleAuthURLWithPrompt(state, "select_account")
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
 
+	h.clearCurrentSession(w, r)
 	h.setOAuthStateCookie(w, state)
 	h.setOAuthModeCookie(w, googleOAuthModeInvitation)
 	h.setOAuthInviteCodeCookie(w, inviteCode)
@@ -448,6 +451,11 @@ func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		if modeCookie != nil && modeCookie.Value == googleOAuthModeInvitation {
+			h.redirectToSignupWithError(w, r, "google_auth_failed")
+			return
+		}
+
 		writeError(w, http.StatusUnauthorized, err)
 		return
 	}
@@ -463,7 +471,7 @@ func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 		h.clearOAuthModeCookie(w)
 		inviteCodeCookie, err := r.Cookie(googleOAuthInviteCodeCookieName)
 		if err != nil || inviteCodeCookie.Value == "" {
-			writeError(w, http.StatusBadRequest, service.ErrInvalidAuth)
+			h.redirectToSignupWithError(w, r, "missing_invitation_code")
 			return
 		}
 		h.clearOAuthInviteCodeCookie(w)
@@ -478,10 +486,11 @@ func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if err := h.invitationCodesService.RedeemCodeForUser(r.Context(), course.Id, inviteCodeCookie.Value, result.User.Id); err != nil {
-			writeError(w, http.StatusBadRequest, err)
+			h.redirectToSignupWithError(w, r, "invalid_invitation_code")
 			return
 		}
 
+		h.clearCurrentSession(w, r)
 		h.setSessionCookie(w, result.Session.Id.String(), result.Session.ExpiresAt)
 		http.Redirect(w, r, h.cfg.FrontendURL+"/course", http.StatusFound)
 		return
@@ -513,6 +522,16 @@ func (h *AuthHandler) clearSessionCookie(w http.ResponseWriter) {
 		SameSite: http.SameSiteLaxMode,
 		Secure:   h.cfg.Env != "development",
 	})
+}
+
+func (h *AuthHandler) clearCurrentSession(w http.ResponseWriter, r *http.Request) {
+	sessionCookie, err := r.Cookie(middlewarego.SessionCookieName)
+	if err == nil && sessionCookie.Value != "" {
+		if sessionID, parseErr := uuid.Parse(sessionCookie.Value); parseErr == nil {
+			_ = h.sessionsService.Revoke(r.Context(), sessionID)
+		}
+	}
+	h.clearSessionCookie(w)
 }
 
 func (h *AuthHandler) setOAuthStateCookie(w http.ResponseWriter, value string) {
@@ -598,6 +617,27 @@ func (h *AuthHandler) frontendURLWithError(code string) string {
 	query.Set("auth_error", code)
 	parsedURL.RawQuery = query.Encode()
 	return parsedURL.String()
+}
+
+func (h *AuthHandler) redirectToSignupWithError(w http.ResponseWriter, r *http.Request, code string) {
+	h.clearOAuthModeCookie(w)
+	frontendURL := strings.TrimRight(h.cfg.FrontendURL, "/")
+	inviteCodeCookie, err := r.Cookie(googleOAuthInviteCodeCookieName)
+	if err != nil || strings.TrimSpace(inviteCodeCookie.Value) == "" {
+		http.Redirect(w, r, h.frontendURLWithError(code), http.StatusFound)
+		return
+	}
+
+	signupURL := frontendURL + "/signup/" + url.PathEscape(inviteCodeCookie.Value)
+	parsedURL, err := url.Parse(signupURL)
+	if err != nil {
+		http.Redirect(w, r, signupURL, http.StatusFound)
+		return
+	}
+	query := parsedURL.Query()
+	query.Set("auth_error", code)
+	parsedURL.RawQuery = query.Encode()
+	http.Redirect(w, r, parsedURL.String(), http.StatusFound)
 }
 
 func randomState() (string, error) {

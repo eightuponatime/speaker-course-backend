@@ -33,11 +33,21 @@ export function LessonEditor({
   const holderRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<EditorJS | null>(null);
   const instanceIdRef = useRef(0);
+  const onReadyRef = useRef(onReady);
+  const onDebugRef = useRef(onDebug);
+  const onChangeRef = useRef(onChange);
   const uploadImageRef = useRef(onUploadImage);
+  const uploadPdfRef = useRef(onUploadPdf);
+  const uploadVideoRef = useRef(onUploadVideo);
 
   useEffect(() => {
+    onReadyRef.current = onReady;
+    onDebugRef.current = onDebug;
+    onChangeRef.current = onChange;
     uploadImageRef.current = onUploadImage;
-  }, [onUploadImage]);
+    uploadPdfRef.current = onUploadPdf;
+    uploadVideoRef.current = onUploadVideo;
+  }, [onReady, onDebug, onChange, onUploadImage, onUploadPdf, onUploadVideo]);
 
 	useEffect(() => {
 		const root = holderRef.current;
@@ -46,17 +56,17 @@ export function LessonEditor({
     const instanceId = instanceIdRef.current + 1;
     instanceIdRef.current = instanceId;
 		let cancelled = false;
-		onDebug(`editor create #${instanceId} ${lesson.id.slice(0, 8)}`);
+		onDebugRef.current(`editor create #${instanceId} ${lesson.id.slice(0, 8)}`);
 
     const holder = document.createElement("div");
     holder.className = "editor-instance";
     holder.dataset.editorInstance = String(instanceId);
     root.replaceChildren(holder);
 
-		const editor = new EditorJS({
+    const editor = new EditorJS({
       holder,
       data: lesson.draft_content as unknown as OutputData,
-      onChange,
+      onChange: () => onChangeRef.current(),
       tools: {
         header: Header,
         list: List,
@@ -65,25 +75,28 @@ export function LessonEditor({
         videoUrl: {
           class: VideoUrlTool,
           config: {
-            uploadVideo: onUploadVideo,
-            onChange,
-            onDebug
+            uploadVideo: (
+              file: File,
+              onState: (state: { phase: "uploading" | "processing"; progress: number; label: string }) => void
+            ) => uploadVideoRef.current(file, onState),
+            onChange: () => onChangeRef.current(),
+            onDebug: (message: string) => onDebugRef.current(message)
           }
         },
         imageUrl: {
           class: ImageUrlTool,
           config: {
-            uploadImage: onUploadImage,
-            onChange,
-            onDebug
+            uploadImage: (file: File) => uploadImageRef.current(file),
+            onChange: () => onChangeRef.current(),
+            onDebug: (message: string) => onDebugRef.current(message)
           }
         },
         pdfUrl: {
           class: PdfUrlTool,
           config: {
-            uploadPdf: onUploadPdf,
-            onChange,
-            onDebug
+            uploadPdf: (file: File) => uploadPdfRef.current(file),
+            onChange: () => onChangeRef.current(),
+            onDebug: (message: string) => onDebugRef.current(message)
           }
         }
       },
@@ -93,7 +106,7 @@ export function LessonEditor({
     editor.isReady
 			.then(() => {
 				if (cancelled || instanceIdRef.current !== instanceId) {
-					onDebug(`editor stale ready #${instanceId}`);
+					onDebugRef.current(`editor stale ready #${instanceId}`);
 					if (typeof editor.destroy === "function") {
 						editor.destroy();
 					}
@@ -101,23 +114,23 @@ export function LessonEditor({
         }
 
 				editorRef.current = editor;
-				onDebug(`editor ready #${instanceId} ${lesson.id.slice(0, 8)}`);
-				onReady(editor);
+				onDebugRef.current(`editor ready #${instanceId} ${lesson.id.slice(0, 8)}`);
+				onReadyRef.current(editor);
 			})
 			.catch((err) => {
 				console.error("Editor.js failed to initialize", err);
-				onDebug(`editor init error: ${formatDebugError(err)}`);
+				onDebugRef.current(`editor init error: ${formatDebugError(err)}`);
 				editorRef.current = null;
-				onReady(null);
+				onReadyRef.current(null);
 			});
 
 		return () => {
 			cancelled = true;
-			onDebug(`editor cleanup #${instanceId} ${lesson.id.slice(0, 8)}`);
+			onDebugRef.current(`editor cleanup #${instanceId} ${lesson.id.slice(0, 8)}`);
 
       if (editorRef.current === editor && instanceIdRef.current === instanceId) {
         editorRef.current = null;
-        onReady(null);
+        onReadyRef.current(null);
       }
 
       editor.isReady
@@ -131,7 +144,7 @@ export function LessonEditor({
         })
         .catch(() => undefined);
     };
-	}, [lesson, onChange, onDebug, onReady, onUploadImage, onUploadPdf, onUploadVideo]);
+	}, [lesson?.id]);
 
   useEffect(() => {
     const root = holderRef.current;

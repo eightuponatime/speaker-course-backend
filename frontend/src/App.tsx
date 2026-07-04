@@ -49,6 +49,22 @@ import { markExternalAuthSyncActive, notifyAuthChanged, subscribeToAuthChanges }
 import { useAssetPreload } from "./utils/preload";
 import logosVoiceLogo from "../assets/images/transparent_logo.png";
 
+type CourseHistoryAction =
+  | {
+      type: "create_lesson";
+      lessonId: string;
+      sectionId: string;
+      title: string;
+      slug: string;
+      position: number;
+    }
+  | {
+      type: "create_section";
+      sectionId: string;
+      title: string;
+      position: number;
+    };
+
 export default function App() {
   const [path, setPath] = useState(() => readAppRouteFromURL() || window.location.pathname);
   const isAdminRoute = path.startsWith("/admin");
@@ -89,6 +105,12 @@ export default function App() {
     current: null,
     restoring: false
   });
+  const courseActionHistoryRef = useRef<{ past: CourseHistoryAction[]; future: CourseHistoryAction[]; restoring: boolean }>({
+    past: [],
+    future: [],
+    restoring: false
+  });
+  const forceUnpublishedOnNextLoadRef = useRef(false);
   const [historyState, setHistoryState] = useState({ canUndo: false, canRedo: false });
 
   const addDebug = useCallback((message: string) => {
@@ -118,9 +140,16 @@ export default function App() {
 
   function updateHistoryState() {
     setHistoryState({
-      canUndo: historyRef.current.past.length > 0,
-      canRedo: historyRef.current.future.length > 0
+      canUndo: historyRef.current.past.length > 0 || courseActionHistoryRef.current.past.length > 0,
+      canRedo: historyRef.current.future.length > 0 || courseActionHistoryRef.current.future.length > 0
     });
+  }
+
+  function recordCourseAction(action: CourseHistoryAction) {
+    if (courseActionHistoryRef.current.restoring) return;
+    courseActionHistoryRef.current.past.push(action);
+    courseActionHistoryRef.current.future = [];
+    updateHistoryState();
   }
 
   function loadCurriculum(preferredLessonId?: string, forceAdminAccess = isAdminUser(currentUser)) {
@@ -129,6 +158,10 @@ export default function App() {
     getAdminPrimaryCourseCurriculum()
       .then((data) => {
         const normalizedData = normalizeCurriculum(data);
+        if (forceUnpublishedOnNextLoadRef.current) {
+          normalizedData.has_unpublished_changes = true;
+          forceUnpublishedOnNextLoadRef.current = false;
+        }
         setCurriculum(normalizedData);
         const lessons = normalizedData.sections.flatMap((section) => safeLessons(section.lessons));
         const nextActiveLessonId =
@@ -277,6 +310,15 @@ export default function App() {
       });
 
       setActiveLessonId(lesson.id);
+      recordCourseAction({
+        type: "create_lesson",
+        lessonId: lesson.id,
+        sectionId,
+        title,
+        slug: lesson.slug,
+        position: nextPosition
+      });
+      forceUnpublishedOnNextLoadRef.current = true;
       markUnpublishedChanges();
       loadCurriculum(lesson.id);
     } catch (err) {
@@ -291,12 +333,19 @@ export default function App() {
     const title = `New section ${nextPosition}`;
 
     try {
-      await createSection({
+      const section = await createSection({
         courseId: curriculum.course.id,
         title,
         position: nextPosition
       });
 
+      recordCourseAction({
+        type: "create_section",
+        sectionId: section.id,
+        title,
+        position: nextPosition
+      });
+      forceUnpublishedOnNextLoadRef.current = true;
       markUnpublishedChanges();
       loadCurriculum(activeLessonId);
     } catch (err) {
@@ -479,11 +528,25 @@ export default function App() {
     addDebug(editor ? "editor ready -> ref stored" : "editor null -> ref cleared");
   }, [addDebug]);
 
-  const scheduleAutosave = useCallback(() => {
+  const scheduleAutosave = useCallback((contentSnapshot?: EditorContent) => {
     if (!activeLesson) return;
 
     if (autosaveTimerRef.current) {
       window.clearTimeout(autosaveTimerRef.current);
+    }
+
+    if (contentSnapshot && !isLessonContentUnpublished(activeLesson, contentSnapshot)) {
+      const cleanContent = cloneEditorContent(contentSnapshot);
+      syncLessonDraftState(cleanContent);
+      setPublishStatus("Back to published version");
+      autosaveTimerRef.current = window.setTimeout(async () => {
+        try {
+          await saveLessonDraft(activeLesson.id, cleanContent);
+        } catch (err) {
+          setPublishStatus(formatError(err));
+        }
+      }, 300);
+      return;
     }
 
     markUnpublishedChanges();
@@ -494,7 +557,7 @@ export default function App() {
 
       try {
         await editor.isReady;
-        const content = (await editor.save()) as unknown as EditorContent;
+        const content = contentSnapshot ? cloneEditorContent(contentSnapshot) : ((await editor.save()) as unknown as EditorContent);
 
         if (hasPendingMedia(content)) {
           setPublishStatus("Waiting for media processing");
@@ -527,13 +590,19 @@ export default function App() {
   }
 
   const handleEditorChange = useCallback(() => {
-    void recordEditorHistory();
-    scheduleAutosave();
+    void handleEditorContentChange();
   }, [scheduleAutosave]);
 
-  async function recordEditorHistory() {
+  async function handleEditorContentChange() {
+    if (historyRef.current.restoring) return;
+    const result = await recordEditorHistory();
+    if (!result?.changed) return;
+    scheduleAutosave(result.content);
+  }
+
+  async function recordEditorHistory(): Promise<{ content: EditorContent; changed: boolean } | null> {
     const editor = editorRef.current;
-    if (!editor || historyRef.current.restoring) return;
+    if (!editor || historyRef.current.restoring) return null;
 
     try {
       await editor.isReady;
@@ -542,23 +611,33 @@ export default function App() {
       if (!current) {
         historyRef.current.current = cloneEditorContent(content);
         updateHistoryState();
-        return;
+        return { content, changed: false };
       }
-      if (sameEditorContent(current, content)) return;
+      if (sameEditorContent(current, content)) return { content, changed: false };
 
       historyRef.current.past = [...historyRef.current.past.slice(-29), cloneEditorContent(current)];
       historyRef.current.future = [];
       historyRef.current.current = cloneEditorContent(content);
       updateHistoryState();
+      return { content, changed: true };
     } catch (err) {
       addDebug(`history record skipped: ${formatError(err)}`);
+      return null;
     }
   }
 
   async function handleUndo() {
     const editor = editorRef.current;
     const previous = historyRef.current.past.pop();
-    if (!editor || !previous || !activeLesson) return;
+    if (!previous) {
+      await undoCourseAction();
+      return;
+    }
+    if (!editor || !activeLesson) {
+      historyRef.current.past.push(previous);
+      updateHistoryState();
+      return;
+    }
 
     try {
       await editor.isReady;
@@ -570,7 +649,7 @@ export default function App() {
       syncLessonDraftState(previous);
       if (isLessonContentUnpublished(activeLesson, previous)) {
         setPublishStatus("Unsaved changes");
-        scheduleAutosave();
+        scheduleAutosave(previous);
       } else {
         clearAutosaveTimer();
         setPublishStatus("Back to published version");
@@ -587,7 +666,15 @@ export default function App() {
   async function handleRedo() {
     const editor = editorRef.current;
     const next = historyRef.current.future.shift();
-    if (!editor || !next || !activeLesson) return;
+    if (!next) {
+      await redoCourseAction();
+      return;
+    }
+    if (!editor || !activeLesson) {
+      historyRef.current.future.unshift(next);
+      updateHistoryState();
+      return;
+    }
 
     try {
       await editor.isReady;
@@ -599,7 +686,7 @@ export default function App() {
       syncLessonDraftState(next);
       if (isLessonContentUnpublished(activeLesson, next)) {
         setPublishStatus("Unsaved changes");
-        scheduleAutosave();
+        scheduleAutosave(next);
       } else {
         clearAutosaveTimer();
         setPublishStatus("Back to published version");
@@ -609,6 +696,107 @@ export default function App() {
       setPublishStatus(formatError(err));
     } finally {
       historyRef.current.restoring = false;
+      updateHistoryState();
+    }
+  }
+
+  async function undoCourseAction() {
+    if (!curriculum) return;
+    const action = courseActionHistoryRef.current.past.pop();
+    if (!action) {
+      updateHistoryState();
+      return;
+    }
+
+    courseActionHistoryRef.current.restoring = true;
+    try {
+      if (action.type === "create_lesson") {
+        await deleteLesson(action.lessonId);
+        const remainingLessons = curriculum.sections
+          .flatMap((section) => safeLessons(section.lessons))
+          .filter((lesson) => lesson.id !== action.lessonId);
+        const nextActiveLessonId = activeLessonId === action.lessonId ? remainingLessons[0]?.id ?? "" : activeLessonId;
+        setActiveLessonId(nextActiveLessonId);
+        courseActionHistoryRef.current.future.unshift(action);
+        forceUnpublishedOnNextLoadRef.current = true;
+        markUnpublishedChanges();
+        loadCurriculum(nextActiveLessonId);
+        setPublishStatus("Создание урока отменено");
+        return;
+      }
+
+      const currentSection = curriculum.sections.find((section) => section.id === action.sectionId);
+      if (currentSection && safeLessons(currentSection.lessons).length > 0) {
+        courseActionHistoryRef.current.past.push(action);
+        setPublishStatus("Раздел уже содержит уроки, автоматическая отмена недоступна");
+        return;
+      }
+
+      await deleteSection({ courseId: curriculum.course.id, sectionId: action.sectionId });
+      courseActionHistoryRef.current.future.unshift(action);
+      forceUnpublishedOnNextLoadRef.current = true;
+      markUnpublishedChanges();
+      loadCurriculum(activeLessonId);
+      setPublishStatus("Создание раздела отменено");
+    } catch (err) {
+      courseActionHistoryRef.current.past.push(action);
+      setPublishStatus(formatError(err));
+    } finally {
+      courseActionHistoryRef.current.restoring = false;
+      updateHistoryState();
+    }
+  }
+
+  async function redoCourseAction() {
+    if (!curriculum) return;
+    const action = courseActionHistoryRef.current.future.shift();
+    if (!action) {
+      updateHistoryState();
+      return;
+    }
+
+    courseActionHistoryRef.current.restoring = true;
+    try {
+      if (action.type === "create_lesson") {
+        const lesson = await createLesson({
+          courseId: curriculum.course.id,
+          sectionId: action.sectionId,
+          title: action.title,
+          slug: uniqueLessonSlug(action.title),
+          position: action.position
+        });
+        const nextAction = {
+          ...action,
+          lessonId: lesson.id,
+          slug: lesson.slug
+        };
+        setActiveLessonId(lesson.id);
+        courseActionHistoryRef.current.past.push(nextAction);
+        forceUnpublishedOnNextLoadRef.current = true;
+        markUnpublishedChanges();
+        loadCurriculum(lesson.id);
+        setPublishStatus("Создание урока повторено");
+        return;
+      }
+
+      const section = await createSection({
+        courseId: curriculum.course.id,
+        title: action.title,
+        position: action.position
+      });
+      courseActionHistoryRef.current.past.push({
+        ...action,
+        sectionId: section.id
+      });
+      forceUnpublishedOnNextLoadRef.current = true;
+      markUnpublishedChanges();
+      loadCurriculum(activeLessonId);
+      setPublishStatus("Создание раздела повторено");
+    } catch (err) {
+      courseActionHistoryRef.current.future.unshift(action);
+      setPublishStatus(formatError(err));
+    } finally {
+      courseActionHistoryRef.current.restoring = false;
       updateHistoryState();
     }
   }
@@ -1739,7 +1927,15 @@ function cloneEditorContent(content: EditorContent): EditorContent {
 }
 
 function sameEditorContent(left: EditorContent, right: EditorContent): boolean {
-  return JSON.stringify(left.blocks || []) === JSON.stringify(right.blocks || []);
+  return JSON.stringify(normalizeEditorBlocks(left.blocks || [])) === JSON.stringify(normalizeEditorBlocks(right.blocks || []));
+}
+
+function normalizeEditorBlocks(blocks: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
+  return blocks.map((block) => {
+    const stableBlock = { ...block };
+    delete stableBlock.id;
+    return stableBlock;
+  });
 }
 
 function isLessonContentUnpublished(lesson: Lesson, draftContent: EditorContent): boolean {

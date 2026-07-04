@@ -165,9 +165,20 @@ func (r *CoursesRepository) CreateSection(
 	input domain.CreateCourseSectionInput,
 ) (*domain.CourseSection, error) {
 	const query = `
-		insert into course_sections (course_id, title, position)
-		values ($1, $2, $3)
-		returning id, course_id, title, position, created_at, updated_at
+		with inserted_section as (
+			insert into course_sections (course_id, title, position)
+			values ($1, $2, $3)
+			returning id, course_id, title, position, created_at, updated_at
+		),
+		touched_course as (
+			update courses
+			set updated_at = now()
+			from inserted_section
+			where courses.id = inserted_section.course_id
+			returning courses.id
+		)
+		select id, course_id, title, position, created_at, updated_at
+		from inserted_section
 	`
 
 	q := extractTransaction(ctx, r.db)

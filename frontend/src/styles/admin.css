@@ -2215,6 +2215,10 @@
   background: #f8fafc;
 }
 
+.lesson-title-actions button span {
+  line-height: 1;
+}
+
 .lesson-title-row button {
   width: 32px;
   height: 32px;
@@ -2225,6 +2229,17 @@
   color: #657080;
   background: transparent;
   cursor: pointer;
+}
+
+.lesson-title-actions button {
+  width: auto;
+  min-width: 32px;
+  grid-template-columns: 17px auto;
+  column-gap: 7px;
+  padding: 0 10px;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .lesson-title-row button:hover:not(:disabled) {

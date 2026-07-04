@@ -593,7 +593,6 @@
 .student-activity-head span {
   min-width: 0;
   overflow: auto;
-  resize: horizontal;
 }
 
 .student-activity-row {
@@ -702,7 +701,7 @@
 .admin-dialog-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 60;
+  z-index: 240;
   display: grid;
   place-items: center;
   padding: 28px;
@@ -919,8 +918,10 @@
 
 .assignments-panel {
   display: grid;
-  gap: 16px;
-  padding: 18px 24px 42px;
+  align-content: start;
+  grid-template-rows: auto auto;
+  gap: 12px;
+  padding: 12px 20px 32px;
 }
 
 .assignments-table-wrap {
@@ -950,7 +951,7 @@
 
 .assignments-table td {
   border-top: 1px solid #e4e9f1;
-  padding: 10px 12px;
+  padding: 8px 12px;
   color: #3f4652;
   vertical-align: top;
 }
@@ -979,6 +980,13 @@
   background: #fff;
   font-weight: 750;
   cursor: pointer;
+}
+
+.assignments-empty-row td {
+  height: 52px;
+  color: #667085;
+  background: #ffffff;
+  font-weight: 750;
 }
 
 .file-count {
@@ -1021,6 +1029,211 @@
   font-size: 11px;
   font-weight: 850;
   text-transform: uppercase;
+}
+
+.assignment-detail-status {
+  width: fit-content;
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 5px 9px;
+}
+
+.assignment-detail-status.pending,
+.status-select.pending {
+  color: #7a4d00;
+  background-color: #fff2cc;
+}
+
+.assignment-detail-status.needs_revision,
+.status-select.needs_revision {
+  color: #9e3428;
+  background-color: #fff1ef;
+}
+
+.assignment-detail-status.accepted,
+.status-select.accepted {
+  color: #1f6a3e;
+  background-color: #edf9f1;
+}
+
+.status-select option.pending {
+  color: #7a4d00;
+  background-color: #fff2cc;
+}
+
+.status-select option.needs_revision {
+  color: #9e3428;
+  background-color: #fff1ef;
+}
+
+.status-select option.accepted {
+  color: #1f6a3e;
+  background-color: #edf9f1;
+}
+
+.submission-revisions {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #d8e0ed;
+  border-radius: 8px;
+  padding: 12px;
+  background: #f8fafc;
+}
+
+.submission-revisions strong,
+.submission-revisions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.submission-revisions strong {
+  color: #344054;
+  font-size: 13px;
+}
+
+.submission-revisions button {
+  width: fit-content;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  padding: 6px 10px;
+  color: #1d4ed8;
+  background: #fff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.admin-upload-progress {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  padding: 8px 11px;
+  color: #334155;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.admin-upload-progress span,
+.admin-upload-progress strong {
+  position: relative;
+  z-index: 1;
+}
+
+.admin-upload-progress span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-upload-progress i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: rgba(37, 99, 235, 0.13);
+  transition: width 160ms ease;
+}
+
+.revision-diff-dialog {
+  width: min(980px, calc(100vw - 40px));
+  max-height: min(760px, calc(100vh - 48px));
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  border: 1px solid #d8e0ed;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 24px 80px rgba(18, 25, 38, 0.22);
+}
+
+.revision-diff-dialog > header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid #e4e7ec;
+  padding: 18px 20px;
+}
+
+.revision-diff-dialog > header span {
+  color: #667185;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.revision-diff-dialog > header h2 {
+  margin: 4px 0 0;
+}
+
+.revision-diff-dialog > header button {
+  width: 36px;
+  height: 36px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid #d8e0ed;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.revision-diff-grid {
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding: 18px;
+}
+
+.revision-diff-grid article {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  border: 1px solid #e4e7ec;
+  border-radius: 10px;
+  padding: 14px;
+  background: #f8fafc;
+}
+
+.revision-diff-text,
+.revision-empty {
+  margin: 0;
+  color: #344054;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.revision-diff-text .removed,
+.revision-attachments.removed span {
+  border-radius: 4px;
+  background: rgba(248, 113, 113, 0.22);
+}
+
+.revision-diff-text .added,
+.revision-attachments.added span {
+  border-radius: 4px;
+  background: rgba(34, 197, 94, 0.2);
+}
+
+.revision-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.revision-attachments span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  color: #344054;
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .assignment-detail h3,
@@ -1083,6 +1296,45 @@
   font: inherit;
 }
 
+.assignment-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.assignment-attach-menu {
+  position: relative;
+}
+
+.assignment-attach-popover {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 8px);
+  z-index: 4;
+  width: 238px;
+  overflow: hidden;
+  border: 1px solid #2f3846;
+  border-radius: 8px;
+  background: #222a34;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.22);
+}
+
+.assignment-attach-popover button {
+  width: 100%;
+  height: 44px;
+  justify-content: flex-start;
+  border: 0;
+  border-radius: 0;
+  padding: 0 14px;
+  color: #f8fafc;
+  background: transparent;
+  font-weight: 650;
+}
+
+.assignment-attach-popover button:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
 .admin-assignment-attachments {
   display: flex;
   flex-wrap: wrap;
@@ -1101,6 +1353,23 @@
   font-size: 12px;
   font-weight: 750;
   text-decoration: none;
+}
+
+.admin-assignment-attachments a > button {
+  width: 20px;
+  height: 20px;
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  padding: 0;
+  color: #7c6f62;
+  background: transparent;
+  cursor: pointer;
+}
+
+.admin-assignment-attachments a > button:hover {
+  background: rgba(43, 43, 43, 0.08);
 }
 
 .assignments-toolbar {
@@ -1435,7 +1704,6 @@
 .access-table th,
 .privileges-table th {
   overflow: auto;
-  resize: horizontal;
 }
 
 .invitation-table th {
@@ -1902,11 +2170,26 @@
 
 .lesson-title-row h1 {
   min-width: 0;
-  flex: 1;
   margin: 0;
   color: #161d29;
   font-size: 27px;
   font-weight: 750;
+}
+
+.lesson-heading-display {
+  min-width: 0;
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lesson-heading-display h1 {
+  flex: 0 1 auto;
+}
+
+.lesson-heading-display button {
+  flex: 0 0 auto;
 }
 
 .lesson-title-input {
@@ -2716,11 +2999,14 @@
 
   .student-activity-panel,
   .requests-panel,
-  .privileges-panel {
+  .privileges-panel,
+  .access-management-panel,
+  .invitation-codes-panel {
     padding: 14px 12px 24px;
   }
 
   .student-activity-header,
+  .access-management-header,
   .admin-section-heading.compact {
     grid-template-columns: 1fr;
     align-items: stretch;
@@ -2730,8 +3016,12 @@
   .privileges-summary,
   .privileges-table-wrap,
   .admin-inline-message,
-  .student-activity-table {
+  .student-activity-table,
+  .access-table-wrap,
+  .invitation-table-wrap,
+  .assignments-table-wrap {
     width: 100%;
+    max-width: calc(100vw - 24px);
   }
 
   .admin-dialog {
@@ -2869,6 +3159,39 @@
 }
 
 @media (max-width: 640px) {
+  .admin-screen {
+    overflow-x: hidden;
+  }
+
+  .course-topbar {
+    max-width: 100vw;
+    overflow: hidden;
+  }
+
+  .course-topbar-title-row {
+    grid-template-columns: 40px minmax(0, 1fr) 40px;
+    gap: 8px;
+  }
+
+  .course-status-pill,
+  .course-changes-pill {
+    display: none;
+  }
+
+  .mobile-notification-slot .notification-trigger {
+    width: 40px;
+    height: 40px;
+  }
+
+  .assignments-panel,
+  .access-management-panel,
+  .invitation-codes-panel {
+    width: 100%;
+    max-width: 100vw;
+    overflow: hidden;
+    padding: 14px 12px 24px;
+  }
+
   .student-activity-header,
   .access-management-header {
     grid-template-columns: 1fr;
@@ -2888,11 +3211,12 @@
 
   .access-table-wrap {
     width: 100%;
-    overflow-x: auto;
+    max-width: calc(100vw - 24px);
   }
 
   .admin-section-heading.compact {
     gap: 10px;
+    width: 100%;
   }
 
   .admin-section-heading.compact h1 {
@@ -3077,6 +3401,7 @@
   }
 
   .student-activity-row {
+    min-width: 0;
     display: grid;
     grid-template-columns: 1fr;
     gap: 0;
@@ -3202,5 +3527,248 @@
 
   .student-activity-summary {
     width: 100%;
+  }
+
+  .assignments-toolbar,
+  .assignments-toolbar-actions,
+  .invitation-heading-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .assignments-toolbar h2 {
+    font-size: 24px;
+  }
+
+  .assignments-toolbar label,
+  .assignments-toolbar select,
+  .assignments-toolbar button,
+  .admin-section-heading.compact button,
+  .invitation-heading-actions button,
+  .access-management-header .secondary-button {
+    width: 100%;
+  }
+
+  .assignments-table-wrap,
+  .access-table-wrap,
+  .invitation-table-wrap {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+
+  .assignments-table,
+  .assignments-table thead,
+  .assignments-table tbody,
+  .assignments-table tr,
+  .assignments-table td,
+  .access-table,
+  .access-table thead,
+  .access-table tbody,
+  .access-table tr,
+  .access-table td,
+  .invitation-table,
+  .invitation-table thead,
+  .invitation-table tbody,
+  .invitation-table tr,
+  .invitation-table td {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .assignments-table thead,
+  .access-table thead,
+  .invitation-table thead {
+    display: none;
+  }
+
+  .assignments-table,
+  .access-table,
+  .invitation-table {
+    display: grid;
+    gap: 10px;
+    border-collapse: separate;
+    font-size: 14px;
+  }
+
+  .assignments-table tr,
+  .access-table tr,
+  .invitation-table tr {
+    overflow: hidden;
+    display: grid;
+    gap: 0;
+    border: 1px solid #dbe1ea;
+    border-radius: 9px;
+    background: #ffffff;
+  }
+
+  .assignments-table td,
+  .access-table td,
+  .invitation-table td {
+    min-width: 0;
+    display: grid;
+    gap: 4px;
+    border-top: 0;
+    border-bottom: 1px solid #edf0f4;
+    padding: 10px 12px;
+    white-space: normal;
+  }
+
+  .assignments-table td:last-child,
+  .access-table td:last-child,
+  .invitation-table td:last-child {
+    border-bottom: 0;
+  }
+
+  .assignments-table td::before,
+  .access-table td::before,
+  .invitation-table td::before {
+    display: block;
+    color: #667085;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .assignments-table td:nth-child(1)::before {
+    content: "Статус";
+  }
+
+  .assignments-table td:nth-child(2)::before {
+    content: "Ученик";
+  }
+
+  .assignments-table td:nth-child(3)::before {
+    content: "Урок";
+  }
+
+  .assignments-table td:nth-child(4)::before {
+    content: "Комментарий";
+  }
+
+  .assignments-table td:nth-child(5)::before {
+    content: "Файлы";
+  }
+
+  .assignments-table td:nth-child(6)::before {
+    content: "Обновлено";
+  }
+
+  .assignments-table td:nth-child(7)::before {
+    content: "Действие";
+  }
+
+  .access-table td:nth-child(1)::before {
+    content: "Ученик";
+  }
+
+  .access-table td:nth-child(2)::before {
+    content: "Email";
+  }
+
+  .access-table td:nth-child(3)::before {
+    content: "Статус";
+  }
+
+  .access-table td:nth-child(4)::before {
+    content: "Начало";
+  }
+
+  .access-table td:nth-child(5)::before {
+    content: "Доступ до";
+  }
+
+  .access-table td:nth-child(6)::before {
+    content: "Осталось";
+  }
+
+  .access-table td:nth-child(7)::before {
+    content: "Продлить до";
+  }
+
+  .access-table td:nth-child(8)::before {
+    content: "Действие";
+  }
+
+  .invitation-table td:nth-child(1)::before {
+    content: "Ссылка";
+  }
+
+  .invitation-table td:nth-child(2)::before {
+    content: "Код";
+  }
+
+  .invitation-table td:nth-child(3)::before {
+    content: "Статус";
+  }
+
+  .invitation-table td:nth-child(4)::before {
+    content: "Создан";
+  }
+
+  .invitation-table td:nth-child(5)::before {
+    content: "Истекает";
+  }
+
+  .invitation-table td:nth-child(6)::before {
+    content: "Использован";
+  }
+
+  .invitation-table td:nth-child(7)::before {
+    content: "Действия";
+  }
+
+  .assignments-empty-row td,
+  .assignments-empty-row td::before {
+    display: block;
+    content: "";
+  }
+
+  .assignments-table button,
+  .access-extend-button,
+  .invitation-copy-button {
+    width: 100%;
+    min-height: 38px;
+    justify-content: center;
+  }
+
+  .access-email-cell,
+  .invitation-link-cell,
+  .invitation-code-cell {
+    max-width: none;
+    overflow: visible;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+  }
+
+  .access-date-input {
+    width: 100%;
+  }
+
+  .access-management-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .access-management-summary span {
+    min-width: 0;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .invitation-generated-dialog,
+  .admin-confirm-dialog {
+    width: calc(100vw - 24px);
+  }
+
+  .invitation-generated-actions {
+    display: grid;
   }
 }

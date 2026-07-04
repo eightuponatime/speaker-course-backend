@@ -24,9 +24,9 @@ func (r *NotificationsRepository) Create(
 	input domain.CreateNotificationInput,
 ) (*domain.Notification, error) {
 	const query = `
-		insert into notifications (user_id, actor_id, course_id, enrollment_id, type, title, body)
-		values ($1, $2, $3, $4, $5, $6, $7)
-		returning id, user_id, actor_id, course_id, enrollment_id, type, title, body,
+		insert into notifications (user_id, actor_id, course_id, enrollment_id, lesson_id, submission_id, type, title, body)
+		values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		returning id, user_id, actor_id, course_id, enrollment_id, lesson_id, submission_id, type, title, body,
 			read_at, deleted_at, created_at
 	`
 
@@ -41,6 +41,8 @@ func (r *NotificationsRepository) Create(
 		input.ActorId,
 		input.CourseId,
 		input.EnrollmentId,
+		input.LessonId,
+		input.SubmissionId,
 		input.Type,
 		input.Title,
 		input.Body,
@@ -57,7 +59,7 @@ func (r *NotificationsRepository) ListByUser(
 	limit int,
 ) ([]domain.Notification, error) {
 	const query = `
-		select id, user_id, actor_id, course_id, enrollment_id, type, title, body,
+		select id, user_id, actor_id, course_id, enrollment_id, lesson_id, submission_id, type, title, body,
 			read_at, deleted_at, created_at
 		from notifications
 		where user_id = $1
@@ -113,7 +115,7 @@ func (r *NotificationsRepository) MarkRead(ctx context.Context, notificationId u
 		where id = $1
 			and user_id = $2
 			and deleted_at is null
-		returning id, user_id, actor_id, course_id, enrollment_id, type, title, body,
+		returning id, user_id, actor_id, course_id, enrollment_id, lesson_id, submission_id, type, title, body,
 			read_at, deleted_at, created_at
 	`
 

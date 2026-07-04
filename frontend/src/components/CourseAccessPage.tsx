@@ -7,6 +7,7 @@ import {
   requestPrimaryCourseEnrollment
 } from "../api/courseDatasource";
 import type { Course, CourseCurriculum, CourseEnrollment, User } from "../entities/course/course";
+import type { Notification } from "../entities/notification/notification";
 import type { TranslationKey } from "../i18n";
 import { CoursePreviewPage } from "./CoursePreviewPage";
 import { PreloadScreen } from "./PreloadScreen";
@@ -17,6 +18,8 @@ type CourseAccessPageProps = {
   onLogout: () => void;
   onLandingOpen: () => void;
   onProfileOpen: () => void;
+  initialLessonId?: string;
+  onNotificationOpen?: (notification: Notification) => void;
 };
 
 export function CourseAccessPage({
@@ -24,7 +27,9 @@ export function CourseAccessPage({
   t,
   onLogout,
   onLandingOpen,
-  onProfileOpen
+  onProfileOpen,
+  initialLessonId = "",
+  onNotificationOpen
 }: CourseAccessPageProps) {
   const [course, setCourse] = useState<Course | null>(null);
   const [curriculum, setCurriculum] = useState<CourseCurriculum | null>(null);
@@ -100,13 +105,14 @@ export function CourseAccessPage({
     return (
       <CoursePreviewPage
         curriculum={curriculum}
-        initialLessonId=""
+        initialLessonId={initialLessonId}
         t={t}
         onLogout={onLogout}
         onLandingOpen={onLandingOpen}
         onProfileOpen={onProfileOpen}
         onBack={onLandingOpen}
         backLabel={t("backToLanding")}
+        onNotificationOpen={onNotificationOpen}
         enableQuizResponses
         enableActivityTracking
         storageScope={currentUser.id}

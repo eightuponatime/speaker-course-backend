@@ -247,13 +247,32 @@
   justify-content: center;
   border: 0;
   border-radius: 999px;
+  padding: 0;
   color: #6f6a63;
   background: transparent;
+  box-shadow: none;
   cursor: pointer;
 }
 
 .notification-item > button:hover {
   background: rgba(43, 43, 43, 0.06);
+}
+
+.notification-panel .notification-item > button {
+  min-width: 30px;
+  font-size: 0;
+}
+
+.preview-nav .notification-panel .notification-item > button,
+.landing-header .notification-panel .notification-item > button {
+  width: 30px;
+  height: 30px;
+  gap: 0;
+  border: 0;
+  border-radius: 999px;
+  padding: 0;
+  color: #6f6a63;
+  background: transparent;
 }
 
 @media (max-width: 640px) {

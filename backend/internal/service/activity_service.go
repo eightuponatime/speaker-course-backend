@@ -82,6 +82,20 @@ func (s *ActivityService) EnsureCourseAccessStarted(
 	return s.rp.EnsureCourseAccessStarted(ctx, input)
 }
 
+func (s *ActivityService) GetCourseAccessWindow(
+	ctx context.Context,
+	input domain.MarkCourseActivityOfflineInput,
+) (*domain.CourseAccessWindow, error) {
+	if input.CourseId == uuid.Nil {
+		return nil, fmt.Errorf("%w: course_id is empty", ErrInvalidActivity)
+	}
+	if input.UserId == uuid.Nil {
+		return nil, fmt.Errorf("%w: user_id is empty", ErrInvalidActivity)
+	}
+
+	return s.rp.GetCourseAccessWindow(ctx, input)
+}
+
 func (s *ActivityService) ListCourseStudentActivity(
 	ctx context.Context,
 	courseId uuid.UUID,

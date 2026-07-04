@@ -1,4 +1,4 @@
-create table course_invitation_codes (
+create table if not exists course_invitation_codes (
     id uuid primary key default uuid_generate_v4(),
     course_id uuid not null references courses(id) on delete cascade,
     code text not null unique,
@@ -10,9 +10,9 @@ create table course_invitation_codes (
     constraint course_invitation_codes_expires_after_created check (expires_at > created_at)
 );
 
-create index course_invitation_codes_course_created_idx
+create index if not exists course_invitation_codes_course_created_idx
     on course_invitation_codes(course_id, created_at desc);
 
-create index course_invitation_codes_active_idx
+create index if not exists course_invitation_codes_active_idx
     on course_invitation_codes(course_id, expires_at)
     where used_at is null;

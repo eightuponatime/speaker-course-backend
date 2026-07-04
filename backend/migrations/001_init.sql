@@ -1,6 +1,6 @@
 create extension if not exists "uuid-ossp";
 
-create table users (
+create table if not exists users (
     id uuid primary key default uuid_generate_v4(),
     google_sub text unique,
     email text not null unique,
@@ -10,7 +10,7 @@ create table users (
     created_at timestamptz not null default now()
 );
 
-create table sessions (
+create table if not exists sessions (
     id uuid primary key default uuid_generate_v4(),
     user_id uuid not null references users(id) on delete cascade,
     created_at timestamptz not null default now(),
@@ -19,7 +19,7 @@ create table sessions (
     constraint sessions_expires_after_created check (expires_at > created_at)
 );
 
-create table courses (
+create table if not exists courses (
     id uuid primary key default uuid_generate_v4(),
     author_id uuid not null references users(id) on delete restrict,
     title text not null,
@@ -32,7 +32,7 @@ create table courses (
     published_at timestamptz
 );
 
-create table course_sections (
+create table if not exists course_sections (
     id uuid primary key default uuid_generate_v4(),
     course_id uuid not null references courses(id) on delete cascade,
     title text not null,
@@ -43,7 +43,7 @@ create table course_sections (
     unique (course_id, position)
 );
 
-create table lessons (
+create table if not exists lessons (
     id uuid primary key default uuid_generate_v4(),
     course_id uuid not null references courses(id) on delete cascade,
     section_id uuid not null,
@@ -65,7 +65,7 @@ create table lessons (
     )
 );
 
-create table media_assets (
+create table if not exists media_assets (
     id uuid primary key default uuid_generate_v4(),
     owner_id uuid not null references users(id) on delete restrict,
     course_id uuid references courses(id) on delete cascade,
@@ -79,7 +79,7 @@ create table media_assets (
     created_at timestamptz not null default now()
 );
 
-create table course_enrollments (
+create table if not exists course_enrollments (
     id uuid primary key default uuid_generate_v4(),
     course_id uuid not null references courses(id) on delete cascade,
     user_id uuid not null references users(id) on delete cascade,
@@ -94,7 +94,7 @@ create table course_enrollments (
     unique (course_id, user_id)
 );
 
-create table lesson_progress (
+create table if not exists lesson_progress (
     id uuid primary key default uuid_generate_v4(),
     lesson_id uuid not null references lessons(id) on delete cascade,
     user_id uuid not null references users(id) on delete cascade,
@@ -104,7 +104,7 @@ create table lesson_progress (
     unique (lesson_id, user_id)
 );
 
-create table course_student_activity (
+create table if not exists course_student_activity (
     course_id uuid not null references courses(id) on delete cascade,
     user_id uuid not null references users(id) on delete cascade,
     current_lesson_id uuid references lessons(id) on delete set null,
@@ -117,7 +117,7 @@ create table course_student_activity (
     primary key (course_id, user_id)
 );
 
-create table lesson_quiz_responses (
+create table if not exists lesson_quiz_responses (
     id uuid primary key default uuid_generate_v4(),
     lesson_id uuid not null references lessons(id) on delete cascade,
     user_id uuid not null references users(id) on delete cascade,
@@ -128,7 +128,7 @@ create table lesson_quiz_responses (
     unique (lesson_id, user_id, quiz_id)
 );
 
-create table notifications (
+create table if not exists notifications (
     id uuid primary key default uuid_generate_v4(),
     user_id uuid not null references users(id) on delete cascade,
     actor_id uuid references users(id) on delete set null,
@@ -150,21 +150,21 @@ create table notifications (
     created_at timestamptz not null default now()
 );
 
-create index sessions_user_id_idx on sessions(user_id);
-create index course_sections_course_id_position_idx on course_sections(course_id, position);
-create index lessons_course_id_idx on lessons(course_id);
-create index lessons_section_id_position_idx on lessons(section_id, position);
-create index media_assets_course_id_idx on media_assets(course_id);
-create index media_assets_lesson_id_idx on media_assets(lesson_id);
-create index course_enrollments_user_id_idx on course_enrollments(user_id);
-create index course_enrollments_course_id_status_idx on course_enrollments(course_id, status);
-create index lesson_progress_user_id_idx on lesson_progress(user_id);
-create index course_student_activity_course_seen_idx on course_student_activity(course_id, last_seen_at desc);
-create index course_student_activity_user_id_idx on course_student_activity(user_id);
-create index lesson_quiz_responses_user_id_idx on lesson_quiz_responses(user_id);
-create index notifications_user_id_created_at_idx on notifications(user_id, created_at desc)
+create index if not exists sessions_user_id_idx on sessions(user_id);
+create index if not exists course_sections_course_id_position_idx on course_sections(course_id, position);
+create index if not exists lessons_course_id_idx on lessons(course_id);
+create index if not exists lessons_section_id_position_idx on lessons(section_id, position);
+create index if not exists media_assets_course_id_idx on media_assets(course_id);
+create index if not exists media_assets_lesson_id_idx on media_assets(lesson_id);
+create index if not exists course_enrollments_user_id_idx on course_enrollments(user_id);
+create index if not exists course_enrollments_course_id_status_idx on course_enrollments(course_id, status);
+create index if not exists lesson_progress_user_id_idx on lesson_progress(user_id);
+create index if not exists course_student_activity_course_seen_idx on course_student_activity(course_id, last_seen_at desc);
+create index if not exists course_student_activity_user_id_idx on course_student_activity(user_id);
+create index if not exists lesson_quiz_responses_user_id_idx on lesson_quiz_responses(user_id);
+create index if not exists notifications_user_id_created_at_idx on notifications(user_id, created_at desc)
     where deleted_at is null;
-create index notifications_user_id_unread_idx on notifications(user_id)
+create index if not exists notifications_user_id_unread_idx on notifications(user_id)
     where read_at is null and deleted_at is null;
 
 insert into users (id, google_sub, email, password, full_name, role)

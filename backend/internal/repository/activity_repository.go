@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"speaker_course/internal/domain"
 
 	"github.com/jmoiron/sqlx"
@@ -109,6 +111,33 @@ func (r *ActivityRepository) EnsureCourseAccessStarted(
 	return &access, nil
 }
 
+func (r *ActivityRepository) GetCourseAccessWindow(
+	ctx context.Context,
+	input domain.MarkCourseActivityOfflineInput,
+) (*domain.CourseAccessWindow, error) {
+	const query = `
+		select course_id,
+			user_id,
+			first_access_at,
+			access_expires_at,
+			coalesce(access_expires_at <= now(), false) as is_expired
+		from course_student_activity
+		where course_id = $1
+			and user_id = $2
+	`
+
+	q := extractTransaction(ctx, r.db)
+	var access domain.CourseAccessWindow
+	if err := sqlx.GetContext(ctx, q, &access, query, input.CourseId, input.UserId); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return &access, nil
+}
+
 func (r *ActivityRepository) MarkCourseActivityOffline(
 	ctx context.Context,
 	input domain.MarkCourseActivityOfflineInput,
@@ -204,6 +233,7 @@ func (r *ActivityRepository) ListCourseStudentActivity(
 		left join last_sessions ls on ls.user_id = e.user_id
 		where e.course_id = $1
 			and e.status = 'approved'
+			and u.role = 'member'
 		order by a.last_seen_at desc nulls last, e.reviewed_at desc nulls last, e.requested_at desc
 	`
 

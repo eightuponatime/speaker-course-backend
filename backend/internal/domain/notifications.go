@@ -9,11 +9,14 @@ import (
 type NotificationType string
 
 const (
-	NotificationCourseEnrollmentRequested NotificationType = "course_enrollment_requested"
-	NotificationCourseAccessApproved      NotificationType = "course_access_approved"
-	NotificationCourseAccessRejected      NotificationType = "course_access_rejected"
-	NotificationCourseAccessRevoked       NotificationType = "course_access_revoked"
-	NotificationCourseAccessRestored      NotificationType = "course_access_restored"
+	NotificationCourseEnrollmentRequested     NotificationType = "course_enrollment_requested"
+	NotificationCourseAccessApproved          NotificationType = "course_access_approved"
+	NotificationCourseAccessRejected          NotificationType = "course_access_rejected"
+	NotificationCourseAccessRevoked           NotificationType = "course_access_revoked"
+	NotificationCourseAccessRestored          NotificationType = "course_access_restored"
+	NotificationLessonSubmissionSent          NotificationType = "lesson_submission_sent"
+	NotificationLessonSubmissionCommented     NotificationType = "lesson_submission_commented"
+	NotificationLessonSubmissionStatusUpdated NotificationType = "lesson_submission_status_updated"
 )
 
 type Notification struct {
@@ -22,6 +25,8 @@ type Notification struct {
 	ActorId      *uuid.UUID       `db:"actor_id" json:"actor_id,omitempty"`
 	CourseId     *uuid.UUID       `db:"course_id" json:"course_id,omitempty"`
 	EnrollmentId *uuid.UUID       `db:"enrollment_id" json:"enrollment_id,omitempty"`
+	LessonId     *uuid.UUID       `db:"lesson_id" json:"lesson_id,omitempty"`
+	SubmissionId *uuid.UUID       `db:"submission_id" json:"submission_id,omitempty"`
 	Type         NotificationType `db:"type" json:"type"`
 	Title        string           `db:"title" json:"title"`
 	Body         string           `db:"body" json:"body"`
@@ -35,6 +40,8 @@ type CreateNotificationInput struct {
 	ActorId      *uuid.UUID
 	CourseId     *uuid.UUID
 	EnrollmentId *uuid.UUID
+	LessonId     *uuid.UUID
+	SubmissionId *uuid.UUID
 	Type         NotificationType
 	Title        string
 	Body         string

@@ -44,6 +44,22 @@ func (s *SubmissionsService) Submit(
 	if body == "" && len(attachments) == 0 {
 		return nil, fmt.Errorf("%w: body or attachments required", ErrInvalidSubmission)
 	}
+	existing, err := s.rp.GetByLessonAndUser(ctx, lessonID, userID)
+	if err != nil {
+		return nil, err
+	}
+	if existing != nil && existing.Status == domain.LessonSubmissionStatusAccepted {
+		return nil, fmt.Errorf("%w: accepted submission is readonly", ErrInvalidSubmission)
+	}
+	if existing != nil {
+		teacherComments, err := s.rp.CountTeacherComments(ctx, existing.Id)
+		if err != nil {
+			return nil, err
+		}
+		if teacherComments > 0 {
+			return s.rp.UpdateWithRevision(ctx, existing.Id, userID, body, payload)
+		}
+	}
 	return s.rp.Upsert(ctx, lessonID, userID, body, payload)
 }
 
@@ -61,7 +77,11 @@ func (s *SubmissionsService) GetMineByLesson(
 	if err != nil {
 		return nil, err
 	}
-	return &domain.LessonSubmissionDetail{Submission: *submission, Comments: comments}, nil
+	revisions, err := s.rp.ListRevisions(ctx, submission.Id)
+	if err != nil {
+		return nil, err
+	}
+	return &domain.LessonSubmissionDetail{Submission: *submission, Comments: comments, Revisions: revisions}, nil
 }
 
 func (s *SubmissionsService) ListMineByCourse(
@@ -70,6 +90,31 @@ func (s *SubmissionsService) ListMineByCourse(
 	userID uuid.UUID,
 ) ([]domain.LessonSubmissionSummary, error) {
 	return s.rp.ListMineByCourse(ctx, courseID, userID)
+}
+
+func (s *SubmissionsService) CancelPending(
+	ctx context.Context,
+	lessonID uuid.UUID,
+	userID uuid.UUID,
+) (*domain.LessonSubmission, error) {
+	if lessonID == uuid.Nil {
+		return nil, fmt.Errorf("%w: lesson_id is empty", ErrInvalidSubmission)
+	}
+	if userID == uuid.Nil {
+		return nil, fmt.Errorf("%w: user_id is empty", ErrInvalidSubmission)
+	}
+	submission, err := s.rp.GetByLessonAndUser(ctx, lessonID, userID)
+	if err != nil || submission == nil {
+		return submission, err
+	}
+	teacherComments, err := s.rp.CountTeacherComments(ctx, submission.Id)
+	if err != nil {
+		return nil, err
+	}
+	if teacherComments > 0 {
+		return nil, fmt.Errorf("%w: submission has teacher comments", ErrInvalidSubmission)
+	}
+	return s.rp.DeletePendingByLessonAndUser(ctx, lessonID, userID)
 }
 
 func (s *SubmissionsService) ListAdminByCourse(
@@ -96,7 +141,39 @@ func (s *SubmissionsService) GetAdminDetail(
 	if err != nil {
 		return nil, err
 	}
-	return &domain.LessonSubmissionDetail{Submission: *submission, Comments: comments}, nil
+	revisions, err := s.rp.ListRevisions(ctx, submissionID)
+	if err != nil {
+		return nil, err
+	}
+	return &domain.LessonSubmissionDetail{Submission: *submission, Comments: comments, Revisions: revisions}, nil
+}
+
+func (s *SubmissionsService) GetByID(
+	ctx context.Context,
+	submissionID uuid.UUID,
+) (*domain.LessonSubmission, error) {
+	if submissionID == uuid.Nil {
+		return nil, fmt.Errorf("%w: submission_id is empty", ErrInvalidSubmission)
+	}
+	return s.rp.GetByID(ctx, submissionID)
+}
+
+func (s *SubmissionsService) GetByLessonAndUser(
+	ctx context.Context,
+	lessonID uuid.UUID,
+	userID uuid.UUID,
+) (*domain.LessonSubmission, error) {
+	if lessonID == uuid.Nil || userID == uuid.Nil {
+		return nil, fmt.Errorf("%w: id is empty", ErrInvalidSubmission)
+	}
+	return s.rp.GetByLessonAndUser(ctx, lessonID, userID)
+}
+
+func (s *SubmissionsService) CountTeacherComments(ctx context.Context, submissionID uuid.UUID) (int, error) {
+	if submissionID == uuid.Nil {
+		return 0, fmt.Errorf("%w: submission_id is empty", ErrInvalidSubmission)
+	}
+	return s.rp.CountTeacherComments(ctx, submissionID)
 }
 
 func (s *SubmissionsService) AddComment(
@@ -117,6 +194,13 @@ func (s *SubmissionsService) AddComment(
 	}
 	if body == "" && len(attachments) == 0 {
 		return nil, fmt.Errorf("%w: body or attachments required", ErrInvalidSubmission)
+	}
+	submission, err := s.rp.GetByID(ctx, submissionID)
+	if err != nil {
+		return nil, err
+	}
+	if submission != nil && submission.Status == domain.LessonSubmissionStatusAccepted {
+		return nil, fmt.Errorf("%w: accepted submission is readonly", ErrInvalidSubmission)
 	}
 	return s.rp.AddComment(ctx, submissionID, authorID, body, payload, authorIsAdmin)
 }

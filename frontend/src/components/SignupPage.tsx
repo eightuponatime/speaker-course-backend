@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { CSSProperties, FormEvent } from "react";
 import { Eye, EyeOff, ShieldCheck } from "lucide-react";
 
-import { registerWithInvitationCode } from "../api/authDatasource";
+import { getInvitationCodeStatus, registerWithInvitationCode } from "../api/authDatasource";
+import type { InvitationCodeStatusResponse } from "../api/authDatasource";
 import { apiBaseUrl } from "../api/http";
 import { useAssetPreload } from "../utils/preload";
 import { PreloadScreen } from "./PreloadScreen";
@@ -23,13 +24,49 @@ export function SignupPage({}: SignupPageProps) {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
+  const [inviteStatus, setInviteStatus] = useState<InvitationCodeStatusResponse | null>(null);
+  const [inviteChecking, setInviteChecking] = useState(false);
   const inviteCode = readInviteCode();
-  const canSubmit = inviteCode.length > 0 && email.trim().length > 0 && password.length > 0 && fullName.trim().length > 0;
+  const inviteIsActive = inviteStatus?.valid === true && inviteStatus.status === "active";
+  const canSubmit = inviteIsActive && email.trim().length > 0 && password.length > 0 && fullName.trim().length > 0;
   const googleSignupUrl = `${apiBaseUrl}/auth/google/invitation/start?code=${encodeURIComponent(inviteCode)}`;
   const criticalAssetsReady = useAssetPreload(signupCriticalImages, {
     minDelayMs: 300,
     timeoutMs: 2500
   });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function validateInvite() {
+      if (!inviteCode) {
+        setInviteStatus(null);
+        return;
+      }
+
+      setInviteChecking(true);
+      try {
+        const status = await getInvitationCodeStatus(inviteCode);
+        if (!cancelled) {
+          setInviteStatus(status);
+        }
+      } catch {
+        if (!cancelled) {
+          setInviteStatus({ valid: false, status: "invalid" });
+        }
+      } finally {
+        if (!cancelled) {
+          setInviteChecking(false);
+        }
+      }
+    }
+
+    void validateInvite();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [inviteCode]);
 
   if (!criticalAssetsReady) {
     return <PreloadScreen label="Загрузка регистрации" />;
@@ -51,7 +88,7 @@ export function SignupPage({}: SignupPageProps) {
         password,
         fullName
       });
-      window.location.assign("/?app_route=%2Fcourse");
+      window.location.assign("/");
     } catch (err) {
       setMessage(formatSignupError(err));
     } finally {
@@ -72,16 +109,16 @@ export function SignupPage({}: SignupPageProps) {
       </header>
 
       <section className="signup-shell" aria-label="Регистрация по приглашению">
-        {!inviteCode ? (
+        {!inviteCode || inviteChecking || !inviteIsActive ? (
           <div className="signup-card signup-card-locked">
             <div className="signup-card-mark" aria-hidden="true" />
             <div className="signup-card-heading">
               <h1>Регистрация по приглашению</h1>
-              <p>Для регистрации нужна персональная одноразовая ссылка.</p>
+              <p>{signupInviteMessage(inviteCode, inviteChecking, inviteStatus)}</p>
             </div>
             <div className="signup-invite-note">
               <ShieldCheck size={20} strokeWidth={1.7} />
-              <span>Откройте страницу по ссылке с кодом приглашения</span>
+              <span>{signupInviteNote(inviteCode, inviteChecking, inviteStatus)}</span>
             </div>
           </div>
         ) : (
@@ -187,6 +224,30 @@ function formatSignupError(err: unknown): string {
   if (lower.includes("password is empty")) return "Введите пароль.";
   if (lower.includes("email is empty")) return "Введите email.";
   return "Не удалось завершить регистрацию. Проверьте данные и попробуйте снова.";
+}
+
+function signupInviteMessage(
+  inviteCode: string,
+  inviteChecking: boolean,
+  inviteStatus: InvitationCodeStatusResponse | null
+): string {
+  if (!inviteCode) return "Для регистрации нужна персональная одноразовая ссылка.";
+  if (inviteChecking) return "Проверяем ссылку приглашения.";
+  if (inviteStatus?.status === "used") return "Эта ссылка регистрации уже была использована.";
+  if (inviteStatus?.status === "expired") return "Срок действия этой ссылки регистрации истек.";
+  return "Ссылка регистрации недействительна или была отозвана.";
+}
+
+function signupInviteNote(
+  inviteCode: string,
+  inviteChecking: boolean,
+  inviteStatus: InvitationCodeStatusResponse | null
+): string {
+  if (!inviteCode) return "Откройте страницу по ссылке с кодом приглашения";
+  if (inviteChecking) return "Подождите несколько секунд";
+  if (inviteStatus?.status === "used") return "Запросите у администратора новую персональную ссылку";
+  if (inviteStatus?.status === "expired") return "Запросите у администратора свежую ссылку";
+  return "Проверьте ссылку или обратитесь к администратору курса";
 }
 
 function GoogleIcon() {

@@ -76,6 +76,7 @@ func NewAuthHandler(
 func (h *AuthHandler) RegisterRoutes(r chi.Router, authMiddleware *middlewarego.AuthMiddleware) {
 	// Public registration is disabled. New users must register through a one-time invitation code.
 	// r.Post("/auth/register", h.Register)
+	r.Get("/auth/invitation-code", h.GetInvitationCodeStatus)
 	r.Post("/auth/register/invitation", h.RegisterWithInvitationCode)
 	r.Post("/auth/login", h.Login)
 	r.Post("/auth/forgot-password", h.ForgotPassword)
@@ -120,6 +121,49 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	h.setSessionCookie(w, result.Session.Id.String(), result.Session.ExpiresAt)
 	writeJSON(w, http.StatusCreated, buildAuthUserResponse(result.User))
+}
+
+func (h *AuthHandler) GetInvitationCodeStatus(w http.ResponseWriter, r *http.Request) {
+	code := strings.TrimSpace(r.URL.Query().Get("code"))
+	if code == "" {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"valid":  false,
+			"status": "invalid",
+		})
+		return
+	}
+
+	course, err := h.coursesService.GetPrimaryCourse(r.Context())
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	if course == nil {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"valid":  false,
+			"status": "invalid",
+		})
+		return
+	}
+
+	invitationCode, err := h.invitationCodesService.GetByCode(r.Context(), course.Id, code)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	if invitationCode == nil {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"valid":  false,
+			"status": "invalid",
+		})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"valid":      invitationCode.Status == domain.InvitationCodeStatusActive,
+		"status":     invitationCode.Status,
+		"expires_at": invitationCode.ExpiresAt,
+	})
 }
 
 func (h *AuthHandler) RegisterWithInvitationCode(w http.ResponseWriter, r *http.Request) {
@@ -471,14 +515,16 @@ func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusNotFound, nil)
 			return
 		}
-		if err := h.invitationCodesService.RedeemCodeForUser(r.Context(), course.Id, inviteCodeCookie.Value, result.User.Id); err != nil {
-			h.redirectToSignupWithError(w, r, "invalid_invitation_code")
-			return
+		if result.Created {
+			if err := h.invitationCodesService.RedeemCodeForUser(r.Context(), course.Id, inviteCodeCookie.Value, result.User.Id); err != nil {
+				h.redirectToSignupWithError(w, r, "invalid_invitation_code")
+				return
+			}
 		}
 
 		h.clearCurrentSession(w, r)
 		h.setSessionCookie(w, result.Session.Id.String(), result.Session.ExpiresAt)
-		http.Redirect(w, r, h.frontendURLWithAppRoute("/course"), http.StatusFound)
+		http.Redirect(w, r, h.cfg.FrontendURL, http.StatusFound)
 		return
 	} else {
 		h.setSessionCookie(w, result.Session.Id.String(), result.Session.ExpiresAt)
@@ -663,7 +709,7 @@ func buildAuthUserResponse(user *domain.User) authUserResponse {
 		Role:              user.Role,
 		AuthProvider:      provider,
 		CanChangeEmail:    user.GoogleSub == nil,
-		CanChangePassword: user.Password != nil,
+		CanChangePassword: user.Password != nil && user.GoogleSub == nil,
 		CreatedAt:         user.CreatedAt,
 	}
 }

@@ -56,6 +56,55 @@ func (r *SubmissionsRepository) Upsert(
 	return &submission, nil
 }
 
+func (r *SubmissionsRepository) UpdateWithRevision(
+	ctx context.Context,
+	submissionID uuid.UUID,
+	editorID uuid.UUID,
+	body string,
+	attachments []byte,
+) (*domain.LessonSubmission, error) {
+	const query = `
+		with current_submission as (
+			select id, body, attachments
+			from lesson_submissions
+			where id = $1
+		),
+		revision as (
+			insert into lesson_submission_revisions (
+				submission_id,
+				editor_id,
+				previous_body,
+				previous_attachments,
+				next_body,
+				next_attachments
+			)
+			select id, $2, body, attachments, $3, $4::jsonb
+			from current_submission
+			where body is distinct from $3
+				or attachments is distinct from $4::jsonb
+		)
+		update lesson_submissions
+		set body = $3,
+			attachments = $4::jsonb,
+			viewed_by_admin_at = null,
+			updated_at = now()
+		where id = $1
+		returning id, lesson_id, course_id, user_id, status, body, attachments,
+			viewed_by_admin_at, viewed_by_student_at, submitted_at, reviewed_at, reviewed_by,
+			created_at, updated_at
+	`
+
+	q := extractTransaction(ctx, r.db)
+	var submission domain.LessonSubmission
+	if err := sqlx.GetContext(ctx, q, &submission, query, submissionID, editorID, body, string(attachments)); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &submission, nil
+}
+
 func (r *SubmissionsRepository) GetByLessonAndUser(
 	ctx context.Context,
 	lessonID uuid.UUID,
@@ -143,6 +192,7 @@ func (r *SubmissionsRepository) ListAdminByCourse(
 		join course_sections cs on cs.id = l.section_id
 		join users u on u.id = s.user_id
 		where s.course_id = $1
+			and u.role = 'member'
 		order by is_unread_for_admin desc, s.updated_at desc
 	`
 
@@ -157,9 +207,11 @@ func (r *SubmissionsRepository) ListAdminByCourse(
 func (r *SubmissionsRepository) CountUnreadForAdmin(ctx context.Context, courseID uuid.UUID) (int, error) {
 	const query = `
 		select count(*)
-		from lesson_submissions
-		where course_id = $1
-			and (viewed_by_admin_at is null or viewed_by_admin_at < updated_at)
+		from lesson_submissions s
+		join users u on u.id = s.user_id
+		where s.course_id = $1
+			and u.role = 'member'
+			and (s.viewed_by_admin_at is null or s.viewed_by_admin_at < s.updated_at)
 	`
 
 	q := extractTransaction(ctx, r.db)
@@ -226,6 +278,43 @@ func (r *SubmissionsRepository) ListComments(
 	return items, nil
 }
 
+func (r *SubmissionsRepository) ListRevisions(
+	ctx context.Context,
+	submissionID uuid.UUID,
+) ([]domain.LessonSubmissionRevision, error) {
+	const query = `
+		select id, submission_id, editor_id, previous_body, previous_attachments,
+			next_body, next_attachments, created_at
+		from lesson_submission_revisions
+		where submission_id = $1
+		order by created_at desc
+	`
+
+	q := extractTransaction(ctx, r.db)
+	items := make([]domain.LessonSubmissionRevision, 0)
+	if err := sqlx.SelectContext(ctx, q, &items, query, submissionID); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+func (r *SubmissionsRepository) CountTeacherComments(ctx context.Context, submissionID uuid.UUID) (int, error) {
+	const query = `
+		select count(*)
+		from lesson_submission_comments c
+		join users u on u.id = c.author_id
+		where c.submission_id = $1
+			and u.role in ('owner', 'admin')
+	`
+
+	q := extractTransaction(ctx, r.db)
+	var count int
+	if err := sqlx.GetContext(ctx, q, &count, query, submissionID); err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
 func (r *SubmissionsRepository) UpdateStatus(
 	ctx context.Context,
 	submissionID uuid.UUID,
@@ -248,6 +337,39 @@ func (r *SubmissionsRepository) UpdateStatus(
 	q := extractTransaction(ctx, r.db)
 	var submission domain.LessonSubmission
 	if err := sqlx.GetContext(ctx, q, &submission, query, submissionID, status, adminID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &submission, nil
+}
+
+func (r *SubmissionsRepository) DeletePendingByLessonAndUser(
+	ctx context.Context,
+	lessonID uuid.UUID,
+	userID uuid.UUID,
+) (*domain.LessonSubmission, error) {
+	const query = `
+		delete from lesson_submissions
+		where lesson_id = $1
+			and user_id = $2
+			and status = 'pending'
+			and not exists (
+				select 1
+				from lesson_submission_comments c
+				join users u on u.id = c.author_id
+				where c.submission_id = lesson_submissions.id
+					and u.role in ('owner', 'admin')
+			)
+		returning id, lesson_id, course_id, user_id, status, body, attachments,
+			viewed_by_admin_at, viewed_by_student_at, submitted_at, reviewed_at, reviewed_by,
+			created_at, updated_at
+	`
+
+	q := extractTransaction(ctx, r.db)
+	var submission domain.LessonSubmission
+	if err := sqlx.GetContext(ctx, q, &submission, query, lessonID, userID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}

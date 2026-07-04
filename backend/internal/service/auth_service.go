@@ -29,6 +29,7 @@ type AuthService struct {
 type AuthResult struct {
 	User    *domain.User     `json:"user"`
 	Session *domain.Sessions `json:"session"`
+	Created bool            `json:"created"`
 }
 
 type RegisterWithPasswordInput struct {
@@ -113,7 +114,7 @@ func (s *AuthService) RegisterWithPassword(
 		return nil, err
 	}
 
-	return &AuthResult{User: user, Session: session}, nil
+	return &AuthResult{User: user, Session: session, Created: true}, nil
 }
 
 func (s *AuthService) LoginWithPassword(
@@ -211,6 +212,7 @@ func (s *AuthService) loginWithGoogleCode(ctx context.Context, code string, allo
 		}
 	}
 
+	created := false
 	if user == nil {
 		if !allowCreate {
 			return nil, ErrGoogleAccountNotFound
@@ -231,6 +233,7 @@ func (s *AuthService) loginWithGoogleCode(ctx context.Context, code string, allo
 		if err != nil {
 			return nil, err
 		}
+		created = true
 	} else if user.GoogleSub == nil {
 		user, err = s.usersService.UpdateGoogleSub(ctx, user.Id, info.Sub)
 		if err != nil {
@@ -252,7 +255,7 @@ func (s *AuthService) loginWithGoogleCode(ctx context.Context, code string, allo
 		return nil, err
 	}
 
-	return &AuthResult{User: user, Session: session}, nil
+	return &AuthResult{User: user, Session: session, Created: created}, nil
 }
 
 func (s *AuthService) LinkGoogleCode(ctx context.Context, userID uuid.UUID, code string) (*domain.User, error) {

@@ -162,6 +162,107 @@ func TemporaryPasswordEmail(to string, fullName string, temporaryPassword string
 	})
 }
 
+func AdminLessonSubmissionEmail(
+	to string,
+	adminName string,
+	studentName string,
+	studentEmail string,
+	courseTitle string,
+	lessonTitle string,
+	adminURL string,
+	isFollowUp bool,
+) SendEmailInput {
+	studentName = strings.TrimSpace(studentName)
+	if studentName == "" {
+		studentName = studentEmail
+	}
+
+	title := "Новая работа ученика"
+	body := studentName + ` отправил(а) работу по уроку "` + lessonTitle + `" курса "` + courseTitle + `".`
+	preheader := "В админ-панели ожидает новая работа ученика."
+	if isFollowUp {
+		title = "Работа ученика обновлена"
+		body = studentName + ` обновил(а) работу по уроку "` + lessonTitle + `" после реакции преподавателя.`
+		preheader = "Ученик обновил работу после комментария или изменения статуса."
+	}
+
+	return templatedEmail(to, emailTemplateData{
+		Subject:     uniqueEmailSubject(title, studentName, studentEmail),
+		Title:       title,
+		Preheader:   preheader,
+		Greeting:    greetingFor(adminName),
+		Body:        body,
+		ButtonLabel: "Открыть задания",
+		ButtonURL:   adminURL,
+	})
+}
+
+func AdminLessonSubmissionCommentEmail(
+	to string,
+	adminName string,
+	studentName string,
+	studentEmail string,
+	courseTitle string,
+	lessonTitle string,
+	adminURL string,
+) SendEmailInput {
+	studentName = strings.TrimSpace(studentName)
+	if studentName == "" {
+		studentName = studentEmail
+	}
+
+	body := studentName + ` добавил(а) комментарий к работе по уроку "` + lessonTitle + `" курса "` + courseTitle + `".`
+	return templatedEmail(to, emailTemplateData{
+		Subject:     uniqueEmailSubject("Комментарий ученика к работе", studentName, studentEmail),
+		Title:       "Комментарий ученика к работе",
+		Preheader:   "Ученик оставил комментарий к отправленной работе.",
+		Greeting:    greetingFor(adminName),
+		Body:        body,
+		ButtonLabel: "Открыть задания",
+		ButtonURL:   adminURL,
+	})
+}
+
+func StudentLessonSubmissionStatusEmail(
+	to string,
+	fullName string,
+	courseTitle string,
+	lessonTitle string,
+	status string,
+	lessonURL string,
+) SendEmailInput {
+	statusLabel := lessonSubmissionStatusLabel(status)
+	body := `Преподаватель обновил статус вашей работы по уроку "` + lessonTitle + `" курса "` + courseTitle + `": ` + statusLabel + `.`
+	return templatedEmail(to, emailTemplateData{
+		Subject:     uniqueEmailSubject("Статус задания обновлен", fullName, to),
+		Title:       "Статус задания обновлен",
+		Preheader:   "Преподаватель обновил статус вашей работы.",
+		Greeting:    greetingFor(fullName),
+		Body:        body,
+		ButtonLabel: "Открыть задание",
+		ButtonURL:   lessonURL,
+	})
+}
+
+func StudentLessonSubmissionCommentEmail(
+	to string,
+	fullName string,
+	courseTitle string,
+	lessonTitle string,
+	lessonURL string,
+) SendEmailInput {
+	body := `Преподаватель оставил комментарий к вашей работе по уроку "` + lessonTitle + `" курса "` + courseTitle + `".`
+	return templatedEmail(to, emailTemplateData{
+		Subject:     uniqueEmailSubject("Новый комментарий к заданию", fullName, to),
+		Title:       "Новый комментарий к заданию",
+		Preheader:   "Преподаватель оставил комментарий к вашей работе.",
+		Greeting:    greetingFor(fullName),
+		Body:        body,
+		ButtonLabel: "Открыть задание",
+		ButtonURL:   lessonURL,
+	})
+}
+
 func templatedEmail(to string, data emailTemplateData) SendEmailInput {
 	var html bytes.Buffer
 	if err := template.Must(template.New("email").Parse(baseEmailTemplate)).Execute(&html, data); err != nil {
@@ -211,4 +312,17 @@ func greetingFor(fullName string) string {
 		return "Здравствуйте!"
 	}
 	return "Здравствуйте, " + fullName + "!"
+}
+
+func lessonSubmissionStatusLabel(status string) string {
+	switch status {
+	case "accepted":
+		return "принято"
+	case "needs_revision":
+		return "на доработку"
+	case "pending":
+		return "на рассмотрении"
+	default:
+		return "обновлен"
+	}
 }

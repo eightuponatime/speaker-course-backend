@@ -149,7 +149,10 @@ func isNotificationType(kind domain.NotificationType) bool {
 		domain.NotificationCourseAccessApproved,
 		domain.NotificationCourseAccessRejected,
 		domain.NotificationCourseAccessRevoked,
-		domain.NotificationCourseAccessRestored:
+		domain.NotificationCourseAccessRestored,
+		domain.NotificationLessonSubmissionSent,
+		domain.NotificationLessonSubmissionCommented,
+		domain.NotificationLessonSubmissionStatusUpdated:
 		return true
 	default:
 		return false

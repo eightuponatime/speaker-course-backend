@@ -66,9 +66,11 @@ func (h *CoursesHandler) RegisterRoutes(r chi.Router, authMiddleware *middleware
 
 		r.Get("/course/curriculum", h.GetPrimaryCourseCurriculum)
 		r.Get("/course/enrollment/me", h.GetMyPrimaryCourseEnrollment)
+		r.Get("/course/access/me", h.GetMyPrimaryCourseAccess)
 		r.Post("/course/enrollments", h.RequestPrimaryCourseEnrollment)
 		r.Get("/courses/{courseID}/curriculum", h.GetCurriculum)
 		r.Get("/courses/{courseID}/enrollment/me", h.GetMyEnrollment)
+		r.Get("/courses/{courseID}/access/me", h.GetMyCourseAccess)
 		r.Post("/courses/{courseID}/enrollments", h.RequestEnrollment)
 		r.Post("/courses/{courseID}/activity", h.TrackCourseActivity)
 		r.Post("/courses/{courseID}/activity/offline", h.MarkCourseActivityOffline)
@@ -77,6 +79,7 @@ func (h *CoursesHandler) RegisterRoutes(r chi.Router, authMiddleware *middleware
 		r.Get("/courses/{courseID}/submissions/me", h.ListMyLessonSubmissions)
 		r.Get("/lessons/{lessonID}/submission", h.GetMyLessonSubmission)
 		r.Post("/lessons/{lessonID}/submission", h.SubmitLessonSubmission)
+		r.Delete("/lessons/{lessonID}/submission", h.CancelMyLessonSubmission)
 		r.Post("/submissions/{submissionID}/comments", h.AddMySubmissionComment)
 
 		admin := r.With(authMiddleware.RequireAdmin())
@@ -340,7 +343,7 @@ func (h *CoursesHandler) getCurriculumForCourse(w http.ResponseWriter, r *http.R
 			return
 		}
 
-		access, err = h.activityService.EnsureCourseAccessStarted(r.Context(), domain.MarkCourseActivityOfflineInput{
+		access, err = h.activityService.GetCourseAccessWindow(r.Context(), domain.MarkCourseActivityOfflineInput{
 			CourseId: courseID,
 			UserId:   userID,
 		})
@@ -348,7 +351,7 @@ func (h *CoursesHandler) getCurriculumForCourse(w http.ResponseWriter, r *http.R
 			writeError(w, http.StatusBadRequest, err)
 			return
 		}
-		if access.IsExpired {
+		if access != nil && access.IsExpired {
 			writeError(w, http.StatusForbidden, nil)
 			return
 		}
@@ -664,6 +667,58 @@ func (h *CoursesHandler) GetMyEnrollment(w http.ResponseWriter, r *http.Request)
 	}
 
 	h.getMyEnrollmentForCourse(w, r, courseID)
+}
+
+func (h *CoursesHandler) GetMyPrimaryCourseAccess(w http.ResponseWriter, r *http.Request) {
+	course, err := h.coursesService.GetPrimaryCourse(r.Context())
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	if course == nil {
+		writeJSON(w, http.StatusOK, nil)
+		return
+	}
+
+	h.getMyCourseAccessForCourse(w, r, course.Id)
+}
+
+func (h *CoursesHandler) GetMyCourseAccess(w http.ResponseWriter, r *http.Request) {
+	courseID, ok := parseUUIDParam(w, r, "courseID")
+	if !ok {
+		return
+	}
+
+	h.getMyCourseAccessForCourse(w, r, courseID)
+}
+
+func (h *CoursesHandler) getMyCourseAccessForCourse(w http.ResponseWriter, r *http.Request, courseID uuid.UUID) {
+	userID, ok := middlewarego.UserIDFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, nil)
+		return
+	}
+
+	hasAccess, err := h.enrollmentsService.HasApprovedAccess(r.Context(), courseID, userID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	if !hasAccess {
+		writeJSON(w, http.StatusOK, nil)
+		return
+	}
+
+	access, err := h.activityService.GetCourseAccessWindow(r.Context(), domain.MarkCourseActivityOfflineInput{
+		CourseId: courseID,
+		UserId:   userID,
+	})
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, access)
 }
 
 func (h *CoursesHandler) getMyEnrollmentForCourse(w http.ResponseWriter, r *http.Request, courseID uuid.UUID) {
@@ -1005,11 +1060,45 @@ func (h *CoursesHandler) SubmitLessonSubmission(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	existingSubmission, err := h.submissionsService.GetByLessonAndUser(r.Context(), lessonID, userID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
 	submission, err := h.submissionsService.Submit(r.Context(), lessonID, userID, request.Body, request.Attachments)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
+	h.notifyAdminsAboutSubmission(r.Context(), submission, userID, domain.NotificationLessonSubmissionSent)
+	h.emailAdminsAboutSubmissionIfNeeded(r.Context(), submission, userID, existingSubmission)
+	writeJSON(w, http.StatusOK, submission)
+}
+
+func (h *CoursesHandler) CancelMyLessonSubmission(w http.ResponseWriter, r *http.Request) {
+	lessonID, ok := parseUUIDParam(w, r, "lessonID")
+	if !ok {
+		return
+	}
+	userID, ok := middlewarego.UserIDFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, nil)
+		return
+	}
+	if !h.ensureLessonAccess(w, r, lessonID, userID) {
+		return
+	}
+
+	submission, err := h.submissionsService.CancelPending(r.Context(), lessonID, userID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	if submission == nil {
+		writeError(w, http.StatusBadRequest, service.ErrInvalidSubmission)
+		return
+	}
+
 	writeJSON(w, http.StatusOK, submission)
 }
 
@@ -1030,11 +1119,27 @@ func (h *CoursesHandler) AddMySubmissionComment(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	submission, err := h.submissionsService.GetByID(r.Context(), submissionID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	if submission == nil {
+		writeError(w, http.StatusNotFound, nil)
+		return
+	}
+	if submission.UserId != userID {
+		writeError(w, http.StatusForbidden, nil)
+		return
+	}
+
 	comment, err := h.submissionsService.AddComment(r.Context(), submissionID, userID, false, request.Body, request.Attachments)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
+	h.notifyAdminsAboutSubmission(r.Context(), submission, userID, domain.NotificationLessonSubmissionCommented)
+	h.emailAdminsAboutStudentCommentIfNeeded(r.Context(), submission, userID)
 	writeJSON(w, http.StatusCreated, comment)
 }
 
@@ -1094,10 +1199,19 @@ func (h *CoursesHandler) UpdateLessonSubmissionStatus(w http.ResponseWriter, r *
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
+	previousSubmission, err := h.submissionsService.GetByID(r.Context(), submissionID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
 	submission, err := h.submissionsService.UpdateStatus(r.Context(), submissionID, request.Status, adminID)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
+	}
+	h.notifyStudentAboutSubmission(r.Context(), submission, adminID, domain.NotificationLessonSubmissionStatusUpdated)
+	if previousSubmission == nil || previousSubmission.Status != submission.Status {
+		h.emailStudentAboutSubmissionStatus(r.Context(), submission)
 	}
 	writeJSON(w, http.StatusOK, submission)
 }
@@ -1121,6 +1235,12 @@ func (h *CoursesHandler) AddAdminSubmissionComment(w http.ResponseWriter, r *htt
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
+	}
+	if detail, detailErr := h.submissionsService.GetAdminDetail(r.Context(), submissionID); detailErr == nil && detail != nil {
+		h.notifyStudentAboutSubmission(r.Context(), &detail.Submission, adminID, domain.NotificationLessonSubmissionCommented)
+		if !recentStatusUpdateBy(&detail.Submission, adminID) {
+			h.emailStudentAboutSubmissionComment(r.Context(), &detail.Submission)
+		}
 	}
 	writeJSON(w, http.StatusCreated, comment)
 }
@@ -1465,6 +1585,259 @@ func (h *CoursesHandler) notifyAdminsAboutEnrollmentRequest(
 		// 	h.cfg.FrontendURL+"/admin",
 		// ))
 	}
+}
+
+func (h *CoursesHandler) notifyAdminsAboutSubmission(
+	ctx context.Context,
+	submission *domain.LessonSubmission,
+	actorID uuid.UUID,
+	notificationType domain.NotificationType,
+) {
+	if submission == nil {
+		return
+	}
+
+	admins, err := h.usersService.ListAdmins(ctx)
+	if err != nil {
+		return
+	}
+
+	student, _ := h.usersService.GetByID(ctx, actorID)
+	studentName := "Ученик"
+	if student != nil {
+		studentName = displayUserName(student)
+	}
+
+	title := "Работа ученика"
+	body := studentName + " отправил работу на проверку."
+	if notificationType == domain.NotificationLessonSubmissionCommented {
+		title = "Комментарий к работе"
+		body = studentName + " добавил комментарий к работе."
+	}
+
+	for _, admin := range admins {
+		if admin.Id == actorID || admin.Email == "system@logos-voice.local" {
+			continue
+		}
+		_, _ = h.notificationsService.Create(ctx, domain.CreateNotificationInput{
+			UserId:       admin.Id,
+			ActorId:      &actorID,
+			CourseId:     &submission.CourseId,
+			LessonId:     &submission.LessonId,
+			SubmissionId: &submission.Id,
+			Type:         notificationType,
+			Title:        title,
+			Body:         body,
+		})
+	}
+}
+
+func (h *CoursesHandler) notifyStudentAboutSubmission(
+	ctx context.Context,
+	submission *domain.LessonSubmission,
+	actorID uuid.UUID,
+	notificationType domain.NotificationType,
+) {
+	if submission == nil || submission.UserId == actorID {
+		return
+	}
+
+	title := "Обновление по заданию"
+	body := "Преподаватель обновил статус вашей работы."
+	if notificationType == domain.NotificationLessonSubmissionCommented {
+		title = "Новый комментарий"
+		body = "Преподаватель оставил комментарий к вашей работе."
+	}
+
+	_, _ = h.notificationsService.Create(ctx, domain.CreateNotificationInput{
+		UserId:       submission.UserId,
+		ActorId:      &actorID,
+		CourseId:     &submission.CourseId,
+		LessonId:     &submission.LessonId,
+		SubmissionId: &submission.Id,
+		Type:         notificationType,
+		Title:        title,
+		Body:         body,
+	})
+}
+
+func (h *CoursesHandler) emailAdminsAboutSubmissionIfNeeded(
+	ctx context.Context,
+	submission *domain.LessonSubmission,
+	actorID uuid.UUID,
+	previousSubmission *domain.LessonSubmission,
+) {
+	if submission == nil {
+		return
+	}
+
+	isFollowUp := false
+	if previousSubmission != nil {
+		interacted, err := h.teacherInteractedWithSubmission(ctx, previousSubmission)
+		if err != nil || !interacted {
+			return
+		}
+		isFollowUp = true
+	}
+
+	admins, err := h.usersService.ListAdmins(ctx)
+	if err != nil {
+		return
+	}
+	student, _ := h.usersService.GetByID(ctx, actorID)
+	studentName := ""
+	studentEmail := ""
+	if student != nil {
+		studentName = student.FullName
+		studentEmail = student.Email
+	}
+	courseTitle, lessonTitle := h.submissionCourseLessonTitles(ctx, submission)
+	adminURL := strings.TrimRight(h.cfg.FrontendURL, "/") + "/admin"
+
+	for _, admin := range admins {
+		if admin.Id == actorID || admin.Email == "system@logos-voice.local" {
+			continue
+		}
+		_ = h.emailService.Send(ctx, service.AdminLessonSubmissionEmail(
+			admin.Email,
+			admin.FullName,
+			studentName,
+			studentEmail,
+			courseTitle,
+			lessonTitle,
+			adminURL,
+			isFollowUp,
+		))
+	}
+}
+
+func (h *CoursesHandler) emailAdminsAboutStudentCommentIfNeeded(
+	ctx context.Context,
+	submission *domain.LessonSubmission,
+	actorID uuid.UUID,
+) {
+	if submission == nil {
+		return
+	}
+	interacted, err := h.teacherInteractedWithSubmission(ctx, submission)
+	if err != nil || !interacted {
+		return
+	}
+
+	admins, err := h.usersService.ListAdmins(ctx)
+	if err != nil {
+		return
+	}
+	student, _ := h.usersService.GetByID(ctx, actorID)
+	studentName := ""
+	studentEmail := ""
+	if student != nil {
+		studentName = student.FullName
+		studentEmail = student.Email
+	}
+	courseTitle, lessonTitle := h.submissionCourseLessonTitles(ctx, submission)
+	adminURL := strings.TrimRight(h.cfg.FrontendURL, "/") + "/admin"
+
+	for _, admin := range admins {
+		if admin.Id == actorID || admin.Email == "system@logos-voice.local" {
+			continue
+		}
+		_ = h.emailService.Send(ctx, service.AdminLessonSubmissionCommentEmail(
+			admin.Email,
+			admin.FullName,
+			studentName,
+			studentEmail,
+			courseTitle,
+			lessonTitle,
+			adminURL,
+		))
+	}
+}
+
+func (h *CoursesHandler) emailStudentAboutSubmissionStatus(ctx context.Context, submission *domain.LessonSubmission) {
+	if submission == nil {
+		return
+	}
+	student, err := h.usersService.GetByID(ctx, submission.UserId)
+	if err != nil || student == nil {
+		return
+	}
+	courseTitle, lessonTitle := h.submissionCourseLessonTitles(ctx, submission)
+	lessonURL := strings.TrimRight(h.cfg.FrontendURL, "/") + "/course?lesson_id=" + submission.LessonId.String() + "&section=assignment"
+	_ = h.emailService.Send(ctx, service.StudentLessonSubmissionStatusEmail(
+		student.Email,
+		student.FullName,
+		courseTitle,
+		lessonTitle,
+		string(submission.Status),
+		lessonURL,
+	))
+}
+
+func (h *CoursesHandler) emailStudentAboutSubmissionComment(ctx context.Context, submission *domain.LessonSubmission) {
+	if submission == nil {
+		return
+	}
+	student, err := h.usersService.GetByID(ctx, submission.UserId)
+	if err != nil || student == nil {
+		return
+	}
+	courseTitle, lessonTitle := h.submissionCourseLessonTitles(ctx, submission)
+	lessonURL := strings.TrimRight(h.cfg.FrontendURL, "/") + "/course?lesson_id=" + submission.LessonId.String() + "&section=assignment"
+	_ = h.emailService.Send(ctx, service.StudentLessonSubmissionCommentEmail(
+		student.Email,
+		student.FullName,
+		courseTitle,
+		lessonTitle,
+		lessonURL,
+	))
+}
+
+func (h *CoursesHandler) teacherInteractedWithSubmission(ctx context.Context, submission *domain.LessonSubmission) (bool, error) {
+	if submission == nil {
+		return false, nil
+	}
+	if submission.ReviewedAt != nil || submission.ReviewedBy != nil {
+		return true, nil
+	}
+	count, err := h.submissionsService.CountTeacherComments(ctx, submission.Id)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+func (h *CoursesHandler) submissionCourseLessonTitles(ctx context.Context, submission *domain.LessonSubmission) (string, string) {
+	courseTitle := "Курс"
+	lessonTitle := "Урок"
+	if submission == nil {
+		return courseTitle, lessonTitle
+	}
+	if course, err := h.coursesService.GetCourseByID(ctx, submission.CourseId); err == nil && course != nil {
+		courseTitle = course.Title
+	}
+	if lesson, err := h.coursesService.GetLessonByID(ctx, submission.LessonId); err == nil && lesson != nil {
+		lessonTitle = lesson.Title
+	}
+	return courseTitle, lessonTitle
+}
+
+func recentStatusUpdateBy(submission *domain.LessonSubmission, adminID uuid.UUID) bool {
+	if submission == nil || submission.ReviewedAt == nil || submission.ReviewedBy == nil {
+		return false
+	}
+	if *submission.ReviewedBy != adminID {
+		return false
+	}
+	return time.Since(*submission.ReviewedAt) >= 0 && time.Since(*submission.ReviewedAt) <= 45*time.Second
+}
+
+func displayUserName(user *domain.User) string {
+	name := strings.TrimSpace(user.FullName)
+	if name != "" {
+		return name
+	}
+	return user.Email
 }
 
 func (h *CoursesHandler) emailCourseAccessReviewed(

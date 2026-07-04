@@ -45,6 +45,16 @@ export function registerWithInvitationCode(input: {
   });
 }
 
+export type InvitationCodeStatusResponse = {
+  valid: boolean;
+  status: "active" | "used" | "expired" | "invalid";
+  expires_at?: string;
+};
+
+export function getInvitationCodeStatus(code: string): Promise<InvitationCodeStatusResponse> {
+  return request<InvitationCodeStatusResponse>(`/auth/invitation-code?code=${encodeURIComponent(code)}`);
+}
+
 export function getMe(): Promise<User> {
   return request<User>("/auth/me");
 }

@@ -48,6 +48,10 @@ export function getMyPrimaryCourseEnrollment(): Promise<CourseEnrollment | null>
   return request<CourseEnrollment | null>("/course/enrollment/me");
 }
 
+export function getMyPrimaryCourseAccess(): Promise<CourseAccessWindow | null> {
+  return request<CourseAccessWindow | null>("/course/access/me");
+}
+
 export function requestCourseEnrollment(courseId: string): Promise<CourseEnrollment> {
   return request<CourseEnrollment>(`/courses/${courseId}/enrollments`, {
     method: "POST"
@@ -128,6 +132,12 @@ export function submitLessonSubmission(input: {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ body: input.body, attachments: input.attachments })
+  });
+}
+
+export function cancelLessonSubmission(lessonId: string): Promise<LessonSubmission> {
+  return request<LessonSubmission>(`/lessons/${lessonId}/submission`, {
+    method: "DELETE"
   });
 }
 

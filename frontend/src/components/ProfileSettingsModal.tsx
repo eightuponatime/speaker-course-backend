@@ -52,7 +52,7 @@ export function ProfileSettingsModal({
     normalizedFullName !== user.full_name || (canChangeEmail && normalizedEmail !== user.email);
   const canSaveProfile =
     isEditing && hasProfileChanges && normalizedFullName.length > 0 && (!canChangeEmail || normalizedEmail.length > 0);
-  const authLabel = user.auth_provider === "google" ? "Google" : "Email и пароль";
+  const authLabel = isGoogleAccount ? "Google" : "Email и пароль";
 
   async function handleProfileSubmit(event: FormEvent) {
     event.preventDefault();

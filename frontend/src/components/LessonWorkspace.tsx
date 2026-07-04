@@ -89,7 +89,14 @@ export function LessonWorkspace({
               value={titleDraft}
             />
           ) : (
-            <h1>{lesson?.title ?? t("selectLesson")}</h1>
+            <div className="lesson-heading-display">
+              <h1>{lesson?.title ?? t("selectLesson")}</h1>
+              {lesson ? (
+                <button onClick={() => setIsEditingTitle(true)} type="button" title="Редактировать название урока">
+                  <Pencil size={17} />
+                </button>
+              ) : null}
+            </div>
           )}
           {lesson && (
             <div className="lesson-title-actions">
@@ -98,9 +105,6 @@ export function LessonWorkspace({
               </button>
               <button onClick={onRedo} type="button" title="Повторить" disabled={!canRedo}>
                 <Redo2 size={17} />
-              </button>
-              <button onClick={() => setIsEditingTitle(true)} type="button" title="Edit title">
-                <Pencil size={17} />
               </button>
             </div>
           )}

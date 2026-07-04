@@ -1,5 +1,6 @@
-import { AlertTriangle, ArrowLeft, CalendarDays, Check, Download, FileText, Gauge, LogOut, Menu, Paperclip, Play, Send, Upload, UserRound, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CalendarDays, Check, Download, FileText, Gauge, Image, LogOut, Menu, Play, Send, Upload, UserRound, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { Ref } from "react";
 
 import {
   listLessonQuizResponses,
@@ -8,6 +9,7 @@ import {
   markCourseActivityOffline,
   markCourseActivityOfflineKeepalive,
   addSubmissionComment,
+  cancelLessonSubmission,
   getMyLessonSubmission,
   saveMyLessonQuizResponse,
   submitLessonSubmission,
@@ -17,7 +19,9 @@ import { uploadUserSubmissionAsset } from "../api/mediaDatasource";
 import { isExternalAuthSyncActive } from "../authSync";
 import logosVoiceLogo from "../../assets/images/transparent_logo.png";
 import type { CourseCurriculum, EditorContent, Lesson, LessonQuizResponseWithUser, LessonSubmissionDetail, LessonSubmissionSummary, SubmissionAttachment } from "../entities/course/course";
+import type { Notification } from "../entities/notification/notification";
 import type { TranslationKey } from "../i18n";
+import { NotificationBell } from "./NotificationBell";
 
 type CoursePreviewPageProps = {
   curriculum: CourseCurriculum;
@@ -27,6 +31,7 @@ type CoursePreviewPageProps = {
   onAdminOpen?: () => void;
   onLandingOpen?: () => void;
   onProfileOpen?: () => void;
+  onNotificationOpen?: (notification: Notification) => void;
   onBack?: () => void;
   backLabel?: string;
   enableQuizResponses?: boolean;
@@ -44,6 +49,7 @@ export function CoursePreviewPage({
   onAdminOpen,
   onLandingOpen,
   onProfileOpen,
+  onNotificationOpen,
   onBack,
   backLabel,
   enableQuizResponses = false,
@@ -61,7 +67,7 @@ export function CoursePreviewPage({
   const scrollStorageKey = `logos_voice_lesson_scroll_${storageKeyPrefix}`;
   const videoStoragePrefix = `logos_voice_video_progress_${storageKeyPrefix}`;
   const [activeLessonId, setActiveLessonId] = useState(() =>
-    getStoredLessonId(activeLessonStorageKey, lessons) || initialLessonId || lessons[0]?.id || ""
+    initialLessonId || getStoredLessonId(activeLessonStorageKey, lessons) || lessons[0]?.id || ""
   );
   const scrollPositionsRef = useRef<Record<string, number>>(readJSONStorage<Record<string, number>>(scrollStorageKey, {}));
   const activeLessonIdRef = useRef(activeLessonId);
@@ -81,6 +87,8 @@ export function CoursePreviewPage({
   const curriculumRef = useRef<HTMLElement | null>(null);
   const activeLessonButtonRef = useRef<HTMLButtonElement | null>(null);
   const activityOnlineRef = useRef(false);
+  const assignmentRef = useRef<HTMLElement | null>(null);
+  const lastAppliedInitialLessonIdRef = useRef(initialLessonId);
 
   useEffect(() => {
     let cancelled = false;
@@ -156,8 +164,15 @@ export function CoursePreviewPage({
   useEffect(() => {
     if (!activeLessonId || lessons.some((lesson) => lesson.id === activeLessonId)) return;
 
-    setActiveLessonId(getStoredLessonId(activeLessonStorageKey, lessons) || lessons[0]?.id || "");
-  }, [activeLessonId, activeLessonStorageKey, lessons]);
+    setActiveLessonId(initialLessonId || getStoredLessonId(activeLessonStorageKey, lessons) || lessons[0]?.id || "");
+  }, [activeLessonId, activeLessonStorageKey, initialLessonId, lessons]);
+
+  useEffect(() => {
+    if (!initialLessonId || lastAppliedInitialLessonIdRef.current === initialLessonId) return;
+    lastAppliedInitialLessonIdRef.current = initialLessonId;
+    if (!lessons.some((lesson) => lesson.id === initialLessonId)) return;
+    setActiveLessonId(initialLessonId);
+  }, [initialLessonId, lessons]);
 
   useEffect(() => {
     return () => {
@@ -193,6 +208,17 @@ export function CoursePreviewPage({
       window.scrollTo({ top: storedScroll, behavior: "auto" });
     });
   }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("section") !== "assignment" || !activeLesson?.id) return;
+
+    const timer = window.setTimeout(() => {
+      assignmentRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+    }, 260);
+
+    return () => window.clearTimeout(timer);
+  }, [activeLesson?.id]);
 
   useEffect(() => {
     const activeButton = activeLessonButtonRef.current;
@@ -348,6 +374,9 @@ export function CoursePreviewPage({
               <span>Профиль</span>
             </button>
           ) : null}
+          {onNotificationOpen ? (
+            <NotificationBell emptyLabel={t("noNotifications")} onNotificationOpen={onNotificationOpen} />
+          ) : null}
           <button className="preview-action-button" type="button" onClick={() => setLogoutConfirmOpen(true)} aria-label={t("logout")}>
             <LogOut size={17} />
             <span>{t("logout")}</span>
@@ -405,7 +434,8 @@ export function CoursePreviewPage({
           ))}
         </aside>
 
-        <article className="preview-lesson">
+        <div className="preview-lesson-frame">
+          <article className="preview-lesson">
           {activeLesson ? (
             <>
               <span className="preview-kicker">{t("lessonPreview")}</span>
@@ -440,11 +470,19 @@ export function CoursePreviewPage({
               />
               {enableQuizResponses ? (
                 <LessonAssignmentPanel
+                  ref={assignmentRef}
                   lesson={activeLesson}
                   courseId={curriculum.course.id}
                   summary={submissionSummaries[activeLesson.id]}
                   onSummaryChange={(summary) => {
                     setSubmissionSummaries((current) => ({ ...current, [summary.lesson_id]: summary }));
+                  }}
+                  onSummaryRemove={(lessonId) => {
+                    setSubmissionSummaries((current) => {
+                      const next = { ...current };
+                      delete next[lessonId];
+                      return next;
+                    });
                   }}
                   showToast={showToast}
                 />
@@ -459,7 +497,15 @@ export function CoursePreviewPage({
           ) : (
             <p>{t("noLessonSelected")}</p>
           )}
-        </article>
+          </article>
+          {activeLesson && enableQuizResponses ? (
+            <LessonStepNav
+              assignmentStatus={submissionSummaries[activeLesson.id]?.status}
+              onMaterialClick={() => document.querySelector(".preview-lesson")?.scrollIntoView({ block: "start", behavior: "smooth" })}
+              onAssignmentClick={() => assignmentRef.current?.scrollIntoView({ block: "start", behavior: "smooth" })}
+            />
+          ) : null}
+        </div>
       </section>
       {toastMessage ? <div className="preview-toast">{toastMessage}</div> : null}
       {logoutConfirmOpen ? (
@@ -636,17 +682,46 @@ function LessonViewer({
   );
 }
 
+function LessonStepNav({
+  assignmentStatus,
+  onMaterialClick,
+  onAssignmentClick
+}: {
+  assignmentStatus?: string;
+  onMaterialClick: () => void;
+  onAssignmentClick: () => void;
+}) {
+  return (
+    <nav className="lesson-step-nav" aria-label="Навигация урока">
+      <button type="button" onClick={onMaterialClick}>
+        <span>1</span>
+        <strong>Материал</strong>
+      </button>
+      <i />
+      <button type="button" onClick={onAssignmentClick}>
+        <span className={assignmentStatus ? `assignment-${assignmentStatus}` : ""}>2</span>
+        <strong>Задание</strong>
+        {assignmentStatus ? <small>{submissionStatusLabel(assignmentStatus)}</small> : null}
+      </button>
+    </nav>
+  );
+}
+
 function LessonAssignmentPanel({
+  ref,
   lesson,
   courseId,
   summary,
   onSummaryChange,
+  onSummaryRemove,
   showToast
 }: {
+  ref?: Ref<HTMLElement>;
   lesson: Lesson;
   courseId: string;
   summary?: LessonSubmissionSummary;
   onSummaryChange: (summary: LessonSubmissionSummary) => void;
+  onSummaryRemove: (lessonId: string) => void;
   showToast: (message: string) => void;
 }) {
   const [detail, setDetail] = useState<LessonSubmissionDetail | null>(null);
@@ -656,6 +731,31 @@ function LessonAssignmentPanel({
   const [commentAttachments, setCommentAttachments] = useState<SubmissionAttachment[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [attachmentMenu, setAttachmentMenu] = useState<"submission" | "comment" | null>(null);
+  const [uploadingLabel, setUploadingLabel] = useState("");
+  const [uploadingTarget, setUploadingTarget] = useState<"submission" | "comment" | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [confirmAction, setConfirmAction] = useState<"submit" | "resubmit" | "edit" | "cancel" | null>(null);
+  const isAccepted = summary?.status === "accepted";
+  const isRevision = summary?.status === "needs_revision";
+  const isPending = summary?.status === "pending";
+  const hasTeacherComment = Boolean(detail?.comments.some((comment) => comment.author_role !== "member"));
+  const latestRevision = detail?.revisions?.[0];
+  const initialBody = detail?.submission.body || "";
+  const initialAttachments = useMemo(
+    () => (Array.isArray(detail?.submission.attachments) ? detail.submission.attachments : []),
+    [detail?.submission.attachments]
+  );
+  const hasSubmissionChanges = useMemo(
+    () => body !== initialBody || !sameAttachments(attachments, initialAttachments),
+    [attachments, body, initialAttachments, initialBody]
+  );
+  const canSubmitAssignment = Boolean(
+    !submitting &&
+      !uploadingLabel &&
+      (body.trim() || attachments.length > 0) &&
+      (!summary || hasSubmissionChanges)
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -686,34 +786,50 @@ function LessonAssignmentPanel({
     };
   }, [lesson.id, summary?.id, summary?.updated_at]);
 
-  async function uploadAttachment(target: "submission" | "comment") {
-    const file = await pickLocalFile();
+  async function uploadAttachment(target: "submission" | "comment", choice: "media" | "document") {
+    const file = await pickLocalFile(choice);
+    setAttachmentMenu(null);
     if (!file) return;
-    const asset = await uploadUserSubmissionAsset({
-      file,
-      kind: file.type.startsWith("image/") ? "image" : "file",
-      courseId,
-      lessonId: lesson.id
-    });
-    const attachment: SubmissionAttachment = {
-      kind: asset.kind,
-      name: asset.original_name,
-      url: asset.public_url,
-      mime_type: asset.mime_type,
-      size_bytes: asset.size_bytes
-    };
-    if (target === "submission") {
-      setAttachments((current) => [...current, attachment]);
-    } else {
-      setCommentAttachments((current) => [...current, attachment]);
+    setUploadingLabel(file.name);
+    setUploadingTarget(target);
+    setUploadProgress(0);
+    try {
+      const asset = await uploadUserSubmissionAsset({
+        file,
+        kind: file.type.startsWith("image/") ? "image" : file.type.startsWith("video/") ? "video" : "file",
+        courseId,
+        lessonId: lesson.id,
+        onProgress: setUploadProgress
+      });
+      const attachment: SubmissionAttachment = {
+        kind: asset.kind,
+        name: asset.original_name,
+        url: asset.public_url,
+        mime_type: asset.mime_type,
+        size_bytes: asset.size_bytes
+      };
+      if (target === "submission") {
+        setAttachments((current) => [...current, attachment]);
+      } else {
+        setCommentAttachments((current) => [...current, attachment]);
+      }
+      setUploadProgress(100);
+    } catch {
+      showToast("Не удалось загрузить файл");
+    } finally {
+      setUploadingLabel("");
+      setUploadingTarget(null);
+      setUploadProgress(null);
     }
   }
 
   async function submitAssignment() {
+    setConfirmAction(null);
     setSubmitting(true);
     try {
       const submission = await submitLessonSubmission({ lessonId: lesson.id, body, attachments });
-      setDetail({ submission, comments: detail?.comments ?? [] });
+      const nextDetail = await getMyLessonSubmission(lesson.id).catch(() => null);
+      setDetail(nextDetail ?? { submission, comments: detail?.comments ?? [], revisions: detail?.revisions ?? [] });
       onSummaryChange({
         id: submission.id,
         lesson_id: submission.lesson_id,
@@ -727,7 +843,20 @@ function LessonAssignmentPanel({
         is_unread_for_admin: false,
         comment_count: detail?.comments.length ?? 0
       });
-      showToast("Задание отправлено");
+      showToast(assignmentSuccessMessage(summary?.status, hasTeacherComment));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function cancelSubmission() {
+    setConfirmAction(null);
+    setSubmitting(true);
+    try {
+      await cancelLessonSubmission(lesson.id);
+      setDetail(null);
+      onSummaryRemove(lesson.id);
+      showToast("Сдача отменена");
     } finally {
       setSubmitting(false);
     }
@@ -752,62 +881,232 @@ function LessonAssignmentPanel({
   }
 
   return (
-    <section className="lesson-assignment">
+    <section className="lesson-assignment" ref={ref}>
       <header>
         <div>
-          <span>Задание</span>
+          <span>Практика</span>
           <h3>Отправьте работу по уроку</h3>
+          <p>Поделитесь ответом и файлами, чтобы закрепить материал.</p>
         </div>
         {summary ? <strong className={`assignment-status ${summary.status}`}>{submissionStatusLabel(summary.status)}</strong> : null}
       </header>
 
       {loading ? <p className="assignment-muted">Загрузка задания...</p> : null}
-      <textarea
-        value={body}
-        onChange={(event) => setBody(event.target.value)}
-        placeholder="Опишите выполненное задание, приложите материалы или задайте вопрос преподавателю."
-      />
-      <AttachmentList attachments={attachments} onRemove={(index) => setAttachments((current) => current.filter((_, itemIndex) => itemIndex !== index))} />
-      <div className="assignment-actions">
-        <button type="button" onClick={() => void uploadAttachment("submission")} disabled={submitting}>
-          <Upload size={17} />
-          Прикрепить файл
-        </button>
-        <button className="dark" type="button" onClick={() => void submitAssignment()} disabled={submitting || (!body.trim() && attachments.length === 0)}>
-          <Send size={17} />
-          {summary ? "Отправить заново" : "Отправить задание"}
-        </button>
-      </div>
+      <div className="assignment-grid">
+        <div className="assignment-workspace">
+          {latestRevision ? (
+            <button className="assignment-edit-note" type="button">
+              Отредактировано {formatCommentTime(latestRevision.created_at)}
+            </button>
+          ) : null}
+          <textarea
+            value={body}
+            onChange={(event) => setBody(event.target.value)}
+            placeholder="Напишите ваш ответ или выполните задание..."
+            readOnly={isAccepted}
+          />
+          <AttachmentList attachments={attachments} onRemove={isAccepted ? undefined : (index) => setAttachments((current) => current.filter((_, itemIndex) => itemIndex !== index))} />
+          {uploadingLabel && uploadingTarget === "submission" ? <UploadProgress label={uploadingLabel} progress={uploadProgress} /> : null}
+          {!isAccepted ? (
+            <div className="assignment-actions">
+              <AttachmentMenu
+                open={attachmentMenu === "submission"}
+                onToggle={() => setAttachmentMenu((current) => current === "submission" ? null : "submission")}
+                onClose={() => setAttachmentMenu(null)}
+                onPick={(choice) => void uploadAttachment("submission", choice)}
+                disabled={submitting || Boolean(uploadingLabel)}
+              />
+              <button className="dark" type="button" onClick={() => setConfirmAction(hasTeacherComment ? "edit" : summary ? "resubmit" : "submit")} disabled={!canSubmitAssignment}>
+                <Send size={17} />
+                {hasTeacherComment ? "Сохранить правку" : isRevision ? "Отправить исправление" : summary ? "Обновить работу" : "Отправить задание"}
+              </button>
+              {isPending && !hasTeacherComment ? (
+                <button className="soft-danger" type="button" onClick={() => setConfirmAction("cancel")} disabled={submitting}>
+                  Отменить сдачу
+                </button>
+              ) : null}
+            </div>
+          ) : (
+            <p className="assignment-muted">Работа принята. Редактирование и комментарии закрыты.</p>
+          )}
+        </div>
 
-      {detail ? (
         <div className="assignment-comments">
           <h4>Комментарии</h4>
-          {detail.comments.length === 0 ? <p className="assignment-muted">Комментариев пока нет.</p> : null}
-          {detail.comments.map((comment) => (
+          {!detail || detail.comments.length === 0 ? <p className="assignment-muted">Комментариев пока нет.</p> : null}
+          {detail?.comments.map((comment) => (
             <article className={comment.author_role === "member" ? "student" : "teacher"} key={comment.id}>
-              <strong>{comment.author_role === "member" ? "Вы" : comment.author_full_name || "Преподаватель"}</strong>
+              <header>
+                <strong>{comment.author_role === "member" ? "Вы" : comment.author_full_name || "Преподаватель"}</strong>
+                <time>{formatCommentTime(comment.created_at)}</time>
+              </header>
               {comment.body ? <p>{comment.body}</p> : null}
               <AttachmentList attachments={comment.attachments} />
             </article>
           ))}
-          <textarea
-            value={commentBody}
-            onChange={(event) => setCommentBody(event.target.value)}
-            placeholder="Напишите комментарий преподавателю"
-          />
-          <AttachmentList attachments={commentAttachments} onRemove={(index) => setCommentAttachments((current) => current.filter((_, itemIndex) => itemIndex !== index))} />
-          <div className="assignment-actions">
-            <button type="button" onClick={() => void uploadAttachment("comment")} disabled={submitting}>
-              <Paperclip size={17} />
-              Файл
-            </button>
-            <button className="dark" type="button" onClick={() => void submitComment()} disabled={submitting || (!commentBody.trim() && commentAttachments.length === 0)}>
-              Отправить комментарий
-            </button>
-          </div>
+          {!isAccepted && detail ? (
+            <>
+              <textarea
+                value={commentBody}
+                onChange={(event) => setCommentBody(event.target.value)}
+                placeholder="Напишите комментарий преподавателю"
+              />
+              <AttachmentList attachments={commentAttachments} onRemove={(index) => setCommentAttachments((current) => current.filter((_, itemIndex) => itemIndex !== index))} />
+              {uploadingLabel && uploadingTarget === "comment" ? <UploadProgress label={uploadingLabel} progress={uploadProgress} /> : null}
+              <div className="assignment-actions">
+                <AttachmentMenu
+                  open={attachmentMenu === "comment"}
+                  onToggle={() => setAttachmentMenu((current) => current === "comment" ? null : "comment")}
+                  onClose={() => setAttachmentMenu(null)}
+                  onPick={(choice) => void uploadAttachment("comment", choice)}
+                  disabled={submitting || Boolean(uploadingLabel)}
+                  compact
+                />
+                <button className="dark" type="button" onClick={() => void submitComment()} disabled={submitting || Boolean(uploadingLabel) || (!commentBody.trim() && commentAttachments.length === 0)}>
+                  Отправить комментарий
+                </button>
+              </div>
+            </>
+          ) : null}
         </div>
+      </div>
+      {confirmAction ? (
+        <AssignmentConfirmDialog
+          action={confirmAction}
+          status={summary?.status}
+          busy={submitting}
+          onCancel={() => setConfirmAction(null)}
+          onConfirm={() => {
+            if (confirmAction === "cancel") {
+              void cancelSubmission();
+              return;
+            }
+            void submitAssignment();
+          }}
+        />
       ) : null}
     </section>
+  );
+}
+
+function AssignmentConfirmDialog({
+  action,
+  status,
+  busy,
+  onCancel,
+  onConfirm
+}: {
+  action: "submit" | "resubmit" | "edit" | "cancel";
+  status?: string;
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const copy = {
+    submit: {
+      title: "Отправить задание?",
+      text: "Работа попадет преподавателю на проверку.",
+      confirm: "Отправить"
+    },
+    resubmit: {
+      title: status === "needs_revision" ? "Отправить исправление?" : "Обновить отправленную работу?",
+      text: status === "needs_revision"
+        ? "Исправленная работа заменит предыдущий ответ и снова попадет преподавателю на проверку."
+        : "Обновленный ответ заменит предыдущую версию и останется на рассмотрении.",
+      confirm: status === "needs_revision" ? "Отправить исправление" : "Обновить работу"
+    },
+    edit: {
+      title: "Сохранить правку?",
+      text: "Преподаватель увидит обновленный ответ и отметку о редактировании.",
+      confirm: "Сохранить"
+    },
+    cancel: {
+      title: "Отменить сдачу?",
+      text: "Работа будет снята с проверки. Вы сможете отправить ее позже.",
+      confirm: "Отменить сдачу"
+    }
+  }[action];
+
+  return (
+    <div className="preview-confirm-backdrop assignment-confirm-backdrop" onMouseDown={onCancel}>
+      <section className="preview-confirm-dialog" role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()}>
+        <header>
+          <AlertTriangle size={20} />
+          <div>
+            <h2>{copy.title}</h2>
+            <p>{copy.text}</p>
+          </div>
+        </header>
+        <div>
+          <button type="button" onClick={onCancel} disabled={busy}>Назад</button>
+          <button className={action === "cancel" ? "danger" : ""} type="button" onClick={onConfirm} disabled={busy}>
+            {copy.confirm}
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function AttachmentMenu({
+  open,
+  disabled,
+  compact,
+  onToggle,
+  onClose,
+  onPick
+}: {
+  open: boolean;
+  disabled?: boolean;
+  compact?: boolean;
+  onToggle: () => void;
+  onClose: () => void;
+  onPick: (choice: "media" | "document") => void;
+}) {
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    function handlePointerDown(event: PointerEvent) {
+      if (menuRef.current?.contains(event.target as Node)) return;
+      onClose();
+    }
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    return () => window.removeEventListener("pointerdown", handlePointerDown);
+  }, [onClose, open]);
+
+  return (
+    <div className="assignment-attach-menu" ref={menuRef}>
+      <button type="button" onClick={onToggle} disabled={disabled}>
+        <Upload size={17} />
+        {compact ? "Файл" : "Прикрепить файл"}
+      </button>
+      {open ? (
+        <div className="assignment-attach-popover">
+          <button type="button" onClick={() => onPick("media")}>
+            <Image size={18} />
+            Изображение, видео или аудио
+          </button>
+          <button type="button" onClick={() => onPick("document")}>
+            <FileText size={18} />
+            Документ
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function UploadProgress({ label, progress }: { label: string; progress: number | null }) {
+  const percent = progress === null ? null : Math.max(0, Math.min(100, Math.round(progress)));
+  return (
+    <div className="assignment-upload-progress">
+      <span>{label}</span>
+      <strong>{percent === null ? "Загрузка..." : `${percent}%`}</strong>
+      <i style={{ width: `${percent ?? 46}%` }} />
+    </div>
   );
 }
 
@@ -842,6 +1141,21 @@ function attachmentPreviewKind(attachment: SubmissionAttachment): "image" | "vid
   if (attachment.kind === "image" || attachment.mime_type?.startsWith("image/")) return "image";
   if (attachment.kind === "video" || attachment.mime_type?.startsWith("video/")) return "video";
   return "document";
+}
+
+function sameAttachments(left: SubmissionAttachment[], right: SubmissionAttachment[]): boolean {
+  if (left.length !== right.length) return false;
+  return left.every((attachment, index) => {
+    const other = right[index];
+    return Boolean(
+      other &&
+        attachment.url === other.url &&
+        attachment.name === other.name &&
+        attachment.kind === other.kind &&
+        attachment.mime_type === other.mime_type &&
+        attachment.size_bytes === other.size_bytes
+    );
+  });
 }
 
 function PersistentVideo({
@@ -1215,11 +1529,29 @@ function submissionStatusLabel(status: string): string {
   return "На рассмотрении";
 }
 
-function pickLocalFile(): Promise<File | null> {
+function assignmentSuccessMessage(status: string | undefined, hasTeacherComment: boolean): string {
+  if (hasTeacherComment) return "Правка сохранена и отправлена преподавателю";
+  if (status === "needs_revision") return "Исправление отправлено на повторную проверку";
+  if (status === "pending") return "Работа обновлена и остается на рассмотрении";
+  return "Задание отправлено на проверку";
+}
+
+function formatCommentTime(value: string): string {
+  return new Date(value).toLocaleString("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+function pickLocalFile(choice: "media" | "document"): Promise<File | null> {
   return new Promise((resolve) => {
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = "image/*,audio/*,video/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.epub,.fb2,*/*";
+    input.accept = choice === "media"
+      ? "image/*,audio/*,video/*"
+      : ".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.rtf,.epub,.fb2,.zip,.rar,*/*";
     input.onchange = () => resolve(input.files?.[0] ?? null);
     input.click();
   });

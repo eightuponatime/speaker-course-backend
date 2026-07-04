@@ -7,6 +7,7 @@ export type Lesson = {
   position: number;
   status: "draft" | "published" | "archived";
   draft_content: EditorContent;
+  published_content?: EditorContent;
 };
 
 export type EditorContent = {
@@ -148,6 +149,17 @@ export type LessonSubmissionComment = {
   author_role: "owner" | "admin" | "member";
 };
 
+export type LessonSubmissionRevision = {
+  id: string;
+  submission_id: string;
+  editor_id: string;
+  previous_body: string;
+  previous_attachments: SubmissionAttachment[];
+  next_body: string;
+  next_attachments: SubmissionAttachment[];
+  created_at: string;
+};
+
 export type LessonSubmissionSummary = {
   id: string;
   lesson_id: string;
@@ -174,6 +186,7 @@ export type AdminLessonSubmissionListItem = LessonSubmissionSummary & {
 export type LessonSubmissionDetail = {
   submission: LessonSubmission;
   comments: LessonSubmissionComment[];
+  revisions: LessonSubmissionRevision[];
 };
 
 export type User = {

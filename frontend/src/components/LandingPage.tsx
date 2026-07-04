@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import {
+  getMyPrimaryCourseAccess,
   getMyPrimaryCourseEnrollment,
   getPrimaryCourse,
   getPrimaryCourseProgram
@@ -25,7 +26,7 @@ import mainSectionBannerImage from "../../assets/images/main_section_banner.png"
 import newCourseProgramBannerImage from "../../assets/images/new_course_program_banner.png";
 import siteEndImage from "../../assets/images/site_end.png";
 import type { CourseProgramSection } from "../api/courseDatasource";
-import type { Course, CourseEnrollment, User } from "../entities/course/course";
+import type { Course, CourseAccessWindow, CourseEnrollment, User } from "../entities/course/course";
 import type { Notification } from "../entities/notification/notification";
 import type { TranslationKey } from "../i18n";
 import { NotificationBell } from "./NotificationBell";
@@ -69,6 +70,7 @@ export function LandingPage({
 }: LandingPageProps) {
   const [course, setCourse] = useState<Course | null>(null);
   const [enrollment, setEnrollment] = useState<CourseEnrollment | null>(null);
+  const [courseAccess, setCourseAccess] = useState<CourseAccessWindow | null>(null);
   const [accessLoading, setAccessLoading] = useState(false);
   const [accessError, setAccessError] = useState("");
   const [mode, setMode] = useState<"login" | "register">("login");
@@ -91,6 +93,7 @@ export function LandingPage({
   const [forgotSubmitting, setForgotSubmitting] = useState(false);
   const [authNotice, setAuthNotice] = useState("");
   const [authNoticeDialogOpen, setAuthNoticeDialogOpen] = useState(false);
+  const [courseStartConfirmOpen, setCourseStartConfirmOpen] = useState(false);
   const [programSections, setProgramSections] = useState<CourseProgramSection[]>([]);
   const criticalAssetsReady = useAssetPreload(landingCriticalImages, {
     minDelayMs: 450,
@@ -123,6 +126,7 @@ export function LandingPage({
     async function loadEnrollment() {
       if (!currentUser || isAdminUser(currentUser)) {
         setEnrollment(null);
+        setCourseAccess(null);
         return;
       }
 
@@ -130,9 +134,13 @@ export function LandingPage({
       setAccessError("");
 
       try {
-        const nextEnrollment = await getMyPrimaryCourseEnrollment();
+        const [nextEnrollment, nextAccess] = await Promise.all([
+          getMyPrimaryCourseEnrollment(),
+          getMyPrimaryCourseAccess()
+        ]);
         if (!cancelled) {
           setEnrollment(nextEnrollment);
+          setCourseAccess(nextAccess);
         }
       } catch (err) {
         if (!cancelled) {
@@ -277,6 +285,15 @@ export function LandingPage({
     window.setTimeout(() => {
       highlightSection("program");
     }, 0);
+  }
+
+  function handleOpenCourse() {
+    if (currentUser && !isAdminUser(currentUser) && enrollment?.status === "approved" && !courseAccess?.first_access_at) {
+      setCourseStartConfirmOpen(true);
+      return;
+    }
+
+    onOpenCourse?.();
   }
 
   const courseTitle = "Курсы ораторского мастерства";
@@ -549,7 +566,7 @@ export function LandingPage({
                   <button type="button" onClick={onAdminOpen}>
                     {t("adminPanel")}
                   </button>
-                  <button className="secondary" type="button" onClick={onOpenCourse}>
+                  <button className="secondary" type="button" onClick={handleOpenCourse}>
                     {t("enterCourse")}
                   </button>
                 </div>
@@ -565,7 +582,7 @@ export function LandingPage({
 
                 <div className="landing-status-actions">
                   {enrollment?.status === "approved" ? (
-                    <button type="button" onClick={onOpenCourse}>
+                    <button type="button" onClick={handleOpenCourse}>
                       {t("enterCourse")}
                     </button>
                   ) : null}
@@ -578,7 +595,7 @@ export function LandingPage({
                   ) : null}
                   */}
                   {enrollment?.status !== "approved" && enrollment ? (
-                    <button className="secondary" type="button" onClick={onOpenCourse}>
+                    <button className="secondary" type="button" onClick={handleOpenCourse}>
                       {t("details")}
                     </button>
                   ) : null}
@@ -675,8 +692,36 @@ export function LandingPage({
               <strong>Google-аккаунт не найден</strong>
               <span>Регистрация доступна только по персональной ссылке. Обратитесь к администратору курса.</span>
             </div>
-            <button type="button" onClick={() => setAuthNoticeDialogOpen(false)}>
+            <button type="button" onClick={scrollToProgramFromLogin}>
               Перейти к записи
+            </button>
+          </section>
+        </div>
+      ) : null}
+
+      {courseStartConfirmOpen ? (
+        <div className="landing-auth-dialog-backdrop" onMouseDown={() => setCourseStartConfirmOpen(false)}>
+          <section className="landing-forgot-dialog" onMouseDown={(event) => event.stopPropagation()}>
+            <button
+              className="landing-auth-dialog-close"
+              type="button"
+              aria-label="Закрыть"
+              onClick={() => setCourseStartConfirmOpen(false)}
+            >
+              <X size={20} strokeWidth={1.8} />
+            </button>
+            <div className="landing-auth-header">
+              <strong>Начать доступ к курсу?</strong>
+              <span>После перехода в курс начнется ваш 30-дневный срок доступа к материалам.</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setCourseStartConfirmOpen(false);
+                onOpenCourse?.();
+              }}
+            >
+              Перейти к курсу
             </button>
           </section>
         </div>
@@ -822,7 +867,7 @@ const landingCriticalImages = [
   markIcon
 ];
 
-const aboutCourseVideoUrl = "https://player.mediadelivery.net/play/673250/519e82d9-d077-433e-a4ee-8cbd6466cae9";
+const aboutCourseVideoUrl = "https://player.mediadelivery.net/play/673250/519e82d9-d077-433e-a4ee-8cbd6466cae9?primaryColor=%23D89B2D";
 const coursePresentationUrl = "https://logos-voice.b-cdn.net/landing/%D0%9F%D1%80%D0%B5%D0%B7%D0%B5%D0%BD%D1%82%D0%B0%D1%86%D0%B8%D1%8F%20Logos%20Voice.pdf";
 
 const benefits = [

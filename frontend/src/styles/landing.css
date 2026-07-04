@@ -1660,35 +1660,56 @@
   .landing-nav {
     grid-template-columns: minmax(0, 1fr) auto;
     justify-items: stretch;
-    gap: 12px;
-    padding: 10px 14px;
+    gap: 8px;
+    padding: 8px 10px;
   }
 
   .landing-nav-actions {
     justify-content: flex-end;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .landing-nav-button {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    overflow: hidden;
+  }
+
+  .landing-nav-button svg {
+    width: 18px;
+    height: 18px;
   }
 
   .landing-brand {
     min-width: 0;
     justify-self: start;
+    gap: 8px;
+    overflow: hidden;
   }
 
   .landing-brand img {
-    width: 34px;
-    height: 34px;
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+  }
+
+  .landing-brand span {
+    min-width: 0;
   }
 
   .landing-brand strong {
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .landing-brand small {
-    font-size: 8px;
+    font-size: 7px;
   }
 
   .landing-brand strong,
   .landing-brand small {
-    letter-spacing: 0.38em;
+    letter-spacing: 0.34em;
   }
 
   .landing-copy h1 {
@@ -1704,8 +1725,26 @@
     padding: 28px 18px 18px;
   }
 
+  .landing-hero-metrics {
+    gap: 10px;
+  }
+
   .landing-hero-metrics div {
-    grid-template-columns: 44px minmax(0, 1fr);
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 12px;
+    min-width: 0;
+    align-items: center;
+  }
+
+  .landing-hero-metrics img {
+    width: 64px;
+    height: 64px;
+  }
+
+  .landing-hero-metrics span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    line-height: 1.12;
   }
 
   .landing-hero>.landing-auth {

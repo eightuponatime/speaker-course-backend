@@ -20,7 +20,6 @@ type CourseTopbarProps = {
   onLandingOpen: () => void;
   onPreview: () => void;
   onPublish: () => void;
-  onProfileOpen: () => void;
   onNotificationOpen?: (notification: Notification) => void;
 };
 
@@ -38,7 +37,6 @@ export function CourseTopbar({
   onLandingOpen,
   onPreview,
   onPublish,
-  onProfileOpen,
   onNotificationOpen
 }: CourseTopbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -77,9 +75,10 @@ export function CourseTopbar({
           <NotificationBell emptyLabel={t("noNotifications")} onNotificationOpen={onNotificationOpen} />
         </div>
         <div className="topbar-platform-actions">
+          <NotificationBell emptyLabel={t("noNotifications")} onNotificationOpen={onNotificationOpen} />
           <button type="button" onClick={onLandingOpen}>
             <ExternalLink size={15} />
-            На лендинг
+            На главную
           </button>
           <button className="danger" type="button" onClick={() => setLogoutConfirmOpen(true)}>
             <LogOut size={16} />
@@ -151,7 +150,6 @@ export function CourseTopbar({
         </nav>
 
         <div className="course-actions">
-          <NotificationBell emptyLabel={t("noNotifications")} onNotificationOpen={onNotificationOpen} />
           <span className="save-indicator">
             <CheckCircle2 size={16} />
             {statusText}
@@ -159,9 +157,6 @@ export function CourseTopbar({
           <button className="preview-button" type="button" onClick={onPreview}>
             <Eye size={18} />
             {t("preview")}
-          </button>
-          <button className="preview-button" type="button" onClick={onProfileOpen}>
-            Профиль
           </button>
           <button
             className="publish-button"
@@ -222,9 +217,6 @@ export function CourseTopbar({
               </button>
               <button type="button" onClick={() => runMobileAction(onPreview)}>
                 {t("preview")}
-              </button>
-              <button type="button" onClick={() => runMobileAction(onProfileOpen)}>
-                Профиль
               </button>
               <button
                 type="button"

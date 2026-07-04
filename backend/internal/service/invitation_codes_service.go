@@ -89,6 +89,22 @@ func (s *InvitationCodesService) ListByCourse(
 	return s.rp.ListByCourse(ctx, courseId)
 }
 
+func (s *InvitationCodesService) GetByCode(
+	ctx context.Context,
+	courseId uuid.UUID,
+	code string,
+) (*domain.CourseInvitationCode, error) {
+	code = strings.TrimSpace(code)
+	if courseId == uuid.Nil {
+		return nil, fmt.Errorf("%w: course_id is empty", ErrInvalidInvitationCode)
+	}
+	if code == "" {
+		return nil, fmt.Errorf("%w: code is empty", ErrInvalidInvitationCode)
+	}
+
+	return s.rp.GetByCode(ctx, courseId, code)
+}
+
 func (s *InvitationCodesService) RegisterWithCode(
 	ctx context.Context,
 	input domain.RegisterWithInvitationCodeInput,

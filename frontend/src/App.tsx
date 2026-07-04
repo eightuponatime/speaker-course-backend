@@ -96,6 +96,11 @@ export default function App() {
   }, []);
   const t = useCallback((key: Parameters<typeof translate>[1]) => translate("ru", key), []);
 
+  useEffect(() => {
+    if (isPreviewing) return;
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [activeTab, isPreviewing]);
+
   const navigate = useCallback((nextPath: string) => {
     window.history.pushState(null, "", nextPath);
     setPath(nextPath);
@@ -553,7 +558,7 @@ export default function App() {
   async function handleUndo() {
     const editor = editorRef.current;
     const previous = historyRef.current.past.pop();
-    if (!editor || !previous) return;
+    if (!editor || !previous || !activeLesson) return;
 
     try {
       await editor.isReady;
@@ -562,9 +567,15 @@ export default function App() {
       historyRef.current.restoring = true;
       await editor.blocks.render(previous as unknown as OutputData);
       historyRef.current.current = cloneEditorContent(previous);
-      markUnpublishedChanges();
-      setPublishStatus("Unsaved changes");
-      scheduleAutosave();
+      syncLessonDraftState(previous);
+      if (isLessonContentUnpublished(activeLesson, previous)) {
+        setPublishStatus("Unsaved changes");
+        scheduleAutosave();
+      } else {
+        clearAutosaveTimer();
+        setPublishStatus("Back to published version");
+        void saveLessonDraft(activeLesson.id, previous).catch((err) => setPublishStatus(formatError(err)));
+      }
     } catch (err) {
       setPublishStatus(formatError(err));
     } finally {
@@ -576,7 +587,7 @@ export default function App() {
   async function handleRedo() {
     const editor = editorRef.current;
     const next = historyRef.current.future.shift();
-    if (!editor || !next) return;
+    if (!editor || !next || !activeLesson) return;
 
     try {
       await editor.isReady;
@@ -585,9 +596,15 @@ export default function App() {
       historyRef.current.restoring = true;
       await editor.blocks.render(next as unknown as OutputData);
       historyRef.current.current = cloneEditorContent(next);
-      markUnpublishedChanges();
-      setPublishStatus("Unsaved changes");
-      scheduleAutosave();
+      syncLessonDraftState(next);
+      if (isLessonContentUnpublished(activeLesson, next)) {
+        setPublishStatus("Unsaved changes");
+        scheduleAutosave();
+      } else {
+        clearAutosaveTimer();
+        setPublishStatus("Back to published version");
+        void saveLessonDraft(activeLesson.id, next).catch((err) => setPublishStatus(formatError(err)));
+      }
     } catch (err) {
       setPublishStatus(formatError(err));
     } finally {
@@ -987,9 +1004,64 @@ export default function App() {
     });
   }
 
+  function clearAutosaveTimer() {
+    if (autosaveTimerRef.current) {
+      window.clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
+    }
+  }
+
+  function syncLessonDraftState(content: EditorContent) {
+    if (!activeLesson) return;
+    const nextContent = cloneEditorContent(content);
+
+    setCurriculum((current) => {
+      if (!current) return current;
+      const hasUnpublishedLessonContent = current.sections.some((section) =>
+        safeLessons(section.lessons).some((lesson) => {
+          if (lesson.id !== activeLesson.id) return isLessonContentUnpublished(lesson, lesson.draft_content as EditorContent);
+          return isLessonContentUnpublished(lesson, nextContent);
+        })
+      );
+
+      return {
+        ...current,
+        has_unpublished_changes: hasUnpublishedLessonContent,
+        sections: current.sections.map((section) => ({
+          ...section,
+          lessons: safeLessons(section.lessons).map((lesson) =>
+            lesson.id === activeLesson.id
+              ? {
+                  ...lesson,
+                  draft_content: nextContent
+                }
+              : lesson
+          )
+        }))
+      };
+    });
+  }
+
   function handleNotificationOpen(notification: Notification) {
     if (notification.type === "course_enrollment_requested") {
       setActiveTab("invitations");
+      if (!window.location.pathname.startsWith("/admin")) {
+        navigate("/admin");
+      }
+      return;
+    }
+
+    if (
+      notification.type === "lesson_submission_sent" ||
+      notification.type === "lesson_submission_commented" ||
+      notification.type === "lesson_submission_status_updated"
+    ) {
+      if (!isAdminUser(currentUser) && notification.lesson_id) {
+        navigate(`/course?lesson_id=${encodeURIComponent(notification.lesson_id)}&section=assignment`);
+        return;
+      }
+
+      setActiveTab("assignments");
       if (!window.location.pathname.startsWith("/admin")) {
         navigate("/admin");
       }
@@ -1080,6 +1152,8 @@ export default function App() {
           onLogout={handleLogout}
           onLandingOpen={() => navigate("/")}
           onProfileOpen={() => setIsProfileOpen(true)}
+          initialLessonId={new URLSearchParams(window.location.search).get("lesson_id") || ""}
+          onNotificationOpen={handleNotificationOpen}
         />
         {renderProfileModal()}
       </>
@@ -1100,7 +1174,7 @@ export default function App() {
               {t("logout")}
             </button>
             <button className="secondary" type="button" onClick={() => navigate("/")}>
-              На лендинг
+              На главную
             </button>
           </div>
         </section>
@@ -1130,6 +1204,7 @@ export default function App() {
           onLandingOpen={() => navigate("/")}
           onBack={isPreviewing ? () => setIsPreviewing(false) : undefined}
           onProfileOpen={() => setIsProfileOpen(true)}
+          onNotificationOpen={handleNotificationOpen}
           enableQuizStats={isAdminUser(currentUser)}
           storageScope={currentUser?.id || "admin-preview"}
           isPreviewMode={isPreviewing}
@@ -1156,7 +1231,6 @@ export default function App() {
           onLandingOpen={() => navigate("/")}
           onPreview={() => setIsPreviewing(true)}
           onPublish={handlePublish}
-          onProfileOpen={() => setIsProfileOpen(true)}
           onNotificationOpen={handleNotificationOpen}
         />
         {activeTab === "curriculum" ? (
@@ -1666,6 +1740,11 @@ function cloneEditorContent(content: EditorContent): EditorContent {
 
 function sameEditorContent(left: EditorContent, right: EditorContent): boolean {
   return JSON.stringify(left.blocks || []) === JSON.stringify(right.blocks || []);
+}
+
+function isLessonContentUnpublished(lesson: Lesson, draftContent: EditorContent): boolean {
+  if (!lesson.published_content) return true;
+  return !sameEditorContent(draftContent, lesson.published_content);
 }
 
 function createClientId(prefix: string): string {

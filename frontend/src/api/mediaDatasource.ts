@@ -1,10 +1,10 @@
-import { request } from "./http";
+import { apiBaseUrl, request } from "./http";
 import * as tus from "tus-js-client";
 import type { MediaAsset, MediaAssetKind, StreamUploadCredentials, StreamVideoStatus } from "../entities/media/media";
 
 type UploadStorageAssetInput = {
   file: File;
-  kind: Extract<MediaAssetKind, "image" | "pdf" | "file">;
+  kind: Extract<MediaAssetKind, "image" | "video" | "pdf" | "file">;
   courseId?: string;
   lessonId?: string;
 };
@@ -68,10 +68,10 @@ export async function uploadUserSubmissionAsset(input: UploadStorageAssetInput &
     });
   }
 
-  return uploadUserStorageAsset({
+  return uploadUserStorageAssetWithProgress({
     ...input,
     kind: input.file.type.startsWith("image/") ? "image" : "file"
-  });
+  }, input.onProgress);
 }
 
 export async function createStreamUpload(title: string): Promise<StreamUploadCredentials> {
@@ -158,6 +158,65 @@ function uploadVideoWithTus(
 
     upload.start();
   });
+}
+
+function uploadUserStorageAssetWithProgress(
+  input: UploadStorageAssetInput,
+  onProgress?: (progress: number) => void
+): Promise<MediaAsset> {
+  const formData = new FormData();
+  formData.append("file", input.file);
+  formData.append("kind", input.kind);
+
+  if (input.courseId) {
+    formData.append("course_id", input.courseId);
+  }
+  if (input.lessonId) {
+    formData.append("lesson_id", input.lessonId);
+  }
+
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${apiBaseUrl}/media/storage`);
+    xhr.withCredentials = true;
+
+    xhr.upload.onprogress = (event) => {
+      if (!event.lengthComputable || !onProgress) return;
+      onProgress(Math.min(99, Math.round((event.loaded / event.total) * 100)));
+    };
+
+    xhr.onload = () => {
+      if (xhr.status < 200 || xhr.status >= 300) {
+        reject(new Error(readUploadError(xhr.responseText) || xhr.statusText));
+        return;
+      }
+
+      try {
+        onProgress?.(100);
+        resolve(JSON.parse(xhr.responseText) as MediaAsset);
+      } catch (error) {
+        reject(error);
+      }
+    };
+
+    xhr.onerror = () => reject(new Error("Не удалось загрузить файл"));
+    xhr.onabort = () => reject(new Error("Загрузка файла отменена"));
+    xhr.send(formData);
+  });
+}
+
+function readUploadError(text: string): string {
+  if (!text) return "";
+
+  try {
+    const payload = JSON.parse(text) as { error?: unknown; message?: unknown };
+    if (typeof payload.error === "string") return payload.error;
+    if (typeof payload.message === "string") return payload.message;
+  } catch {
+    return text;
+  }
+
+  return text;
 }
 
 function inferVideoMimeType(fileName: string): string {

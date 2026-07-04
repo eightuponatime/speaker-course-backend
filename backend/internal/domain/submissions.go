@@ -52,6 +52,17 @@ type LessonSubmissionComment struct {
 	AuthorRole   UserRole        `db:"author_role" json:"author_role"`
 }
 
+type LessonSubmissionRevision struct {
+	Id                  uuid.UUID       `db:"id" json:"id"`
+	SubmissionId        uuid.UUID       `db:"submission_id" json:"submission_id"`
+	EditorId            uuid.UUID       `db:"editor_id" json:"editor_id"`
+	PreviousBody        string          `db:"previous_body" json:"previous_body"`
+	PreviousAttachments json.RawMessage `db:"previous_attachments" json:"previous_attachments"`
+	NextBody            string          `db:"next_body" json:"next_body"`
+	NextAttachments     json.RawMessage `db:"next_attachments" json:"next_attachments"`
+	CreatedAt           time.Time       `db:"created_at" json:"created_at"`
+}
+
 type LessonSubmissionSummary struct {
 	Id                uuid.UUID              `db:"id" json:"id"`
 	LessonId          uuid.UUID              `db:"lesson_id" json:"lesson_id"`
@@ -77,6 +88,7 @@ type AdminLessonSubmissionListItem struct {
 }
 
 type LessonSubmissionDetail struct {
-	Submission LessonSubmission          `json:"submission"`
-	Comments   []LessonSubmissionComment `json:"comments"`
+	Submission LessonSubmission           `json:"submission"`
+	Comments   []LessonSubmissionComment  `json:"comments"`
+	Revisions  []LessonSubmissionRevision `json:"revisions"`
 }

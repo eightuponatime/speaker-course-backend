@@ -139,14 +139,14 @@ export function StudentActivityPanel({ courseId, totalLessons, t }: StudentActiv
           <span>Прогресс</span>
           <span>Доступ</span>
           <span>Последний вход</span>
-          <span>Последнее действие</span>
+          <span>Активность в курсе</span>
           <span />
         </div>
         {filteredItems.map((item) => (
           <div className="student-activity-row" key={item.user_id}>
             <div>
-              <strong>{item.user_full_name || item.user_email}</strong>
-              <span>{item.user_email}</span>
+              <strong title={item.user_full_name || item.user_email}>{item.user_full_name || item.user_email}</strong>
+              <span title={item.user_email}>{item.user_email}</span>
             </div>
             <div>
               <span className={item.is_online ? "activity-status online" : "activity-status"}>
@@ -154,8 +154,8 @@ export function StudentActivityPanel({ courseId, totalLessons, t }: StudentActiv
               </span>
             </div>
             <div>
-              <strong>{item.current_lesson_title || "Еще не открывал"}</strong>
-              <span>{item.current_section_title || "Раздел не определен"}</span>
+              <strong title={item.current_lesson_title || "Еще не открывал"}>{item.current_lesson_title || "Еще не открывал"}</strong>
+              <span title={item.current_section_title || "Раздел не определен"}>{item.current_section_title || "Раздел не определен"}</span>
             </div>
             <div>
               <span className={progressClassName(item)}>{item.viewed_lessons} / {item.total_lessons}</span>
@@ -169,8 +169,8 @@ export function StudentActivityPanel({ courseId, totalLessons, t }: StudentActiv
               <span className="activity-muted-value">{item.last_login_at ? formatDateTime(item.last_login_at) : "нет входов"}</span>
             </div>
             <div>
-              <span className="activity-muted-value">{item.last_seen_at ? formatDateTime(item.last_seen_at) : "нет активности"}</span>
-              <span>{item.is_online ? "сейчас в курсе" : "последнее действие в курсе"}</span>
+              <span className="activity-muted-value" title={item.last_seen_at ? formatDateTime(item.last_seen_at) : "нет активности"}>{item.last_seen_at ? formatDateTime(item.last_seen_at) : "нет активности"}</span>
+              <span title={item.is_online ? "сейчас в курсе" : "последнее действие в курсе"}>{item.is_online ? "сейчас в курсе" : "последнее действие в курсе"}</span>
             </div>
             <button className="secondary-button compact" type="button" onClick={() => void openHistory(item)}>
               История

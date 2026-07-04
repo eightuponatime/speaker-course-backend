@@ -121,6 +121,43 @@ func (r *InvitationCodesRepository) GetActiveByCodeForUpdate(
 	return &code, nil
 }
 
+func (r *InvitationCodesRepository) GetByCode(
+	ctx context.Context,
+	courseId uuid.UUID,
+	codeValue string,
+) (*domain.CourseInvitationCode, error) {
+	const query = `
+		select id,
+			course_id,
+			code,
+			case
+				when used_at is not null then 'used'
+				when expires_at <= now() then 'expired'
+				else 'active'
+			end as status,
+			created_by,
+			used_by,
+			created_at,
+			expires_at,
+			used_at
+		from course_invitation_codes
+		where course_id = $1
+			and code = $2
+	`
+
+	q := extractTransaction(ctx, r.db)
+	var code domain.CourseInvitationCode
+	if err := sqlx.GetContext(ctx, q, &code, query, courseId, codeValue); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+
+		return nil, err
+	}
+
+	return &code, nil
+}
+
 func (r *InvitationCodesRepository) MarkUsed(
 	ctx context.Context,
 	id uuid.UUID,

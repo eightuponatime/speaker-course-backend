@@ -78,7 +78,7 @@ func NewMediaService(cfg *config.Config, rp *repository.MediaAssetsRepository) *
 		cfg: cfg,
 		rp:  rp,
 		httpClient: &http.Client{
-			Timeout: 60 * time.Second,
+			Timeout: 60 * time.Minute,
 		},
 	}
 }
@@ -98,9 +98,6 @@ func (s *MediaService) UploadToStorage(
 	}
 	if input.SizeBytes <= 0 {
 		return nil, fmt.Errorf("%w: file size must be positive", ErrInvalidMedia)
-	}
-	if input.SizeBytes > 50*1024*1024 {
-		return nil, fmt.Errorf("%w: file is too large", ErrInvalidMedia)
 	}
 	if !isStorageKind(input.Kind) {
 		return nil, fmt.Errorf("%w: unsupported storage kind", ErrInvalidMedia)

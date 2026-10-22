@@ -181,6 +181,8 @@ export type AdminLessonSubmissionListItem = LessonSubmissionSummary & {
   user_full_name: string;
   body_preview: string;
   attachment_count: number;
+  has_unread_comment: boolean;
+  latest_student_comment_preview: string;
 };
 
 export type LessonSubmissionDetail = {

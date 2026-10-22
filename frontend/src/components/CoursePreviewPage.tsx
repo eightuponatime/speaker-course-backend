@@ -25,6 +25,7 @@ import { NotificationBell } from "./NotificationBell";
 import { UmbraLogo } from "./umbra/UmbraLogo";
 import { BunnyHlsPlayer } from "./BunnyHlsPlayer";
 import { bunnyHlsUrl } from "../utils/mediaUrls";
+import { submissionErrorMessage } from "../utils/submissionError";
 
 type CoursePreviewPageProps = {
   theme?: "umbra" | "legacy";
@@ -738,13 +739,14 @@ function LessonAssignmentPanel({
   const [attachments, setAttachments] = useState<SubmissionAttachment[]>([]);
   const [commentBody, setCommentBody] = useState("");
   const [commentAttachments, setCommentAttachments] = useState<SubmissionAttachment[]>([]);
+  const [commentError, setCommentError] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [attachmentMenu, setAttachmentMenu] = useState<"submission" | "comment" | null>(null);
   const [uploadingLabel, setUploadingLabel] = useState("");
   const [uploadingTarget, setUploadingTarget] = useState<"submission" | "comment" | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
-  const [confirmAction, setConfirmAction] = useState<"submit" | "resubmit" | "edit" | "cancel" | null>(null);
+  const [confirmAction, setConfirmAction] = useState<"submit" | "resubmit" | "edit" | "cancel" | "comment" | null>(null);
   const isAccepted = summary?.status === "accepted";
   const isRevision = summary?.status === "needs_revision";
   const isPending = summary?.status === "pending";
@@ -771,6 +773,9 @@ function LessonAssignmentPanel({
     setDetail(null);
     setBody("");
     setAttachments([]);
+    setCommentBody("");
+    setCommentAttachments([]);
+    setCommentError("");
 
     async function loadDetail() {
       setLoading(true);
@@ -873,7 +878,9 @@ function LessonAssignmentPanel({
 
   async function submitComment() {
     if (!detail) return;
+    setConfirmAction(null);
     setSubmitting(true);
+    setCommentError("");
     try {
       const comment = await addSubmissionComment({
         submissionId: detail.submission.id,
@@ -884,6 +891,8 @@ function LessonAssignmentPanel({
       setCommentBody("");
       setCommentAttachments([]);
       showToast("Комментарий отправлен");
+    } catch (error) {
+      setCommentError(`Не удалось отправить комментарий: ${submissionErrorMessage(error)}`);
     } finally {
       setSubmitting(false);
     }
@@ -936,7 +945,7 @@ function LessonAssignmentPanel({
               ) : null}
             </div>
           ) : (
-            <p className="assignment-muted">Работа принята. Редактирование и комментарии закрыты.</p>
+            <p className="assignment-muted">Работа принята. Редактирование ответа закрыто, обсуждение доступно ниже.</p>
           )}
         </div>
 
@@ -953,7 +962,7 @@ function LessonAssignmentPanel({
               <AttachmentList attachments={comment.attachments} />
             </article>
           ))}
-          {!isAccepted && detail ? (
+          {detail ? (
             <>
               <textarea
                 value={commentBody}
@@ -961,6 +970,7 @@ function LessonAssignmentPanel({
                 placeholder="Напишите комментарий преподавателю"
               />
               <AttachmentList attachments={commentAttachments} onRemove={(index) => setCommentAttachments((current) => current.filter((_, itemIndex) => itemIndex !== index))} />
+              {commentError ? <p className="assignment-comment-error" role="alert">{commentError}</p> : null}
               {uploadingLabel && uploadingTarget === "comment" ? <UploadProgress label={uploadingLabel} progress={uploadProgress} /> : null}
               <div className="assignment-actions">
                 <AttachmentMenu
@@ -971,7 +981,7 @@ function LessonAssignmentPanel({
                   disabled={submitting || Boolean(uploadingLabel)}
                   compact
                 />
-                <button className="dark" type="button" onClick={() => void submitComment()} disabled={submitting || Boolean(uploadingLabel) || (!commentBody.trim() && commentAttachments.length === 0)}>
+                <button className="dark" type="button" onClick={() => setConfirmAction("comment")} disabled={submitting || Boolean(uploadingLabel) || (!commentBody.trim() && commentAttachments.length === 0)}>
                   Отправить комментарий
                 </button>
               </div>
@@ -986,6 +996,10 @@ function LessonAssignmentPanel({
           busy={submitting}
           onCancel={() => setConfirmAction(null)}
           onConfirm={() => {
+            if (confirmAction === "comment") {
+              void submitComment();
+              return;
+            }
             if (confirmAction === "cancel") {
               void cancelSubmission();
               return;
@@ -1005,7 +1019,7 @@ function AssignmentConfirmDialog({
   onCancel,
   onConfirm
 }: {
-  action: "submit" | "resubmit" | "edit" | "cancel";
+  action: "submit" | "resubmit" | "edit" | "cancel" | "comment";
   status?: string;
   busy: boolean;
   onCancel: () => void;
@@ -1033,12 +1047,17 @@ function AssignmentConfirmDialog({
       title: "Отменить сдачу?",
       text: "Работа будет снята с проверки. Вы сможете отправить ее позже.",
       confirm: "Отменить сдачу"
+    },
+    comment: {
+      title: "Отправить комментарий?",
+      text: "Преподаватель получит ваш комментарий и прикреплённые файлы. Отправить сейчас?",
+      confirm: "Отправить комментарий"
     }
   }[action];
 
   return (
     <div className="preview-confirm-backdrop assignment-confirm-backdrop" onMouseDown={onCancel}>
-      <section className="preview-confirm-dialog" role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()}>
+      <section className={`preview-confirm-dialog${action === "comment" ? " comment-confirm-dialog" : ""}`} role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()}>
         <header>
           <AlertTriangle size={20} />
           <div>
@@ -1048,7 +1067,7 @@ function AssignmentConfirmDialog({
         </header>
         <div>
           <button type="button" onClick={onCancel} disabled={busy}>Назад</button>
-          <button className={action === "cancel" ? "danger" : ""} type="button" onClick={onConfirm} disabled={busy}>
+          <button className={action === "cancel" ? "danger" : action === "comment" ? "primary" : ""} type="button" onClick={onConfirm} disabled={busy}>
             {copy.confirm}
           </button>
         </div>

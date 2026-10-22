@@ -94,6 +94,7 @@ export default function App() {
   } | null>(null);
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const [unreadSubmissionsCount, setUnreadSubmissionsCount] = useState(0);
+  const [assignmentNotification, setAssignmentNotification] = useState<{ token: number; submissionId?: string }>({ token: 0 });
   const editorRef = useRef<EditorJS | null>(null);
   const autosaveTimerRef = useRef<number | null>(null);
   const historyRef = useRef<{ past: EditorContent[]; future: EditorContent[]; current: EditorContent | null; restoring: boolean }>({
@@ -1328,6 +1329,7 @@ export default function App() {
       }
 
       setActiveTab("assignments");
+      setAssignmentNotification((current) => ({ token: current.token + 1, submissionId: notification.submission_id }));
       if (!window.location.pathname.startsWith("/admin")) {
         navigate("/admin");
       }
@@ -1584,6 +1586,9 @@ export default function App() {
           <AssignmentSubmissionsPanel
             courseId={curriculum.course.id}
             onUnreadCountChange={setUnreadSubmissionsCount}
+            refreshToken={assignmentNotification.token}
+            focusSubmissionId={assignmentNotification.submissionId}
+            onNotificationHandled={(token) => setAssignmentNotification((current) => current.token === token ? { token } : current)}
           />
         ) : null}
         {activeTab === "access" ? (

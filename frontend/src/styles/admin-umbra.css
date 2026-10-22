@@ -209,6 +209,13 @@
   background: transparent;
 }
 .umbra-admin-shell :is(.privileges-table tr.pending td, .assignments-table tr.unread td) { background: #241c1b; }
+.umbra-admin-shell .assignments-unread-summary,
+.umbra-admin-shell .assignments-list-controls,
+.umbra-admin-shell .assignment-activity-label { color: var(--admin-muted); }
+.umbra-admin-shell .assignments-list-controls button { border-color: var(--admin-line); color: var(--admin-text); background: var(--admin-panel); }
+.umbra-admin-shell .assignments-list-controls button.active { border-color: #d20a38; color: #f1b4c1; background: #2a171d; }
+.umbra-admin-shell .assignment-activity-label.unread { color: #e54768; }
+.umbra-admin-shell .assignments-table tr.unread td:first-child { box-shadow: inset 3px 0 #d20a38; }
 .umbra-admin-shell :is(.access-table tbody tr:hover, .invitation-table tbody tr:hover) { background: #252528; }
 .umbra-admin-shell .assignments-empty-row td { color: var(--admin-muted); background: transparent; }
 .umbra-admin-shell .assignment-status { border-radius: 0; color: #e6c59c; background: #2a2118; }
@@ -324,6 +331,8 @@
 .umbra-admin-shell .admin-mobile-menu header span,
 .umbra-admin-shell .revision-diff-dialog > header span { color: #e65a70; }
 .umbra-admin-shell .assignment-detail { border-color: var(--admin-line); }
+.umbra-admin-shell .assignment-response-error { color: #ffb5c1; background: #30181e; }
+.umbra-admin-shell .assignment-response-success { color: #b8e0c5; background: #192b20; }
 .umbra-admin-shell .assignment-detail-status.pending { color: #e6c59c; background: #2a2118; }
 .umbra-admin-shell .assignment-detail-status.accepted { color: #b9dcc1; background: #17251c; }
 .umbra-admin-shell .assignment-detail-status.needs_revision { color: #f1a2b0; background: #2a181e; }

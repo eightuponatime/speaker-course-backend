@@ -1035,6 +1035,13 @@
   font-weight: 750;
 }
 
+.assignment-comment-error {
+  margin: 0;
+  color: #9e3428;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .assignment-comments article {
   display: grid;
   gap: 7px;

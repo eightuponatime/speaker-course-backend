@@ -179,6 +179,7 @@
 .umbra-course .lesson-assignment header p,
 .umbra-course .assignment-muted,
 .umbra-course .assignment-comments article time { color:var(--uc-muted); }
+.umbra-course .assignment-comment-error { color:#ffb5c1; }
 .umbra-course .lesson-assignment textarea {
   border:1px solid #68686e;
   border-radius:0;
@@ -221,6 +222,13 @@
 .umbra-course .preview-confirm-dialog button,
 .umbra-course .quiz-voters-dialog header button { border-color:#68686e; border-radius:0; color:var(--uc-text); }
 .umbra-course .preview-confirm-dialog button.danger { border-color:var(--uc-red); background:var(--uc-red); color:#fff; }
+.umbra-course .comment-confirm-dialog { width:min(420px,100%); gap:16px; padding:18px; }
+.umbra-course .comment-confirm-dialog header { gap:12px; }
+.umbra-course .comment-confirm-dialog header svg { flex:0 0 auto; color:var(--uc-red); }
+.umbra-course .comment-confirm-dialog h2 { font-family:Arial,"Helvetica Neue",sans-serif; font-size:18px; font-weight:700; line-height:1.25; }
+.umbra-course .comment-confirm-dialog p { margin-top:4px; font-size:13px; font-weight:400; line-height:1.4; }
+.umbra-course .comment-confirm-dialog button { min-height:36px; padding:0 13px; font-size:13px; }
+.umbra-course .comment-confirm-dialog button.primary { border-color:var(--uc-red); background:var(--uc-red); color:#fff; }
 .umbra-course .quiz-voters-dialog header { border-color:var(--uc-line); }
 .umbra-course .quiz-voters-dialog header strong,
 .umbra-course .quiz-voters-dialog-list article strong { color:var(--uc-text); }

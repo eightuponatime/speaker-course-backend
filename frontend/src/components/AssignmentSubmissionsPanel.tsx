@@ -16,19 +16,24 @@ import type {
   SubmissionAttachment,
   SubmissionStatus
 } from "../entities/course/course";
+import { submissionErrorMessage } from "../utils/submissionError";
 
 type AssignmentSubmissionsPanelProps = {
   courseId: string;
   onUnreadCountChange: (count: number) => void;
+  refreshToken?: number;
+  focusSubmissionId?: string;
+  onNotificationHandled?: (token: number) => void;
 };
 
-export function AssignmentSubmissionsPanel({ courseId, onUnreadCountChange }: AssignmentSubmissionsPanelProps) {
+export function AssignmentSubmissionsPanel({ courseId, onUnreadCountChange, refreshToken = 0, focusSubmissionId, onNotificationHandled }: AssignmentSubmissionsPanelProps) {
   const [items, setItems] = useState<AdminLessonSubmissionListItem[]>([]);
   const [selected, setSelected] = useState<LessonSubmissionDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [commentBody, setCommentBody] = useState("");
   const [commentAttachments, setCommentAttachments] = useState<SubmissionAttachment[]>([]);
   const [sortMode, setSortMode] = useState<"unread" | "newest" | "oldest">("unread");
+  const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const [draftStatus, setDraftStatus] = useState<SubmissionStatus>("pending");
   const [confirmSend, setConfirmSend] = useState<{
     status: SubmissionStatus;
@@ -40,15 +45,25 @@ export function AssignmentSubmissionsPanel({ courseId, onUnreadCountChange }: As
   const [uploadingLabel, setUploadingLabel] = useState("");
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [uploadError, setUploadError] = useState("");
+  const [listError, setListError] = useState("");
+  const [responseError, setResponseError] = useState("");
+  const [responseSuccess, setResponseSuccess] = useState("");
   const [busy, setBusy] = useState(false);
   const unreadCount = useMemo(() => items.filter((item) => item.is_unread_for_admin).length, [items]);
+  const visibleItems = useMemo(() => showUnreadOnly ? items.filter((item) => item.is_unread_for_admin) : items, [items, showUnreadOnly]);
   const hasAdminReply = commentBody.trim().length > 0 || commentAttachments.length > 0;
   const statusChanged = Boolean(selected && draftStatus !== selected.submission.status);
   const canSendResponse = Boolean(selected && !busy && !uploadingLabel && (hasAdminReply || statusChanged));
 
   useEffect(() => {
-    void loadItems();
-  }, [courseId]);
+    void (async () => {
+      await loadItems();
+      if (focusSubmissionId) {
+        await openSubmission(focusSubmissionId);
+        onNotificationHandled?.(refreshToken);
+      }
+    })();
+  }, [courseId, refreshToken]);
 
   useEffect(() => {
     onUnreadCountChange(unreadCount);
@@ -56,6 +71,7 @@ export function AssignmentSubmissionsPanel({ courseId, onUnreadCountChange }: As
 
   async function loadItems() {
     setLoading(true);
+    setListError("");
     try {
       const [nextItems, count] = await Promise.all([
         listAdminLessonSubmissions(courseId),
@@ -63,16 +79,31 @@ export function AssignmentSubmissionsPanel({ courseId, onUnreadCountChange }: As
       ]);
       setItems(sortItems(nextItems, sortMode));
       onUnreadCountChange(count.count);
+    } catch (error) {
+      setListError(`Не удалось загрузить работы: ${submissionErrorMessage(error)}`);
     } finally {
       setLoading(false);
     }
   }
 
-  async function openSubmission(item: AdminLessonSubmissionListItem) {
-    const detail = await getAdminLessonSubmission(item.id);
-    setSelected(detail);
-    setDraftStatus(detail.submission.status);
-    setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, is_unread_for_admin: false } : entry));
+  async function openSubmission(submissionId: string) {
+    setListError("");
+    try {
+      const detail = await getAdminLessonSubmission(submissionId);
+      setSelected(detail);
+      setDraftStatus(detail.submission.status);
+      setCommentBody("");
+      setCommentAttachments([]);
+      setUploadError("");
+      setAttachmentMenuOpen(false);
+      setResponseError("");
+      setResponseSuccess("");
+      setItems((current) => sortItems(current.map((entry) => entry.id === submissionId
+        ? { ...entry, is_unread_for_admin: false, has_unread_comment: false }
+        : entry), sortMode));
+    } catch (error) {
+      setListError(`Не удалось открыть работу: ${submissionErrorMessage(error)}`);
+    }
   }
 
   async function uploadAttachment(choice: "media" | "document") {
@@ -114,28 +145,46 @@ export function AssignmentSubmissionsPanel({ courseId, onUnreadCountChange }: As
 
   async function sendAdminResponse() {
     if (!selected) return;
+    const submissionId = selected.submission.id;
+    const shouldCreateComment = commentBody.trim().length > 0 || commentAttachments.length > 0;
+    const shouldUpdateStatus = draftStatus !== selected.submission.status;
+    let commentSent = false;
     setBusy(true);
+    setResponseError("");
+    setResponseSuccess("");
     try {
-      const shouldCreateComment = commentBody.trim().length > 0 || commentAttachments.length > 0;
-      const nextSubmission = draftStatus !== selected.submission.status
-        ? await updateLessonSubmissionStatus({ submissionId: selected.submission.id, status: draftStatus })
-        : selected.submission;
       const nextComment = shouldCreateComment
         ? await addAdminSubmissionComment({
-            submissionId: selected.submission.id,
+            submissionId,
             body: commentBody,
             attachments: commentAttachments
           })
         : null;
-      setSelected((current) => current ? {
-        ...current,
-        submission: nextSubmission,
-        comments: nextComment ? [...current.comments, nextComment] : current.comments
-      } : current);
-      setDraftStatus(nextSubmission.status);
-      setCommentBody("");
-      setCommentAttachments([]);
-      await loadItems();
+      if (nextComment) {
+        commentSent = true;
+        setSelected((current) => current?.submission.id === submissionId
+          ? { ...current, comments: [...current.comments, nextComment] }
+          : current);
+        setCommentBody("");
+        setCommentAttachments([]);
+      }
+
+      if (shouldUpdateStatus) {
+        const nextSubmission = await updateLessonSubmissionStatus({ submissionId, status: draftStatus });
+        setSelected((current) => current?.submission.id === submissionId
+          ? { ...current, submission: nextSubmission }
+          : current);
+        setDraftStatus(nextSubmission.status);
+      }
+      setResponseSuccess(shouldCreateComment
+        ? shouldUpdateStatus ? "Комментарий отправлен, статус обновлён." : "Комментарий отправлен."
+        : "Статус обновлён.");
+      void loadItems();
+    } catch (error) {
+      const detail = submissionErrorMessage(error);
+      setResponseError(commentSent
+        ? `Комментарий отправлен, но не удалось обновить статус: ${detail}`
+        : `Не удалось ${shouldCreateComment ? "отправить комментарий" : "обновить статус"}: ${detail}`);
     } finally {
       setBusy(false);
     }
@@ -147,6 +196,9 @@ export function AssignmentSubmissionsPanel({ courseId, onUnreadCountChange }: As
         <div>
           <span>Задания</span>
           <h2>Работы учеников</h2>
+          <p className="assignments-unread-summary" role="status">
+            {unreadCount > 0 ? `${unreadCount} ${unreadCount === 1 ? "работа ждёт" : "работы ждут"} просмотра` : "Все работы просмотрены"}
+          </p>
         </div>
         <div className="assignments-toolbar-actions">
           <label>
@@ -171,6 +223,15 @@ export function AssignmentSubmissionsPanel({ courseId, onUnreadCountChange }: As
         </div>
       </header>
 
+      {listError ? <p className="assignment-response-error" role="alert">{listError}</p> : null}
+
+      <div className="assignments-list-controls">
+        <button type="button" className={showUnreadOnly ? "active" : ""} aria-pressed={showUnreadOnly} onClick={() => setShowUnreadOnly((current) => !current)}>
+          Непросмотренные <span>{unreadCount}</span>
+        </button>
+        <span>После открытия работы отметка снимается.</span>
+      </div>
+
       <div className="assignments-table-wrap">
         <table className="assignments-table">
           <thead>
@@ -178,27 +239,34 @@ export function AssignmentSubmissionsPanel({ courseId, onUnreadCountChange }: As
               <th>Статус</th>
               <th>Ученик</th>
               <th>Урок</th>
-              <th>Комментарий</th>
+              <th>Последнее от ученика</th>
               <th>Файлы</th>
               <th>Обновлено</th>
               <th />
             </tr>
           </thead>
           <tbody>
-            {items.map((item) => (
+            {visibleItems.map((item) => (
               <tr className={item.is_unread_for_admin ? "unread" : ""} key={item.id}>
                 <td><span className={`assignment-status ${item.status}`}>{statusLabel(item.status)}</span></td>
                 <td><strong>{item.user_full_name || item.user_email}</strong><small>{item.user_email}</small></td>
                 <td><strong>{item.lesson_title}</strong><small>{item.section_title}</small></td>
-                <td>{item.body_preview || "Файл без текста"}</td>
+                <td>
+                  <span className={`assignment-activity-label${item.is_unread_for_admin ? " unread" : ""}`}>
+                    {item.is_unread_for_admin
+                      ? item.has_unread_comment ? "Новый комментарий" : "Непросмотренное обновление"
+                      : item.latest_student_comment_preview ? "Комментарий" : "Ответ на задание"}
+                  </span>
+                  <span className="assignment-activity-preview">{item.latest_student_comment_preview || item.body_preview || "Прикреплён файл"}</span>
+                </td>
                 <td>{item.attachment_count > 0 ? <span className="file-count"><Paperclip size={14} />{item.attachment_count}</span> : "0"}</td>
                 <td>{formatDateTime(item.updated_at)}</td>
-                <td><button type="button" onClick={() => void openSubmission(item)}>Открыть</button></td>
+                <td><button type="button" onClick={() => void openSubmission(item.id)}>{item.is_unread_for_admin ? "Просмотреть" : "Открыть"}</button></td>
               </tr>
             ))}
-            {!loading && items.length === 0 ? (
+            {!loading && !listError && visibleItems.length === 0 ? (
               <tr className="assignments-empty-row">
-                <td colSpan={7}>Заданий пока нет.</td>
+                <td colSpan={7}>{showUnreadOnly ? "Непросмотренных работ нет." : "Заданий пока нет."}</td>
               </tr>
             ) : null}
           </tbody>
@@ -256,6 +324,8 @@ export function AssignmentSubmissionsPanel({ courseId, onUnreadCountChange }: As
               />
               {uploadingLabel ? <UploadProgress label={uploadingLabel} progress={uploadProgress} /> : null}
               {uploadError ? <p role="alert" className="admin-media-error">{uploadError}</p> : null}
+              {responseError ? <p role="alert" className="assignment-response-error">{responseError}</p> : null}
+              {responseSuccess ? <p role="status" className="assignment-response-success">{responseSuccess}</p> : null}
               <div className="assignment-actions">
                 <div className="assignment-attach-menu">
                   <button type="button" onClick={() => setAttachmentMenuOpen((open) => !open)} disabled={busy}>

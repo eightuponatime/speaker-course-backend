@@ -199,9 +199,10 @@ func (s *SubmissionsService) AddComment(
 	if err != nil {
 		return nil, err
 	}
-	if submission != nil && submission.Status == domain.LessonSubmissionStatusAccepted {
-		return nil, fmt.Errorf("%w: accepted submission is readonly", ErrInvalidSubmission)
+	if submission == nil {
+		return nil, fmt.Errorf("%w: submission not found", ErrInvalidSubmission)
 	}
+	// Accepting a submission freezes its work, not the conversation about it.
 	return s.rp.AddComment(ctx, submissionID, authorID, body, payload, authorIsAdmin)
 }
 

@@ -79,12 +79,14 @@ type LessonSubmissionSummary struct {
 
 type AdminLessonSubmissionListItem struct {
 	LessonSubmissionSummary
-	LessonTitle     string `db:"lesson_title" json:"lesson_title"`
-	SectionTitle    string `db:"section_title" json:"section_title"`
-	UserEmail       string `db:"user_email" json:"user_email"`
-	UserFullName    string `db:"user_full_name" json:"user_full_name"`
-	BodyPreview     string `db:"body_preview" json:"body_preview"`
-	AttachmentCount int    `db:"attachment_count" json:"attachment_count"`
+	LessonTitle                 string `db:"lesson_title" json:"lesson_title"`
+	SectionTitle                string `db:"section_title" json:"section_title"`
+	UserEmail                   string `db:"user_email" json:"user_email"`
+	UserFullName                string `db:"user_full_name" json:"user_full_name"`
+	BodyPreview                 string `db:"body_preview" json:"body_preview"`
+	AttachmentCount             int    `db:"attachment_count" json:"attachment_count"`
+	HasUnreadComment            bool   `db:"has_unread_comment" json:"has_unread_comment"`
+	LatestStudentCommentPreview string `db:"latest_student_comment_preview" json:"latest_student_comment_preview"`
 }
 
 type LessonSubmissionDetail struct {

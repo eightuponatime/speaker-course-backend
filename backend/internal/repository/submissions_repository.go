@@ -186,7 +186,19 @@ func (r *SubmissionsRepository) ListAdminByCourse(
 			u.email as user_email,
 			u.full_name as user_full_name,
 			left(s.body, 140) as body_preview,
-			jsonb_array_length(s.attachments) as attachment_count
+			jsonb_array_length(s.attachments) as attachment_count,
+			exists (
+				select 1 from lesson_submission_comments c
+				where c.submission_id = s.id and c.author_id = s.user_id
+					and (s.viewed_by_admin_at is null or c.created_at > s.viewed_by_admin_at)
+			) as has_unread_comment,
+			coalesce((
+				select coalesce(nullif(left(trim(c.body), 140), ''), 'Прикреплён файл')
+				from lesson_submission_comments c
+				where c.submission_id = s.id and c.author_id = s.user_id
+				order by c.created_at desc, c.id desc
+				limit 1
+			), '') as latest_student_comment_preview
 		from lesson_submissions s
 		join lessons l on l.id = s.lesson_id
 		join course_sections cs on cs.id = l.section_id

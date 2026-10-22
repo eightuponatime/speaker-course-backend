@@ -975,6 +975,30 @@
   background: #fff8e6;
 }
 
+.assignment-activity-label,
+.assignment-activity-preview {
+  display: block;
+}
+
+.assignment-activity-label {
+  margin-bottom: 4px;
+  color: #69758a;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.assignment-activity-label.unread {
+  color: #a72946;
+}
+
+.assignment-activity-preview {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
+}
+
 .assignments-table strong,
 .assignments-table small {
   display: block;
@@ -1256,6 +1280,18 @@
   margin: 0;
 }
 
+.assignment-response-error,
+.assignment-response-success {
+  margin: 10px 0;
+  border: 1px solid currentColor;
+  padding: 10px 14px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.assignment-response-error { color: #9e3428; }
+.assignment-response-success { color: #27623b; }
+
 .assignment-status-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1403,6 +1439,50 @@
   color: #10223d;
   font-size: 22px;
   line-height: 1.15;
+}
+
+.assignments-unread-summary {
+  margin-top: 8px !important;
+  color: #69758a;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.assignments-list-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 10px;
+  color: #69758a;
+  font-size: 12px;
+}
+
+.assignments-list-controls button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 1px solid #cbd5e1;
+  color: #22314a;
+  background: #fff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.assignments-list-controls button.active {
+  border-color: #a72946;
+  color: #a72946;
+  background: #fff0f3;
+}
+
+.assignments-list-controls button span {
+  min-width: 20px;
+  padding: 2px 5px;
+  color: #fff;
+  background: #b50832;
+  text-align: center;
 }
 
 .assignments-toolbar > div > span,
@@ -3673,7 +3753,7 @@
   }
 
   .assignments-table td:nth-child(4)::before {
-    content: "Комментарий";
+    content: "Последнее от ученика";
   }
 
   .assignments-table td:nth-child(5)::before {

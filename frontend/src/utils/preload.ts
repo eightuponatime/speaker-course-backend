@@ -12,7 +12,7 @@ export function useAssetPreload(srcList: string[], options: PreloadOptions): boo
 
   useEffect(() => {
     let active = true;
-    setReady(srcList.length === 0);
+    setReady(srcList.length === 0 && options.minDelayMs === 0);
 
     preloadImages(srcList, options).then(() => {
       if (active) {

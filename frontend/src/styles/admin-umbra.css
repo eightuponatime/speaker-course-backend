@@ -1,0 +1,416 @@
+/* UMBRA admin theme, layered over the existing admin layout styles. */
+.umbra-admin-shell {
+  --admin-bg: #0a0a0b;
+  --admin-panel: #141416;
+  --admin-raised: #1d1d20;
+  --admin-line: #36363a;
+  --admin-text: #ede8df;
+  --admin-muted: #b9b4ab;
+  --admin-dim: #918d87;
+  --admin-red: #c8102e;
+  min-height: 100vh;
+  background: var(--admin-bg);
+  color: var(--admin-text);
+  font-family: "Manrope", system-ui, sans-serif;
+  scrollbar-color: #48484c var(--admin-bg);
+}
+
+.umbra-admin-shell :is(button, input, select, textarea, a):focus-visible {
+  outline: 2px solid #ede8df;
+  outline-offset: 3px;
+}
+
+.umbra-admin-shell .admin-screen,
+.umbra-admin-shell .page,
+.umbra-admin-shell :is(.requests-panel, .student-activity-panel, .access-management-panel, .invitation-codes-panel, .privileges-panel, .assignments-panel) {
+  background: var(--admin-bg);
+}
+.umbra-admin-shell .admin-screen { width: 100%; min-width: 0; grid-template-columns: minmax(0, 1fr); }
+
+.umbra-admin-shell .course-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 70;
+  border-bottom: 1px solid var(--admin-line);
+  background: rgba(10, 10, 11, .97);
+  backdrop-filter: blur(12px);
+}
+
+.umbra-admin-shell .course-topbar-title-row { gap: 20px; padding: 0 24px; }
+.umbra-admin-shell .course-topbar-bottom-row { gap: 16px; padding: 0 24px; border-top: 1px solid #242427; }
+.umbra-admin-shell .admin-umbra-brand {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  padding: 0;
+  color: var(--admin-text);
+  background: transparent;
+  cursor: pointer;
+}
+.umbra-admin-shell .admin-umbra-brand span {
+  font-family: "Oswald", "Arial Narrow", sans-serif;
+  font-size: 23px;
+  font-weight: 600;
+  letter-spacing: .3em;
+  line-height: 1;
+}
+.umbra-admin-shell .course-title-button { margin-left: 6px; color: var(--admin-muted); }
+.umbra-admin-shell .course-title-button span { font-size: 14px; font-weight: 600; }
+.umbra-admin-shell .course-status-pill,
+.umbra-admin-shell .course-changes-pill {
+  border: 1px solid #5b454a;
+  border-radius: 0;
+  color: #ffadba;
+  background: #28181d;
+  font-size: 10px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.umbra-admin-shell .course-changes-pill { border-color: #7a6348; color: #e8c69b; background: #292219; }
+.umbra-admin-shell .course-tabs { gap: 0; border: 0; border-radius: 0; padding: 0; background: transparent; }
+.umbra-admin-shell .course-tabs button {
+  height: 44px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  padding: 0 14px;
+  color: var(--admin-muted);
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+}
+.umbra-admin-shell .course-tabs button:hover { color: var(--admin-text); background: #1c1c1f; }
+.umbra-admin-shell .course-tabs button.active { border-bottom-color: var(--admin-red); color: var(--admin-text); background: #22171b; box-shadow: none; }
+.umbra-admin-shell .tab-count,
+.umbra-admin-shell .segment-count { border-radius: 0; color: var(--admin-muted); background: #2c2c30; }
+.umbra-admin-shell .tab-count.active,
+.umbra-admin-shell .segment-count.active { color: #fff; background: var(--admin-red); }
+.umbra-admin-shell .save-indicator,
+.umbra-admin-shell .preview-button { color: var(--admin-muted); font-size: 12px; }
+.umbra-admin-shell .save-indicator svg { color: #b1cbb5; }
+.umbra-admin-shell .preview-button:hover { color: var(--admin-text); }
+.umbra-admin-shell .publish-button {
+  border: 1px solid var(--admin-red);
+  border-radius: 0;
+  color: #fff;
+  background: var(--admin-red);
+}
+.umbra-admin-shell .publish-button:disabled {
+  border-color: #36363a;
+  color: #aaa49c;
+  background: #252528;
+}
+.umbra-admin-shell .topbar-platform-actions button,
+.umbra-admin-shell .admin-menu-trigger {
+  border: 1px solid #48484c;
+  border-radius: 0;
+  color: var(--admin-text);
+  background: transparent;
+}
+.umbra-admin-shell .topbar-platform-actions button:hover,
+.umbra-admin-shell .admin-menu-trigger:hover { border-color: #8c8680; background: #252528; }
+.umbra-admin-shell .topbar-platform-actions button.danger { border-color: #74424d; color: #f1a2b0; background: #24171b; }
+.umbra-admin-shell .notification-trigger {
+  border: 1px solid #555459;
+  border-radius: 0;
+  color: var(--admin-text);
+  background: var(--admin-panel);
+}
+.umbra-admin-shell .notification-trigger:hover { border-color: #a09a92; background: #29292d; }
+.umbra-admin-shell .notification-trigger span { border-color: var(--admin-panel); background: var(--admin-red); }
+
+/* Sections and management tables */
+.umbra-admin-shell :is(.admin-section-heading.compact h1, .student-activity-header h1, .access-management-header h1, .assignments-toolbar h2) {
+  color: var(--admin-text);
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: clamp(30px, 3vw, 39px);
+  font-weight: 500;
+  line-height: 1.1;
+}
+.umbra-admin-shell :is(.admin-section-heading.compact span, .assignments-toolbar > div > span, .assignments-toolbar label span) {
+  color: #e65a70;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .14em;
+}
+.umbra-admin-shell :is(.admin-section-heading.compact p, .student-activity-header p, .access-management-header p, .panel-message, .privileges-action-note) { color: var(--admin-muted); }
+.umbra-admin-shell :is(.student-activity-panel, .access-management-panel, .invitation-codes-panel, .privileges-panel) { padding: 30px clamp(20px, 3vw, 48px) 56px; }
+.umbra-admin-shell .assignments-panel { padding: 30px clamp(20px, 3vw, 48px) 56px; }
+.umbra-admin-shell .student-activity-panel { min-width: 0; width: 100%; }
+.umbra-admin-shell .student-activity-header {
+  width: 100%;
+  max-width: 1320px;
+  grid-template-columns: minmax(220px, 1fr) auto auto;
+  gap: 14px;
+}
+.umbra-admin-shell .student-activity-header > div:first-child { grid-column: 1 / -1; }
+.umbra-admin-shell .student-activity-search { min-width: 0; }
+.umbra-admin-shell .student-activity-table { width: 100%; max-width: 1320px; min-width: 0; overflow-x: auto; }
+.umbra-admin-shell .student-activity-head,
+.umbra-admin-shell .student-activity-row { width: max(100%, 1160px); min-width: 1160px; }
+.umbra-admin-shell :is(.admin-section-heading.compact, .student-activity-header, .access-management-header, .assignments-toolbar) { margin-bottom: 24px; }
+.umbra-admin-shell :is(.admin-section-heading.compact button, .invitation-copy-button, .invitation-generated-actions button, .privileges-chip-row button, .privileges-actions button, .secondary-button, .assignments-toolbar button, .assignments-table button, .assignment-status-actions button, .assignment-detail header button, .access-extend-button, .submission-revisions button, .admin-assignment-attachments a) {
+  border: 1px solid #555459;
+  border-radius: 0;
+  color: var(--admin-text);
+  background: var(--admin-panel);
+  box-shadow: none;
+}
+.umbra-admin-shell :is(.admin-section-heading.compact button, .invitation-copy-button, .invitation-generated-actions button, .privileges-chip-row button, .privileges-actions button, .secondary-button, .assignments-toolbar button, .assignments-table button, .assignment-status-actions button, .assignment-detail header button, .access-extend-button, .submission-revisions button):hover:not(:disabled) { border-color: #a09a92; background: #29292d; }
+.umbra-admin-shell :is(.privileges-chip-row button.active, .status-segments button.active) { border-color: #8e4050; color: #fff; background: #6c1729; }
+.umbra-admin-shell :is(.student-activity-search, .privileges-search, .student-activity-summary, .access-management-summary, .admin-inline-message, .empty-state, .enrollment-row, .status-segments, .submission-revisions, .assignment-status-control) {
+  border: 1px solid var(--admin-line);
+  border-radius: 0;
+  color: var(--admin-muted);
+  background: var(--admin-panel);
+}
+.umbra-admin-shell :is(.student-activity-search input, .privileges-search input, .assignments-toolbar select, .assignment-status-control select, .access-date-input, .extend-actions input, .invitation-generated-body input, .assignment-admin-comments textarea, .lesson-title-input, .section-title-input) {
+  border: 1px solid #555459;
+  border-radius: 0;
+  color: var(--admin-text);
+  background: var(--admin-raised);
+  color-scheme: dark;
+}
+.umbra-admin-shell :is(.student-activity-search input, .privileges-search input) { border: 0; background: transparent; }
+.umbra-admin-shell input::placeholder,
+.umbra-admin-shell textarea::placeholder { color: #858078; opacity: 1; }
+.umbra-admin-shell :is(.student-activity-summary span, .access-management-summary span, .enrollment-row strong, .access-name-cell, .privileges-table td strong, .student-activity-row strong, .assignment-admin-comments h4) { color: var(--admin-text); }
+.umbra-admin-shell :is(.enrollment-row span, .privileges-table td span, .student-activity-row span, .access-email-cell, .assignments-table small, .invitation-generated-meta, .assignment-detail header span) { color: var(--admin-muted); }
+.umbra-admin-shell :is(.privileges-summary span, .role-pill, .activity-status, .progress-chip, .access-chip, .access-state-chip, .invitation-status, .assignment-detail-status) {
+  border: 1px solid var(--admin-line);
+  border-radius: 0;
+  color: var(--admin-text);
+  background: var(--admin-raised);
+}
+.umbra-admin-shell :is(.role-pill.admin, .progress-chip.high, .access-chip.active, .access-state-chip.active, .activity-status.online, .invitation-status.active) { border-color: #365743; color: #b9dcc1; background: #17251c; }
+.umbra-admin-shell :is(.role-pill.owner, .progress-chip.mid, .access-chip.soon, .access-state-chip.soon) { border-color: #6e5637; color: #e6c59c; background: #2a2118; }
+.umbra-admin-shell :is(.access-chip.expired, .access-state-chip.expired, .invitation-status.expired) { border-color: #74424d; color: #f1a2b0; background: #2a181e; }
+.umbra-admin-shell .invitation-status.used { border-color: #635b66; color: #d0c6d3; background: #262129; }
+.umbra-admin-shell :is(.privileges-table-wrap, .student-activity-table, .access-table-wrap, .invitation-table-wrap, .assignments-table-wrap) {
+  border: 1px solid var(--admin-line);
+  border-radius: 0;
+  background: var(--admin-panel);
+}
+.umbra-admin-shell :is(.privileges-table, .access-table, .invitation-table, .assignments-table) { color: var(--admin-text); }
+.umbra-admin-shell :is(.privileges-table th, .access-table th, .invitation-table th, .assignments-table th, .student-activity-head, .lesson-history-head) {
+  border-color: var(--admin-line);
+  color: var(--admin-dim);
+  background: #1d1d20;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: .12em;
+}
+.umbra-admin-shell :is(.privileges-table td, .access-table td, .invitation-table td, .assignments-table td, .student-activity-row, .lesson-history-row, .lesson-history-section) {
+  border-color: var(--admin-line);
+  color: var(--admin-text);
+  background: transparent;
+}
+.umbra-admin-shell :is(.privileges-table tr.pending td, .assignments-table tr.unread td) { background: #241c1b; }
+.umbra-admin-shell :is(.access-table tbody tr:hover, .invitation-table tbody tr:hover) { background: #252528; }
+.umbra-admin-shell .assignments-empty-row td { color: var(--admin-muted); background: transparent; }
+.umbra-admin-shell .assignment-status { border-radius: 0; color: #e6c59c; background: #2a2118; }
+.umbra-admin-shell .assignment-status.accepted { color: #b9dcc1; background: #17251c; }
+.umbra-admin-shell .assignment-status.needs_revision { color: #f1a2b0; background: #2a181e; }
+.umbra-admin-shell .file-count { color: #e6c59c; }
+.umbra-admin-shell .lesson-history-section h3 { border-color: var(--admin-line); color: var(--admin-text); background: var(--admin-raised); }
+.umbra-admin-shell .admin-inline-message { color: var(--admin-text); }
+
+/* Curriculum and editor */
+.umbra-admin-shell .curriculum-sidebar { border-right-color: var(--admin-line); background: #101012; scrollbar-color: #48484c #101012; }
+.umbra-admin-shell .section-card { border-color: var(--admin-line); border-radius: 0; background: var(--admin-panel); box-shadow: none; }
+.umbra-admin-shell .section-header { border-color: var(--admin-line); background: var(--admin-raised); }
+.umbra-admin-shell .section-title-button { color: var(--admin-text); font-family: "Cormorant Garamond", Georgia, serif; font-size: 21px; font-weight: 500; }
+.umbra-admin-shell :is(.section-chevron, .section-toggle, .section-delete, .lesson-delete) { color: var(--admin-muted); }
+.umbra-admin-shell :is(.section-delete, .lesson-delete):hover { color: #ffc0c9; background: #45212a; }
+.umbra-admin-shell .lesson-list,
+.umbra-admin-shell .lesson-item { border-color: var(--admin-line); color: var(--admin-muted); background: var(--admin-panel); }
+.umbra-admin-shell .lesson-item:hover { color: var(--admin-text); background: #242427; }
+.umbra-admin-shell .lesson-item.active { color: var(--admin-text); background: #2a171d; box-shadow: inset 3px 0 0 var(--admin-red); }
+.umbra-admin-shell :is(.lesson-list.drop-target, .lesson-item.drop-target) { box-shadow: inset 0 3px 0 var(--admin-red); }
+.umbra-admin-shell :is(.add-lesson-button, .add-section-button) { border-color: #555459; border-radius: 0; color: var(--admin-text); background: var(--admin-panel); }
+.umbra-admin-shell :is(.add-lesson-button, .add-section-button):hover { background: #29292d; }
+.umbra-admin-shell .drag-handle span { background: #858078; }
+.umbra-admin-shell .lesson-workspace { background: var(--admin-bg); }
+.umbra-admin-shell .lesson-content { padding: 28px clamp(24px, 4vw, 72px) 220px; }
+.umbra-admin-shell .lesson-title-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 26px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--admin-line);
+}
+.umbra-admin-shell .lesson-heading-display { min-width: 0; gap: 8px; }
+.umbra-admin-shell .lesson-title-row h1 { color: var(--admin-text); font-family: "Cormorant Garamond", Georgia, serif; font-size: clamp(32px, 2.5vw, 44px); font-weight: 500; line-height: 1.08; }
+.umbra-admin-shell .lesson-title-input { min-width: 0; width: 100%; }
+.umbra-admin-shell .lesson-title-actions { flex: 0 0 auto; margin: 0; gap: 6px; border: 0; padding: 0; background: transparent; }
+.umbra-admin-shell .lesson-title-actions button {
+  width: 38px;
+  min-width: 38px;
+  height: 38px;
+  display: grid;
+  grid-template-columns: 1fr;
+  place-items: center;
+  border: 1px solid #555459;
+  padding: 0;
+  color: var(--admin-text);
+  background: var(--admin-panel);
+}
+.umbra-admin-shell .lesson-title-actions button:disabled { border-color: var(--admin-line); color: var(--admin-dim); opacity: .55; }
+.umbra-admin-shell .lesson-title-actions button span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.umbra-admin-shell .lesson-title-row button { border-radius: 0; color: var(--admin-muted); }
+.umbra-admin-shell .lesson-title-row button:hover:not(:disabled) { color: var(--admin-text); background: #29292d; }
+.umbra-admin-shell .editor-holder { color: var(--admin-text); }
+.umbra-admin-shell .editor-holder :is(.ce-paragraph, .ce-header, .cdx-list, .cdx-quote, .cdx-checklist) { color: var(--admin-text); }
+.umbra-admin-shell .editor-holder a { color: #ff9aae; }
+.umbra-admin-shell .editor-holder .ce-block--selected .ce-block__content { background: #49303a; }
+.umbra-admin-shell .editor-holder .inserted-block-highlight .ce-block__content { outline-color: #a83c52; background: #2a171d; }
+.umbra-admin-shell .editor-holder :is(.ce-toolbar__plus, .ce-toolbar__settings-btn, .ce-inline-toolbar, .ce-conversion-toolbar, .ce-popover, .ce-popover__container) { border-color: var(--admin-line); color: var(--admin-text); background: var(--admin-panel); }
+.umbra-admin-shell .editor-holder :is(.ce-popover-item, .ce-inline-tool) { color: var(--admin-text); }
+.umbra-admin-shell .editor-holder :is(.ce-popover-item:hover, .ce-inline-tool:hover) { background: #2b2b2e; }
+.umbra-admin-shell .editor-holder :is(.ce-popover-item__icon, .ce-conversion-tool__icon, .ce-inline-tool-input, .cdx-input) { border-color: var(--admin-line); color: var(--admin-text); background: var(--admin-raised); }
+.umbra-admin-shell .editor-holder :is(.ce-popover__search, .ce-popover__search input) { color: var(--admin-text); background: var(--admin-raised); }
+.umbra-admin-shell .editor-holder :is(.ce-popover-item__title, .ce-conversion-tool__title, .ce-inline-tool) { color: var(--admin-text); }
+.umbra-admin-shell .editor-holder [contenteditable="true"]:empty::before { color: var(--admin-dim); }
+.umbra-admin-shell .block-toolbar,
+.umbra-admin-shell .tool-group { border-color: var(--admin-line); border-radius: 0; background: #101012; box-shadow: none; }
+.umbra-admin-shell .block-toolbar button { border-color: var(--admin-line); color: var(--admin-muted); background: var(--admin-panel); }
+.umbra-admin-shell .block-toolbar button:hover { color: var(--admin-text); background: #29292d; }
+.umbra-admin-shell :is(.url-tool, .image-tool-frame, .image-tool-empty, .pdf-tool-empty, .pdf-tool-card, .quiz-tool, .video-tool-empty, .video-tool-upload-card, .video-tool-frame) { border-color: var(--admin-line); border-radius: 0; color: var(--admin-muted); background: var(--admin-panel); }
+.umbra-admin-shell :is(.url-tool input, .quiz-tool-question, .quiz-tool-option input) { border-color: #555459; border-radius: 0; color: var(--admin-text); background: var(--admin-raised); }
+.umbra-admin-shell .quiz-tool-question { border-top: 0; border-left: 0; border-right: 0; background: transparent; }
+.umbra-admin-shell :is(.image-tool-empty button, .pdf-tool-empty button, .pdf-tool-download, .quiz-tool-add, .video-tool-empty button) { border-color: #555459; border-radius: 0; color: var(--admin-text); background: var(--admin-raised); }
+.umbra-admin-shell :is(.pdf-tool-meta strong, .video-tool-meta strong, .video-tool-title, .url-tool-title) { color: var(--admin-text); }
+.umbra-admin-shell :is(.pdf-tool-meta span, .video-tool-meta span) { color: var(--admin-muted); }
+.umbra-admin-shell .video-tool-progress::before,
+.umbra-admin-shell .pdf-tool-progress::before { background: var(--admin-red); }
+.umbra-admin-shell .video-tool-icon { background: var(--admin-red); }
+.umbra-admin-shell .image-tool-load-error { display: block; padding: 1rem; color: var(--admin-text); background: var(--admin-panel); }
+.umbra-admin-shell .admin-media-error { color: #f5a9b5; }
+.umbra-admin-shell .video-tool-error { display: block; padding: .75rem 1rem; color: #f5a9b5; }
+.umbra-admin-shell .video-tool-recovery-card { display: block; min-height: 0; padding: 1.25rem; }
+.umbra-admin-shell .video-tool-recovery-card .video-tool-error { padding: .75rem 0; overflow-wrap: anywhere; }
+.umbra-admin-shell .video-tool-recovery-card button { padding: .7rem 1rem; border: 1px solid var(--admin-line); color: var(--admin-text); background: var(--admin-raised); cursor: pointer; }
+.umbra-admin-shell .video-tool-recover { display: flex; flex-wrap: wrap; gap: .5rem; width: min(100%, 28rem); margin-top: .75rem; }
+.umbra-admin-shell .video-tool-recover input { flex: 1 1 13rem; min-width: 0; padding: .7rem; border: 1px solid var(--admin-line); color: var(--admin-text); background: var(--admin-panel); }
+.umbra-admin-shell .video-tool-recover button { padding: .7rem 1rem; border: 1px solid var(--admin-line); color: var(--admin-text); background: var(--admin-raised); cursor: pointer; }
+
+/* Dialogs, assignment detail and compact menus */
+.umbra-admin-shell :is(.admin-dialog-backdrop, .assignment-detail-backdrop, .admin-mobile-menu-backdrop, .mobile-lesson-picker-backdrop) { background: rgba(0, 0, 0, .75); }
+.umbra-admin-shell :is(.admin-dialog, .admin-confirm-dialog, .assignment-detail, .revision-diff-dialog, .admin-mobile-menu, .mobile-lesson-picker-panel) {
+  border: 1px solid #555459;
+  border-radius: 0;
+  color: var(--admin-text);
+  background: var(--admin-panel);
+  box-shadow: 0 24px 80px #000b;
+}
+.umbra-admin-shell :is(.admin-dialog header, .revision-diff-dialog > header, .admin-mobile-menu header, .mobile-lesson-picker-panel header) { border-color: var(--admin-line); }
+.umbra-admin-shell :is(.admin-dialog h2, .admin-confirm-dialog h2, .revision-diff-dialog h2, .assignment-detail h3, .admin-mobile-menu header strong, .mobile-lesson-picker-panel header strong) { color: var(--admin-text); }
+.umbra-admin-shell :is(.admin-dialog p, .admin-confirm-dialog p, .revision-empty, .revision-diff-text) { color: var(--admin-muted); }
+.umbra-admin-shell :is(.admin-dialog header button, .admin-confirm-actions button, .revision-diff-dialog > header button, .admin-mobile-menu header button, .mobile-lesson-picker-panel header button, .admin-mobile-menu nav button, .admin-mobile-menu-actions button) { border: 1px solid #555459; border-radius: 0; color: var(--admin-text); background: var(--admin-raised); }
+.umbra-admin-shell :is(.admin-confirm-actions button.primary, .admin-confirm-actions button.danger, .admin-mobile-menu nav button.active) { border-color: var(--admin-red); color: #fff; background: var(--admin-red); }
+.umbra-admin-shell .admin-mobile-menu-actions { border-color: var(--admin-line); }
+.umbra-admin-shell .admin-mobile-menu header span,
+.umbra-admin-shell .revision-diff-dialog > header span { color: #e65a70; }
+.umbra-admin-shell .assignment-detail { border-color: var(--admin-line); }
+.umbra-admin-shell .assignment-detail-status.pending { color: #e6c59c; background: #2a2118; }
+.umbra-admin-shell .assignment-detail-status.accepted { color: #b9dcc1; background: #17251c; }
+.umbra-admin-shell .assignment-detail-status.needs_revision { color: #f1a2b0; background: #2a181e; }
+.umbra-admin-shell .assignment-actions button { border: 1px solid #555459; border-radius: 0; color: var(--admin-text); background: var(--admin-raised); }
+.umbra-admin-shell .assignment-actions button.dark { border-color: var(--admin-red); color: #fff; background: var(--admin-red); }
+.umbra-admin-shell .assignment-actions button.dark:disabled { border-color: #36363a; color: #aaa49c; background: #252528; }
+.umbra-admin-shell .assignment-attach-popover { border-color: #555459; border-radius: 0; background: var(--admin-raised); }
+.umbra-admin-shell .assignment-attach-popover button { border: 0; background: transparent; }
+.umbra-admin-shell .assignment-attach-popover button:hover { background: #303034; }
+.umbra-admin-shell .assignment-status-control > button,
+.umbra-admin-shell .enrollment-actions button { border-radius: 0; color: #fff; background: var(--admin-red); }
+.umbra-admin-shell .assignment-admin-comments { border-color: var(--admin-line); }
+.umbra-admin-shell .assignment-admin-comments article { border-radius: 0; border-left-color: var(--admin-red); background: var(--admin-raised); }
+.umbra-admin-shell .assignment-admin-comments article.student { border-left-color: #c99a5e; }
+.umbra-admin-shell .admin-upload-progress { border-color: var(--admin-line); border-radius: 0; color: var(--admin-text); background: var(--admin-raised); }
+.umbra-admin-shell .admin-upload-progress i { background: #692334; }
+.umbra-admin-shell .revision-diff-grid article { border-color: var(--admin-line); border-radius: 0; background: var(--admin-raised); }
+.umbra-admin-shell .revision-attachments span { color: var(--admin-text); }
+.umbra-admin-shell .admin-toast { border-color: var(--admin-line); border-radius: 0; color: var(--admin-text); background: var(--admin-raised); }
+.umbra-admin-shell .admin-toast.success { border-color: #365743; color: #b9dcc1; background: #17251c; }
+.umbra-admin-shell .admin-toast.error { border-color: #74424d; color: #f1a2b0; background: #2a181e; }
+.umbra-admin-shell .notification-panel { border: 1px solid #555459; border-radius: 0; color: var(--admin-text); background: var(--admin-panel); box-shadow: 0 18px 48px #0008; }
+.umbra-admin-shell .notification-item { border-color: var(--admin-line); background: var(--admin-panel); }
+.umbra-admin-shell .notification-item.unread { border-left-color: var(--admin-red); background: #23151a; box-shadow: none; }
+.umbra-admin-shell .notification-item:hover { background: #252528; }
+.umbra-admin-shell .notification-item strong { color: var(--admin-text); }
+.umbra-admin-shell .notification-item p { color: var(--admin-muted); }
+.umbra-admin-shell .notification-item span,
+.umbra-admin-shell .notification-empty { color: var(--admin-dim); }
+.umbra-admin-shell .notification-panel .notification-item > button { color: var(--admin-muted); }
+
+@media (max-width: 1280px) {
+  .umbra-admin-shell .course-topbar-title-row { gap: 12px; }
+  .umbra-admin-shell .course-topbar-bottom-row { gap: 8px; }
+  .umbra-admin-shell .course-tabs button { padding: 0 9px; font-size: 12px; }
+  .umbra-admin-shell .course-actions { gap: 9px; }
+}
+
+@media (min-width: 1021px) and (max-width: 1450px) {
+  .umbra-admin-shell .admin-screen { grid-template-rows: auto minmax(0, 1fr); }
+  .umbra-admin-shell .course-topbar { grid-template-rows: 58px auto; }
+  .umbra-admin-shell .course-title-button { display: none; }
+  .umbra-admin-shell .course-topbar-bottom-row { display: grid; grid-template-columns: minmax(0, 1fr); padding-bottom: 10px; }
+  .umbra-admin-shell .course-tabs { max-width: 100%; overflow-x: auto; }
+  .umbra-admin-shell .course-actions { justify-self: end; }
+  .umbra-admin-shell .curriculum-sidebar { height: calc(100vh - 150px); }
+}
+
+@media (max-width: 1020px) {
+  .umbra-admin-shell .course-topbar { padding: 10px 16px; }
+  .umbra-admin-shell .course-topbar-title-row { display: grid; grid-template-columns: 40px minmax(0, 1fr) 40px; gap: 12px; padding: 0; }
+  .umbra-admin-shell .course-title-button,
+  .umbra-admin-shell .course-status-pill,
+  .umbra-admin-shell .course-changes-pill { display: none; }
+  .umbra-admin-shell .mobile-notification-slot { justify-self: end; }
+  .umbra-admin-shell .course-topbar-bottom-row { display: none; }
+  .umbra-admin-shell .curriculum-sidebar { height: auto; }
+  .umbra-admin-shell .mobile-lesson-picker-trigger { border-color: #555459; border-radius: 0; color: var(--admin-text); background: var(--admin-panel); }
+  .umbra-admin-shell .student-activity-panel,
+  .umbra-admin-shell .access-management-panel,
+  .umbra-admin-shell .invitation-codes-panel,
+  .umbra-admin-shell .privileges-panel,
+  .umbra-admin-shell .assignments-panel { padding: 22px 16px 40px; }
+  .umbra-admin-shell .student-activity-header { grid-template-columns: minmax(0, 1fr) auto; }
+  .umbra-admin-shell .student-activity-header > .student-activity-search { grid-column: 1 / -1; }
+}
+
+@media (max-width: 640px) {
+  .umbra-admin-shell .admin-umbra-brand span { font-size: 20px; }
+  .umbra-admin-shell .student-activity-row,
+  .umbra-admin-shell .privileges-table tr { border-color: var(--admin-line); border-radius: 0; background: var(--admin-panel); }
+  .umbra-admin-shell .privileges-table tr.pending { background: #241c1b; }
+  .umbra-admin-shell .privileges-table tr.pending td { background: transparent; }
+  .umbra-admin-shell .student-activity-row > div,
+  .umbra-admin-shell .privileges-table td { border-color: var(--admin-line); }
+  .umbra-admin-shell .student-activity-row > div::before,
+  .umbra-admin-shell .privileges-table td:nth-child(n + 2)::before { color: var(--admin-dim); }
+  .umbra-admin-shell .student-activity-table,
+  .umbra-admin-shell .privileges-table-wrap { border: 0; background: transparent; }
+  .umbra-admin-shell .student-activity-header { grid-template-columns: minmax(0, 1fr); }
+  .umbra-admin-shell .student-activity-header > * { grid-column: 1 / -1; }
+  .umbra-admin-shell .student-activity-row { width: 100%; min-width: 0; }
+  .umbra-admin-shell .student-activity-identity { flex-wrap: wrap; }
+  .umbra-admin-shell .lesson-content { padding: 24px 16px 150px; }
+  .umbra-admin-shell .lesson-title-row { gap: 10px; margin-bottom: 22px; padding-bottom: 16px; }
+  .umbra-admin-shell .lesson-title-row h1 { font-size: 30px; }
+  .umbra-admin-shell .lesson-title-actions button { width: 34px; min-width: 34px; height: 34px; }
+  .umbra-admin-shell .block-toolbar { border-color: var(--admin-line); }
+  .umbra-admin-shell .assignment-detail { width: calc(100vw - 24px); max-height: calc(100vh - 24px); padding: 16px; }
+}

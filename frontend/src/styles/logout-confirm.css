@@ -1,0 +1,25 @@
+.logout-confirm {
+  width:min(420px, calc(100vw - 32px));
+  max-height:calc(100dvh - 32px);
+  margin:auto;
+  padding:28px;
+  border:1px solid #48484c;
+  background:#141416;
+  color:#ede8df;
+  font-family:"Manrope", system-ui, sans-serif;
+  box-shadow:0 24px 80px #0006;
+}
+.logout-confirm::backdrop { background:rgba(0,0,0,.72); }
+.logout-confirm h2 { margin:0 0 12px; font-size:23px; font-weight:600; line-height:1.3; }
+.logout-confirm p { margin:0 0 24px; color:#b9b4ab; font-size:14px; line-height:1.6; }
+.logout-confirm-actions { display:flex; gap:12px; }
+.logout-confirm-actions button { flex:1; min-height:44px; padding:8px 12px; border:1px solid #68686e; background:transparent; color:inherit; font-weight:600; cursor:pointer; }
+.logout-confirm-actions button:hover { background:#303034; }
+.logout-confirm-actions .confirm { border-color:#c8102e; background:#c8102e; color:#fff; }
+.logout-confirm-actions .confirm:hover { background:#e0223f; }
+.logout-confirm-actions button:disabled { border-color:#48484c; background:#303034; color:#b9b4ab; cursor:wait; }
+.logout-confirm-actions button:focus-visible { outline:2px solid #ede8df; outline-offset:4px; }
+.logout-confirm p[role="alert"] { margin:16px 0 0; color:#ffb5c1; }
+.logout-confirm-legacy { background:#fffaf4; color:#2d2924; border-color:#d8d0c7; border-radius:12px; }
+.logout-confirm-legacy p { color:#716960; }
+.logout-confirm-legacy .logout-confirm-actions button:not(.confirm):hover { background:#eee7df; }

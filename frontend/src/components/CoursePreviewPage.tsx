@@ -1,5 +1,5 @@
 import { AlertTriangle, ArrowLeft, CalendarDays, Check, Download, FileText, Gauge, Image, LogOut, Menu, Play, Send, Upload, UserRound, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { Ref } from "react";
 
 import {
@@ -22,8 +22,12 @@ import type { CourseCurriculum, EditorContent, Lesson, LessonQuizResponseWithUse
 import type { Notification } from "../entities/notification/notification";
 import type { TranslationKey } from "../i18n";
 import { NotificationBell } from "./NotificationBell";
+import { UmbraLogo } from "./umbra/UmbraLogo";
+import { BunnyHlsPlayer } from "./BunnyHlsPlayer";
+import { bunnyHlsUrl } from "../utils/mediaUrls";
 
 type CoursePreviewPageProps = {
+  theme?: "umbra" | "legacy";
   curriculum: CourseCurriculum;
   initialLessonId: string;
   t: (key: TranslationKey) => string;
@@ -42,6 +46,7 @@ type CoursePreviewPageProps = {
 };
 
 export function CoursePreviewPage({
+  theme = "umbra",
   curriculum,
   initialLessonId,
   t,
@@ -193,21 +198,37 @@ export function CoursePreviewPage({
     window.addEventListener("beforeunload", handleBeforeUnload);
 
     return () => {
-      handleBeforeUnload();
       window.removeEventListener("beforeunload", handleBeforeUnload);
+      writeJSONStorage(scrollStorageKey, scrollPositionsRef.current);
     };
   }, [scrollStorageKey]);
 
   useEffect(() => {
+    let saveTimer = 0;
+    const saveScroll = () => {
+      const lessonId = activeLessonIdRef.current;
+      if (!lessonId) return;
+      scrollPositionsRef.current[lessonId] = window.scrollY;
+      window.clearTimeout(saveTimer);
+      saveTimer = window.setTimeout(() => writeJSONStorage(scrollStorageKey, scrollPositionsRef.current), 180);
+    };
+
+    window.addEventListener("scroll", saveScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", saveScroll);
+      window.clearTimeout(saveTimer);
+    };
+  }, [scrollStorageKey]);
+
+  useLayoutEffect(() => {
     if (!activeLessonId) return;
-
-    const storedScroll = scrollPositionsRef.current[activeLessonId];
-    if (typeof storedScroll !== "number") return;
-
-    window.requestAnimationFrame(() => {
-      window.scrollTo({ top: storedScroll, behavior: "auto" });
+    const savedScroll = scrollPositionsRef.current[activeLessonId];
+    const target = typeof savedScroll === "number" ? savedScroll : 0;
+    const frame = window.requestAnimationFrame(() => {
+      window.scrollTo({ top: target, behavior: "auto" });
     });
-  }, []);
+    return () => window.cancelAnimationFrame(frame);
+  }, [activeLessonId]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -226,13 +247,13 @@ export function CoursePreviewPage({
     if (!activeButton || !curriculumElement) return;
     if (curriculumElement.scrollHeight <= curriculumElement.clientHeight) return;
 
-    const buttonTop = activeButton.offsetTop;
-    const buttonBottom = buttonTop + activeButton.offsetHeight;
-    const visibleTop = curriculumElement.scrollTop;
-    const visibleBottom = visibleTop + curriculumElement.clientHeight;
-
-    if (buttonTop < visibleTop || buttonBottom > visibleBottom) {
-      activeButton.scrollIntoView({ block: "center", behavior: "smooth" });
+    const buttonRect = activeButton.getBoundingClientRect();
+    const curriculumRect = curriculumElement.getBoundingClientRect();
+    if (buttonRect.top < curriculumRect.top || buttonRect.bottom > curriculumRect.bottom) {
+      curriculumElement.scrollTo({
+        top: curriculumElement.scrollTop + buttonRect.top - curriculumRect.top - (curriculumElement.clientHeight - buttonRect.height) / 2,
+        behavior: "smooth"
+      });
     }
   }, [activeLessonId, isCurriculumOpen]);
 
@@ -299,21 +320,9 @@ export function CoursePreviewPage({
       writeJSONStorage(scrollStorageKey, scrollPositionsRef.current);
     }
 
+    activeLessonIdRef.current = lessonId;
     setActiveLessonId(lessonId);
     setIsCurriculumOpen(false);
-
-    window.requestAnimationFrame(() => {
-      const restoredScroll = scrollPositionsRef.current[lessonId];
-      if (typeof restoredScroll === "number") {
-        window.scrollTo({ top: restoredScroll, behavior: "auto" });
-        return;
-      }
-
-      document.querySelector(".preview-course-shell")?.scrollIntoView({
-        block: "start",
-        behavior: "smooth"
-      });
-    });
   }
 
   function showToast(message: string) {
@@ -325,14 +334,14 @@ export function CoursePreviewPage({
   }
 
   return (
-    <main className="course-preview">
+    <main className={`course-preview${theme === "umbra" ? " umbra-course" : ""}`}>
       <header className="preview-nav">
         <button className="preview-brand" type="button" onClick={onLandingOpen}>
-          <img src={logosVoiceLogo} alt="" />
-          <span>
-            <strong>LOGOS</strong>
-            <small>VOICE</small>
-          </span>
+          {theme === "umbra" ? (
+            <><UmbraLogo size={36} /><b>UMBRA</b></>
+          ) : (
+            <><img src={logosVoiceLogo} alt="" /><span><strong>LOGOS</strong><small>VOICE</small></span></>
+          )}
         </button>
         <div className="preview-nav-actions">
           {curriculum.access?.access_expires_at ? (
@@ -628,7 +637,7 @@ function LessonViewer({
           const imageWidth = getImageWidthStyle(data.width);
           return (
             <figure className="preview-image" key={index} style={imageWidth ? { width: imageWidth } : undefined}>
-              <img src={String(data.url || "")} alt={String(data.caption || "")} />
+              <CdnImage src={String(data.url || "")} alt={String(data.caption || "")} />
             </figure>
           );
         }
@@ -651,7 +660,7 @@ function LessonViewer({
 
         if (type === "pdfUrl") {
           return (
-            <a className="preview-file" href={String(data.url || "#")} key={index} download>
+            <a className="preview-file" href={String(data.url || "#")} key={index} target="_blank" rel="noopener noreferrer" download>
               <FileText size={24} />
               <span>{String(data.name || "Course file")}</span>
               <Download size={18} />
@@ -1110,13 +1119,23 @@ function UploadProgress({ label, progress }: { label: string; progress: number |
   );
 }
 
+function CdnImage({ src, alt }: { src: string; alt: string }) {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [src]);
+
+  if (failed) {
+    return <span role="alert" className="cdn-image-error">Изображение недоступно</span>;
+  }
+  return <img src={src} alt={alt} onError={() => setFailed(true)} />;
+}
+
 function AttachmentList({ attachments, onRemove }: { attachments: SubmissionAttachment[]; onRemove?: (index: number) => void }) {
   if (!attachments.length) return null;
   return (
     <div className="assignment-attachments">
       {attachments.map((attachment, index) => (
         <a className={`attachment-preview ${attachmentPreviewKind(attachment)}`} href={attachment.url} target="_blank" rel="noreferrer" key={`${attachment.url}-${index}`}>
-          {attachmentPreviewKind(attachment) === "image" ? <img src={attachment.url} alt="" /> : null}
+          {attachmentPreviewKind(attachment) === "image" ? <CdnImage src={attachment.url} alt="" /> : null}
           {attachmentPreviewKind(attachment) === "video" ? <Play size={16} /> : null}
           {attachmentPreviewKind(attachment) === "document" ? <FileText size={16} /> : null}
           <span>{attachment.name}</span>
@@ -1177,6 +1196,7 @@ function PersistentVideo({
   const lastSavedSecondRef = useRef(0);
   const storageKey = `${storagePrefix}_${lessonId}_${stableStoragePart(videoId)}_${stableStoragePart(url)}`;
   const initialProgress = readVideoProgress(storageKey);
+  const playlistUrl = bunnyHlsUrl(url);
 
   function saveProgress(seconds: number, duration?: number) {
     if (!Number.isFinite(seconds) || seconds < 0) return;
@@ -1194,8 +1214,9 @@ function PersistentVideo({
     });
   }
 
+  // Keep the existing player.js progress behavior for non-Bunny embeds.
   useEffect(() => {
-    if (!url || isDirectVideoUrl(url)) return;
+    if (!url || playlistUrl || isDirectVideoUrl(url)) return;
 
     const iframe = iframeRef.current;
     const targetWindow = iframe?.contentWindow;
@@ -1203,39 +1224,30 @@ function PersistentVideo({
 
     const handleMessage = (event: MessageEvent) => {
       if (event.source !== targetWindow) return;
-
-      const payload = parseMessageData(event.data);
-      const progress = extractPlayerProgress(payload);
-      if (progress) {
-        saveProgress(progress.seconds, progress.duration);
-      }
+      const progress = extractPlayerProgress(parseMessageData(event.data));
+      if (progress) saveProgress(progress.seconds, progress.duration);
     };
-
     const requestTimer = window.setInterval(() => {
       postPlayerMessage(targetWindow, { method: "getCurrentTime" });
       postPlayerMessage(targetWindow, { method: "getDuration" });
     }, 3000);
-
     const handleLoad = () => {
       if (initialProgress.seconds > 2) {
         postPlayerMessage(targetWindow, { method: "setCurrentTime", value: initialProgress.seconds });
         postPlayerMessage(targetWindow, { method: "seek", value: initialProgress.seconds });
       }
-
       postPlayerMessage(targetWindow, { method: "addEventListener", value: "timeupdate" });
       postPlayerMessage(targetWindow, { method: "addEventListener", value: "pause" });
     };
-
     window.addEventListener("message", handleMessage);
     iframe.addEventListener("load", handleLoad);
     handleLoad();
-
     return () => {
       window.clearInterval(requestTimer);
       iframe.removeEventListener("load", handleLoad);
       window.removeEventListener("message", handleMessage);
     };
-  }, [initialProgress.seconds, url]);
+  }, [initialProgress.seconds, playlistUrl, url]);
 
   if (!url) {
     return (
@@ -1263,6 +1275,19 @@ function PersistentVideo({
           }}
           onTimeUpdate={(event) => saveProgress(event.currentTarget.currentTime, event.currentTarget.duration)}
           onPause={(event) => saveProgress(event.currentTarget.currentTime, event.currentTarget.duration)}
+        />
+      </div>
+    );
+  }
+
+  if (playlistUrl) {
+    return (
+      <div className="preview-video">
+        <BunnyHlsPlayer
+          playlistUrl={playlistUrl}
+          title={name}
+          resumeAt={initialProgress.seconds}
+          onProgress={saveProgress}
         />
       </div>
     );
@@ -1419,7 +1444,6 @@ function disableVideoAutoplay(url: string): string {
 
 function withVideoStartTime(url: string, seconds: number): string {
   if (!Number.isFinite(seconds) || seconds <= 2) return url;
-
   try {
     const parsedURL = new URL(url);
     const roundedSeconds = String(Math.floor(seconds));
@@ -1449,19 +1473,11 @@ function readVideoProgress(storageKey: string): { seconds: number; duration?: nu
 }
 
 function postPlayerMessage(targetWindow: Window, payload: Record<string, unknown>) {
-  targetWindow.postMessage(
-    {
-      context: "player.js",
-      version: "0.0.11",
-      ...payload
-    },
-    "*"
-  );
+  targetWindow.postMessage({ context: "player.js", version: "0.0.11", ...payload }, "*");
 }
 
 function parseMessageData(data: unknown): unknown {
   if (typeof data !== "string") return data;
-
   try {
     return JSON.parse(data);
   } catch {
@@ -1471,36 +1487,21 @@ function parseMessageData(data: unknown): unknown {
 
 function extractPlayerProgress(payload: unknown): { seconds: number; duration?: number } | null {
   if (!payload || typeof payload !== "object") return null;
-
   const data = payload as Record<string, unknown>;
   const value = data.value;
   const directSeconds = firstFiniteNumber(data.seconds, data.currentTime, data.time);
-
   if (directSeconds !== null) {
-    return {
-      seconds: directSeconds,
-      duration: firstFiniteNumber(data.duration) ?? undefined
-    };
+    return { seconds: directSeconds, duration: firstFiniteNumber(data.duration) ?? undefined };
   }
-
   if (typeof value === "number" && Number.isFinite(value)) {
     const method = String(data.method || data.event || "");
-    if (/time|current/i.test(method)) {
-      return { seconds: value };
-    }
+    if (/time|current/i.test(method)) return { seconds: value };
   }
-
   if (value && typeof value === "object") {
-    const valueRecord = value as Record<string, unknown>;
-    const seconds = firstFiniteNumber(valueRecord.seconds, valueRecord.currentTime, valueRecord.time);
-    if (seconds !== null) {
-      return {
-        seconds,
-        duration: firstFiniteNumber(valueRecord.duration) ?? undefined
-      };
-    }
+    const nested = value as Record<string, unknown>;
+    const seconds = firstFiniteNumber(nested.seconds, nested.currentTime, nested.time);
+    if (seconds !== null) return { seconds, duration: firstFiniteNumber(nested.duration) ?? undefined };
   }
-
   return null;
 }
 
@@ -1509,7 +1510,6 @@ function firstFiniteNumber(...values: unknown[]): number | null {
     const numberValue = Number(value);
     if (Number.isFinite(numberValue)) return numberValue;
   }
-
   return null;
 }
 

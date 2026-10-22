@@ -1,3 +1,5 @@
+import { normalizeStorageUrls } from "../utils/mediaUrls";
+
 const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 
 export const apiBaseUrl = configuredApiBaseUrl === undefined ? "http://localhost:8080" : configuredApiBaseUrl.trim();
@@ -17,7 +19,7 @@ export async function request<T>(url: string, init?: RequestInit): Promise<T> {
     return undefined as T;
   }
 
-  return response.json() as Promise<T>;
+  return normalizeStorageUrls(await response.json()) as T;
 }
 
 function readErrorMessage(text: string): string {

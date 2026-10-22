@@ -1,6 +1,7 @@
 import { apiBaseUrl, request } from "./http";
 import * as tus from "tus-js-client";
 import type { MediaAsset, MediaAssetKind, StreamUploadCredentials, StreamVideoStatus } from "../entities/media/media";
+import { validateVideoFile } from "../utils/videoFileValidation";
 
 type UploadStorageAssetInput = {
   file: File;
@@ -15,6 +16,8 @@ type CompleteStreamUploadInput = {
   videoId: string;
   title: string;
   sizeBytes: number;
+  expirationTime: number;
+  signature: string;
 };
 
 export async function uploadStorageAsset(input: UploadStorageAssetInput): Promise<MediaAsset> {
@@ -57,15 +60,20 @@ export async function uploadUserSubmissionAsset(input: UploadStorageAssetInput &
   onProgress?: (progress: number) => void;
 }): Promise<MediaAsset> {
   if (input.file.type.startsWith("video/")) {
+    await validateVideoFile(input.file);
     const credentials = await createUserStreamUpload(input.file.name);
-    await uploadVideoWithTus(input.file, credentials, input.onProgress ?? (() => undefined));
-    return completeUserStreamUpload({
+    await uploadVideoWithTus(input.file, credentials, (percent) => input.onProgress?.(Math.min(99, percent)));
+    const asset = await completeUserStreamUpload({
       courseId: input.courseId,
       lessonId: input.lessonId,
       videoId: credentials.video_id,
       title: input.file.name,
-      sizeBytes: input.file.size
+      sizeBytes: input.file.size,
+      expirationTime: credentials.expiration_time,
+      signature: credentials.signature
     });
+    input.onProgress?.(100);
+    return asset;
   }
 
   return uploadUserStorageAssetWithProgress({
@@ -75,23 +83,33 @@ export async function uploadUserSubmissionAsset(input: UploadStorageAssetInput &
 }
 
 export async function createStreamUpload(title: string): Promise<StreamUploadCredentials> {
-  return request<StreamUploadCredentials>("/admin/media/stream/tus", {
+  const credentials = await request<StreamUploadCredentials>("/admin/media/stream/tus", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({ title })
   });
+  assertStreamCompletionAPI(credentials);
+  return credentials;
 }
 
 export async function createUserStreamUpload(title: string): Promise<StreamUploadCredentials> {
-  return request<StreamUploadCredentials>("/media/stream/tus", {
+  const credentials = await request<StreamUploadCredentials>("/media/stream/tus", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({ title })
   });
+  assertStreamCompletionAPI(credentials);
+  return credentials;
+}
+
+function assertStreamCompletionAPI(credentials: StreamUploadCredentials): void {
+  if (credentials.complete_api_version !== 2) {
+    throw new Error("Backend использует старую версию API загрузки видео. Перезапустите backend и повторите загрузку файла.");
+  }
 }
 
 export async function completeStreamUpload(input: CompleteStreamUploadInput): Promise<MediaAsset> {
@@ -105,7 +123,9 @@ export async function completeStreamUpload(input: CompleteStreamUploadInput): Pr
       lesson_id: input.lessonId,
       video_id: input.videoId,
       title: input.title,
-      size_bytes: input.sizeBytes
+      size_bytes: input.sizeBytes,
+      expiration_time: input.expirationTime,
+      signature: input.signature
     })
   });
 }
@@ -121,7 +141,9 @@ export async function completeUserStreamUpload(input: CompleteStreamUploadInput)
       lesson_id: input.lessonId,
       video_id: input.videoId,
       title: input.title,
-      size_bytes: input.sizeBytes
+      size_bytes: input.sizeBytes,
+      expiration_time: input.expirationTime,
+      signature: input.signature
     })
   });
 }

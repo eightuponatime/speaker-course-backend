@@ -1,0 +1,55 @@
+.umbra-preload,
+.umbra-preload * { box-sizing:border-box; }
+
+.umbra-preload {
+  min-height:100vh;
+  min-height:100dvh;
+  display:grid;
+  place-items:center;
+  align-content:center;
+  gap:22px;
+  padding:24px;
+  color:#ede8df;
+  background:#0a0a0b;
+}
+
+.umbra-preload-brand { display:inline-flex; align-items:center; gap:13px; }
+.umbra-preload-brand svg { display:block; flex-shrink:0; }
+.umbra-preload-brand > div { display:grid; gap:4px; }
+.umbra-preload-brand strong {
+  font-family:"Arial Narrow", Arial, sans-serif;
+  font-size:19px;
+  font-weight:600;
+  line-height:1;
+  letter-spacing:.48em;
+}
+.umbra-preload-brand span {
+  color:#9a958d;
+  font-family:Arial, sans-serif;
+  font-size:9px;
+  line-height:1;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+}
+.umbra-preload-bar {
+  position:relative;
+  width:min(220px, 52vw);
+  height:3px;
+  overflow:hidden;
+  border-radius:999px;
+  background:rgba(45,41,36,.12);
+}
+.umbra-preload-bar::before {
+  content:"";
+  position:absolute;
+  inset:0;
+  width:42%;
+  border-radius:inherit;
+  background:#c8102e;
+  animation:landingPreloadBar 1100ms ease-in-out infinite;
+}
+@keyframes landingPreloadBar {
+  0% { transform:translateX(-110%); }
+  55% { transform:translateX(170%); }
+  100% { transform:translateX(170%); }
+}

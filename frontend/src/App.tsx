@@ -19,6 +19,8 @@ import {
   updateLesson
 } from "./api/courseDatasource";
 import { apiBaseUrl } from "./api/http";
+import { validateVideoFile } from "./utils/videoFileValidation";
+import { isBunnyHlsReady } from "./utils/bunnyHlsReadiness";
 import {
   completeStreamUpload,
   createStreamUpload,
@@ -46,8 +48,6 @@ import type { StreamVideoStatus } from "./entities/media/media";
 import type { Notification } from "./entities/notification/notification";
 import { translate } from "./i18n";
 import { markExternalAuthSyncActive, notifyAuthChanged, subscribeToAuthChanges } from "./authSync";
-import { useAssetPreload } from "./utils/preload";
-import logosVoiceLogo from "../assets/images/transparent_logo.png";
 
 type CourseHistoryAction =
   | {
@@ -70,12 +70,9 @@ export default function App() {
   const isAdminRoute = path.startsWith("/admin");
   const isCourseRoute = path.startsWith("/course");
   const isSignupRoute = path.startsWith("/signup");
-  const routePreloadKey = isCourseRoute ? "course" : isAdminRoute ? "admin" : "default";
-  const routeAssetsReady = useAssetPreload(routePreloadAssets[routePreloadKey], {
-    cacheKey: routePreloadKey,
-    minDelayMs: routePreloadKey === "default" ? 0 : 260,
-    timeoutMs: 1600
-  });
+  const isLegacyCourseTheme = new URLSearchParams(window.location.search).get("theme") === "legacy";
+  const [courseTransitionReady, setCourseTransitionReady] = useState(!isCourseRoute);
+  const [courseTransitionToken, setCourseTransitionToken] = useState(0);
   const [curriculum, setCurriculum] = useState<CourseCurriculum | null>(null);
   const [activeLessonId, setActiveLessonId] = useState("");
   const [error, setError] = useState(() => readAuthErrorFromURL());
@@ -124,9 +121,22 @@ export default function App() {
   }, [activeTab, isPreviewing]);
 
   const navigate = useCallback((nextPath: string) => {
+    if (nextPath.startsWith("/course")) {
+      setCourseTransitionReady(false);
+      setCourseTransitionToken((token) => token + 1);
+    }
     window.history.pushState(null, "", nextPath);
     setPath(nextPath);
   }, []);
+
+  useEffect(() => {
+    if (!isCourseRoute) {
+      setCourseTransitionReady(true);
+      return;
+    }
+    const timer = window.setTimeout(() => setCourseTransitionReady(true), 450);
+    return () => window.clearTimeout(timer);
+  }, [isCourseRoute, courseTransitionToken]);
 
   function resetEditorHistory(content?: EditorContent) {
     historyRef.current = {
@@ -228,7 +238,13 @@ export default function App() {
   }, [navigate, resetAuthenticatedState]);
 
   useEffect(() => {
-    const onPopState = () => setPath(window.location.pathname);
+    const onPopState = () => {
+      if (window.location.pathname.startsWith("/course")) {
+        setCourseTransitionReady(false);
+        setCourseTransitionToken((token) => token + 1);
+      }
+      setPath(window.location.pathname);
+    };
     window.addEventListener("popstate", onPopState);
     const appRoute = readAppRouteFromURL();
     if (appRoute) {
@@ -851,11 +867,13 @@ export default function App() {
   const handleInlineVideoUpload = useCallback(
     async (
       file: File,
-      onState: (state: { phase: "uploading" | "processing"; progress: number; label: string }) => void
+      onState: (state: { phase: "uploading" | "processing"; progress: number; label: string; url?: string }) => void | Promise<unknown>
     ) => {
       if (!curriculum || !activeLesson) {
         throw new Error("Lesson is not selected");
       }
+
+      await validateVideoFile(file);
 
       addDebug(`stream create upload: ${file.name}`);
       const credentials = await createStreamUpload(file.name);
@@ -869,27 +887,76 @@ export default function App() {
         });
       }, addDebug);
       addDebug(`stream tus upload complete: video=${credentials.video_id}`);
+      onState({ phase: "processing", progress: 0, label: "Waiting for encoding", url: credentials.embed_url });
 
-      const asset = await completeStreamUpload({
+      const completionInput = {
         courseId: curriculum.course.id,
         lessonId: activeLesson.id,
         videoId: credentials.video_id,
         title: file.name,
-        sizeBytes: file.size
-      });
+        sizeBytes: file.size,
+        expirationTime: credentials.expiration_time,
+        signature: credentials.signature
+      };
+      const completionDeadline = Date.now() + 2 * 60 * 1000;
+      let asset: Awaited<ReturnType<typeof completeStreamUpload>>;
+      while (true) {
+        try {
+          asset = await completeStreamUpload(completionInput);
+          break;
+        } catch (error) {
+          if (!formatError(error).includes("upload is not available yet; retry completion")) throw error;
+          if (Date.now() >= completionDeadline) {
+            throw new Error(`Bunny Stream ещё не подтвердил загрузку видео ${credentials.video_id}. Видео сохранено в библиотеке; попробуйте привязать его позже.`);
+          }
+          onState({ phase: "processing", progress: 0, label: "Bunny подтверждает загрузку", url: credentials.embed_url });
+          await sleep(5000);
+        }
+      }
       addDebug(`stream asset saved: ${asset.id}`);
+      await onState({ phase: "processing", progress: 0, label: "Waiting for encoding", url: asset.public_url });
 
+      // Keep the video reference in the draft even if the tab closes while Bunny encodes it.
+      const editor = editorRef.current;
+      if (editor) {
+        try {
+          await editor.isReady;
+          const content = (await editor.save()) as unknown as EditorContent;
+          let found = false;
+          const recoverableContent: EditorContent = {
+            ...content,
+            blocks: content.blocks.map((block) => {
+              const data = block.data as Record<string, unknown> | undefined;
+              if (block.type !== "videoUrl" || data?.url !== asset.public_url) return block;
+              found = true;
+              return { ...block, data: { ...data, uploading: false, processing: false, progress: 100 } };
+            })
+          };
+          if (found && !hasPendingMedia(recoverableContent)) {
+            await saveLessonDraft(activeLesson.id, recoverableContent);
+          }
+        } catch (error) {
+          setPublishStatus(`Видео загружено, но черновик не сохранился: ${formatError(error)}`);
+        }
+      }
+
+      let lastEncodeProgress = 0;
       const status = await pollStreamVideoUntilPlayable(credentials.video_id, (status) => {
         const progress = normalizeProcessingProgress(status.encode_progress);
+        lastEncodeProgress = progress;
         onState({
           phase: "processing",
           progress,
           label: status.status_label
         });
+      }, () => {
+        onState({ phase: "processing", progress: lastEncodeProgress, label: "Связь с Bunny прервана, повторяем запрос" });
+      }, () => {
+        onState({ phase: "processing", progress: lastEncodeProgress, label: "Публикация видео на CDN" });
       });
 
       return {
-        url: status?.embed_url || "",
+        url: status.embed_url,
         name: file.name
       };
     },
@@ -932,10 +999,13 @@ export default function App() {
           progress: 0
         });
         revealInsertedBlock(addDebug, file.name);
+        let uploadedVideoUrl = "";
 
         try {
           const result = await handleInlineVideoUpload(file, (state) => {
-            void editor.blocks.update(videoBlock.id, {
+            if (state.url) uploadedVideoUrl = state.url;
+            return editor.blocks.update(videoBlock.id, {
+              url: uploadedVideoUrl,
               name: file.name,
               uploading: state.phase === "uploading",
               processing: state.phase === "processing",
@@ -958,12 +1028,16 @@ export default function App() {
             addDebug("video block rendered");
           }
         } catch (err) {
+          const message = formatError(err);
           await editor.blocks.update(videoBlock.id, {
-            name: `${file.name} - upload failed`,
+            url: uploadedVideoUrl,
+            name: uploadedVideoUrl ? file.name : `${file.name} - upload failed`,
             uploading: false,
             processing: false,
-            progress: 0
+            progress: 0,
+            error: `Не удалось завершить обработку видео: ${message}. Video ID: ${uploadedVideoUrl.match(/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}/i)?.[0] ?? "неизвестен"}`
           });
+          if (uploadedVideoUrl) await saveCurrentLessonDraft();
           throw err;
         }
       }
@@ -1002,8 +1076,9 @@ export default function App() {
           URL.revokeObjectURL(previewURL);
           await saveCurrentLessonDraft();
         } catch (err) {
+          URL.revokeObjectURL(previewURL);
           await editor.blocks.update(imageBlock.id, {
-            url: previewURL,
+            url: "",
             caption: `${file.name} - upload failed`,
             uploading: false,
             width: 80
@@ -1065,6 +1140,7 @@ export default function App() {
       addDebug(`done ${blockType}, blocks=${editor.blocks.getBlocksCount()}, domBlocks=${countVisibleEditorBlocks()}`);
     } catch (err) {
       addDebug(`insert ${blockType} failed: ${formatError(err)}`);
+      setPublishStatus(`Не удалось добавить файл: ${formatError(err)}`);
     }
   }
 
@@ -1089,6 +1165,7 @@ export default function App() {
       await authenticateWithPassword(nextEmail, nextPassword);
     } catch (err) {
       setError(formatError(err));
+      throw err;
     }
   }
 
@@ -1128,6 +1205,7 @@ export default function App() {
 
     return (
       <ProfileSettingsModal
+        theme={path === "/legacy" || isLegacyCourseTheme ? "legacy" : "umbra"}
         user={currentUser}
         onClose={() => setIsProfileOpen(false)}
         onUserChange={(user) => {
@@ -1261,8 +1339,8 @@ export default function App() {
     }
   }
 
-  if (!authChecked || !routeAssetsReady) {
-    return <PreloadScreen label="Загрузка сайта" />;
+  if (!authChecked) {
+    return <PreloadScreen label="Загрузка сайта" legacy={path === "/legacy"} />;
   }
 
   if (isSignupRoute) {
@@ -1272,6 +1350,7 @@ export default function App() {
   if (!currentUser && !isAdminRoute) {
     return (
       <LandingPage
+        legacy={path === "/legacy"}
         error={error}
         t={t}
         onLogin={handleLandingLogin}
@@ -1311,17 +1390,22 @@ export default function App() {
 
   const authenticatedUser = currentUser;
 
+  if (isCourseRoute && !courseTransitionReady) {
+    return <PreloadScreen label={t("loadingCourse")} />;
+  }
+
   if (!isAdminRoute && !isCourseRoute) {
     return (
       <>
         <LandingPage
+          legacy={path === "/legacy"}
           error={error}
           t={t}
           onLogin={handleLandingLogin}
           currentUser={authenticatedUser}
           onAdminOpen={isAdminUser(authenticatedUser) ? () => navigate("/admin") : undefined}
           onLogout={handleLogout}
-          onOpenCourse={() => navigate("/course")}
+          onOpenCourse={() => navigate(path === "/legacy" ? "/course?theme=legacy" : "/course")}
           onProfileOpen={() => setIsProfileOpen(true)}
           onNotificationOpen={handleNotificationOpen}
           onClearError={() => setError("")}
@@ -1335,10 +1419,11 @@ export default function App() {
     return (
       <>
         <CourseAccessPage
+          theme={isLegacyCourseTheme ? "legacy" : "umbra"}
           currentUser={authenticatedUser}
           t={t}
           onLogout={handleLogout}
-          onLandingOpen={() => navigate("/")}
+          onLandingOpen={() => navigate(isLegacyCourseTheme ? "/legacy" : "/")}
           onProfileOpen={() => setIsProfileOpen(true)}
           initialLessonId={new URLSearchParams(window.location.search).get("lesson_id") || ""}
           onNotificationOpen={handleNotificationOpen}
@@ -1371,7 +1456,7 @@ export default function App() {
   }
 
   if (!curriculum) {
-    return <PreloadScreen label={t("loadingCourse")} />;
+    return <PreloadScreen label={t("loadingCourse")} legacy={path === "/legacy"} />;
   }
 
   const isAdminMode = isAdminRoute;
@@ -1380,8 +1465,9 @@ export default function App() {
     return (
       <>
         <CoursePreviewPage
+          theme={isLegacyCourseTheme ? "legacy" : "umbra"}
           curriculum={curriculum}
-          initialLessonId={activeLessonId}
+          initialLessonId={isPreviewing ? activeLessonId : new URLSearchParams(window.location.search).get("lesson_id") || ""}
           t={t}
           onLogout={handleLogout}
           onAdminOpen={
@@ -1389,7 +1475,7 @@ export default function App() {
               ? () => navigate("/admin")
               : undefined
           }
-          onLandingOpen={() => navigate("/")}
+          onLandingOpen={() => navigate(isLegacyCourseTheme ? "/legacy" : "/")}
           onBack={isPreviewing ? () => setIsPreviewing(false) : undefined}
           onProfileOpen={() => setIsProfileOpen(true)}
           onNotificationOpen={handleNotificationOpen}
@@ -1403,7 +1489,7 @@ export default function App() {
   }
 
   return (
-    <>
+    <div className="umbra-admin-shell">
       <main className="admin-screen">
         <CourseTopbar
           course={curriculum.course}
@@ -1549,7 +1635,7 @@ export default function App() {
         </div>
       ) : null}
       {renderProfileModal()}
-    </>
+    </div>
   );
 }
 
@@ -1762,12 +1848,6 @@ function clearAuthErrorFromURL() {
   window.history.replaceState(null, "", nextURL);
 }
 
-const routePreloadAssets: Record<"course" | "admin" | "default", string[]> = {
-  course: [logosVoiceLogo],
-  admin: [logosVoiceLogo],
-  default: []
-};
-
 function GoogleIcon() {
   return (
     <svg aria-hidden="true" viewBox="0 0 24 24">
@@ -1876,34 +1956,43 @@ function formatTusError(error: unknown): string {
 
 async function pollStreamVideoUntilPlayable(
   videoId: string,
-  onStatus: (status: StreamVideoStatus) => void
-): Promise<StreamVideoStatus | null> {
-  while (true) {
+  onStatus: (status: StreamVideoStatus) => void,
+  onRetry: () => void,
+  onCdnWait: () => void
+): Promise<StreamVideoStatus> {
+  const deadline = Date.now() + 60 * 60 * 1000;
+  while (Date.now() < deadline) {
+    let status: StreamVideoStatus;
     try {
-      const status = await getStreamVideoStatus(videoId);
-      onStatus(status);
+      status = await getStreamVideoStatus(videoId);
+    } catch (error) {
+      console.warn("[course-builder] Bunny status request failed; retrying", error);
+      onRetry();
+      await sleep(5000);
+      continue;
+    }
+    onStatus(status);
 
-      if (status.failed) {
-        throw new Error(`Video processing failed: ${status.status_label}`);
+    if (status.failed) {
+      throw new Error(`Bunny не смог обработать видео: ${status.error_message || status.status_label}`);
+    }
+    if (status.playable) {
+      try {
+        if (await isBunnyHlsReady(status.embed_url)) return status;
+      } catch (error) {
+        if (error instanceof Error && error.message.includes("отклонил доступ")) throw error;
+        console.warn("[course-builder] Bunny CDN playlist check failed; retrying", error);
       }
-      if (status.playable) {
-        return status;
-      }
-    } catch (err) {
-      console.warn("[course-builder] video status polling failed", err);
-      return null;
+      onCdnWait();
     }
 
     await sleep(5000);
   }
+  throw new Error(`Bunny Stream не завершил обработку видео ${videoId} за час. Видео остаётся в библиотеке; проверьте его статус позже.`);
 }
 
 function normalizeProcessingProgress(progress: number): number {
-  if (!Number.isFinite(progress) || progress <= 0) {
-    return 1;
-  }
-
-  return Math.min(99, Math.max(1, Math.round(progress)));
+  return Number.isFinite(progress) ? Math.min(100, Math.max(0, Math.round(progress))) : 0;
 }
 
 function sleep(ms: number): Promise<void> {

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"speaker_course/internal/domain"
 	middlewarego "speaker_course/internal/middleware.go"
@@ -85,7 +86,7 @@ func (h *MediaHandler) UploadStorageAsset(w http.ResponseWriter, r *http.Request
 		Body:         file,
 	})
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err)
+		writeMediaError(w, err)
 		return
 	}
 
@@ -105,7 +106,7 @@ func (h *MediaHandler) CreateStreamUpload(w http.ResponseWriter, r *http.Request
 		Title: request.Title,
 	})
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err)
+		writeMediaError(w, err)
 		return
 	}
 
@@ -120,11 +121,13 @@ func (h *MediaHandler) CompleteStreamUpload(w http.ResponseWriter, r *http.Reque
 	}
 
 	var request struct {
-		CourseId  *uuid.UUID `json:"course_id"`
-		LessonId  *uuid.UUID `json:"lesson_id"`
-		VideoId   string     `json:"video_id"`
-		Title     string     `json:"title"`
-		SizeBytes int64      `json:"size_bytes"`
+		CourseId       *uuid.UUID `json:"course_id"`
+		LessonId       *uuid.UUID `json:"lesson_id"`
+		VideoId        string     `json:"video_id"`
+		Title          string     `json:"title"`
+		SizeBytes      int64      `json:"size_bytes"`
+		ExpirationTime int64      `json:"expiration_time"`
+		Signature      string     `json:"signature"`
 	}
 	if err := decodeJSON(r, &request); err != nil {
 		writeError(w, http.StatusBadRequest, err)
@@ -132,15 +135,17 @@ func (h *MediaHandler) CompleteStreamUpload(w http.ResponseWriter, r *http.Reque
 	}
 
 	asset, err := h.mediaService.CompleteStreamUpload(r.Context(), service.CompleteStreamUploadInput{
-		OwnerId:   userID,
-		CourseId:  request.CourseId,
-		LessonId:  request.LessonId,
-		VideoId:   request.VideoId,
-		Title:     request.Title,
-		SizeBytes: request.SizeBytes,
+		OwnerId:        userID,
+		CourseId:       request.CourseId,
+		LessonId:       request.LessonId,
+		VideoId:        request.VideoId,
+		Title:          request.Title,
+		SizeBytes:      request.SizeBytes,
+		ExpirationTime: request.ExpirationTime,
+		Signature:      request.Signature,
 	})
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err)
+		writeMediaError(w, err)
 		return
 	}
 
@@ -150,7 +155,7 @@ func (h *MediaHandler) CompleteStreamUpload(w http.ResponseWriter, r *http.Reque
 func (h *MediaHandler) GetStreamVideoStatus(w http.ResponseWriter, r *http.Request) {
 	status, err := h.mediaService.GetStreamVideoStatus(r.Context(), chi.URLParam(r, "videoID"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err)
+		writeMediaError(w, err)
 		return
 	}
 
@@ -170,4 +175,14 @@ func optionalUUIDFormValue(w http.ResponseWriter, r *http.Request, name string) 
 	}
 
 	return &id, true
+}
+
+func writeMediaError(w http.ResponseWriter, err error) {
+	status := http.StatusInternalServerError
+	if errors.Is(err, service.ErrInvalidMedia) {
+		status = http.StatusBadRequest
+	} else if errors.Is(err, service.ErrMediaProvider) {
+		status = http.StatusBadGateway
+	}
+	writeError(w, status, err)
 }

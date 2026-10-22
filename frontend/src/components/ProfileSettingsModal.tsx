@@ -5,8 +5,10 @@ import { Edit3, Eye, EyeOff, KeyRound, RefreshCw, Trash2, X } from "lucide-react
 import { changePassword, deleteMe, updateMe } from "../api/authDatasource";
 import { apiBaseUrl } from "../api/http";
 import type { User } from "../entities/course/course";
+import "../styles/profile-umbra.css";
 
 type ProfileSettingsModalProps = {
+  theme?: "legacy" | "umbra";
   user: User;
   onClose: () => void;
   onUserChange: (user: User) => void;
@@ -14,6 +16,7 @@ type ProfileSettingsModalProps = {
 };
 
 export function ProfileSettingsModal({
+  theme = "legacy",
   user,
   onClose,
   onUserChange,
@@ -24,6 +27,7 @@ export function ProfileSettingsModal({
   const [isEditing, setIsEditing] = useState(false);
   const [profileStatus, setProfileStatus] = useState("");
   const [profileSaving, setProfileSaving] = useState(false);
+  const [saveConfirmOpen, setSaveConfirmOpen] = useState(false);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -41,6 +45,7 @@ export function ProfileSettingsModal({
     setEmail(user.email);
     setFullName(user.full_name);
     setIsEditing(false);
+    setSaveConfirmOpen(false);
   }, [user]);
 
   const canChangeEmail = user.can_change_email !== false;
@@ -54,10 +59,15 @@ export function ProfileSettingsModal({
     isEditing && hasProfileChanges && normalizedFullName.length > 0 && (!canChangeEmail || normalizedEmail.length > 0);
   const authLabel = isGoogleAccount ? "Google" : "Email и пароль";
 
-  async function handleProfileSubmit(event: FormEvent) {
+  function handleProfileSubmit(event: FormEvent) {
     event.preventDefault();
-    if (!canSaveProfile) return;
+    if (!canSaveProfile || profileSaving) return;
+    setProfileStatus("");
+    setSaveConfirmOpen(true);
+  }
 
+  async function saveProfileConfirmed() {
+    if (!canSaveProfile || profileSaving) return;
     setProfileSaving(true);
     setProfileStatus("");
 
@@ -69,6 +79,7 @@ export function ProfileSettingsModal({
       onUserChange(updated);
       setProfileStatus("Профиль сохранен");
       setIsEditing(false);
+      setSaveConfirmOpen(false);
     } catch (err) {
       setProfileStatus(formatError(err));
     } finally {
@@ -126,7 +137,7 @@ export function ProfileSettingsModal({
   }
 
   return (
-    <div className="profile-modal-backdrop" onMouseDown={onClose}>
+    <div className={`profile-modal-backdrop${theme === "umbra" ? " umbra-profile" : ""}`} onMouseDown={onClose}>
       <section className="profile-modal" onMouseDown={(event) => event.stopPropagation()}>
         <header className="profile-modal-header">
           <div>
@@ -260,6 +271,31 @@ export function ProfileSettingsModal({
           </div>
         ) : null}
 
+        {saveConfirmOpen ? (
+          <div className="profile-nested-backdrop" onMouseDown={() => {
+            if (!profileSaving) setSaveConfirmOpen(false);
+          }}>
+            <section className="profile-nested-dialog" role="dialog" aria-modal="true" aria-labelledby="profile-save-title" onMouseDown={(event) => event.stopPropagation()}>
+              <header>
+                <h3 id="profile-save-title">Сохранить изменения?</h3>
+                <button type="button" aria-label="Закрыть" disabled={profileSaving} onClick={() => setSaveConfirmOpen(false)}>
+                  <X size={18} />
+                </button>
+              </header>
+              <p>Вы уверены, что хотите обновить данные профиля?</p>
+              {normalizedFullName !== user.full_name ? <p>Новое имя: <strong>{normalizedFullName}</strong></p> : null}
+              {canChangeEmail && normalizedEmail !== user.email ? <p>Новый email: <strong>{normalizedEmail}</strong></p> : null}
+              <div className="profile-actions-row">
+                <button className="secondary" type="button" disabled={profileSaving} onClick={() => setSaveConfirmOpen(false)}>Отмена</button>
+                <button type="button" disabled={profileSaving} onClick={() => void saveProfileConfirmed()}>
+                  {profileSaving ? "Сохранение..." : "Да, сохранить"}
+                </button>
+              </div>
+              {profileStatus ? <p role="alert">{profileStatus}</p> : null}
+            </section>
+          </div>
+        ) : null}
+
         {deleteConfirmOpen ? (
           <div className="profile-nested-backdrop" onMouseDown={() => setDeleteConfirmOpen(false)}>
             <section className="profile-nested-dialog" onMouseDown={(event) => event.stopPropagation()}>
@@ -270,9 +306,12 @@ export function ProfileSettingsModal({
                 </button>
               </header>
               <p>
-                Аккаунт будет удален вместе с заявками, прогрессом и сессиями. Для администратора удаление через профиль
+                Вы уверены, что хотите удалить аккаунт? Аккаунт будет удален вместе с заявками, прогрессом и сессиями. Для администратора удаление через профиль
                 запрещено.
               </p>
+              <div className="profile-actions-row">
+                <button className="secondary" type="button" disabled={deleteSaving} onClick={() => setDeleteConfirmOpen(false)}>Отмена</button>
+              </div>
               <button className="danger" type="button" disabled={deleteSaving} onClick={handleDeleteAccount}>
                 {deleteSaving ? "Удаление..." : "Удалить аккаунт"}
               </button>

@@ -5,6 +5,7 @@ import type { Course } from "../entities/course/course";
 import type { Notification } from "../entities/notification/notification";
 import type { TranslationKey } from "../i18n";
 import { NotificationBell } from "./NotificationBell";
+import { UmbraLogo } from "./umbra/UmbraLogo";
 
 type CourseTopbarProps = {
   course: Course;
@@ -63,6 +64,10 @@ export function CourseTopbar({
           onClick={() => setMobileMenuOpen(true)}
         >
           <Menu size={20} />
+        </button>
+        <button className="admin-umbra-brand" type="button" onClick={onLandingOpen} aria-label="UMBRA — на главную">
+          <UmbraLogo size={34} />
+          <span>UMBRA</span>
         </button>
         <div className="course-title-button">
           <span>{course.title}</span>

@@ -1,0 +1,492 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UMBRA — школа чёрной риторики</title>
+<meta name="description" content="UMBRA — школа чёрной риторики в Алматы. Учим распознавать приёмы влияния, держать удар в споре и говорить так, чтобы вас слушали.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Oswald:wght@500;600&family=Manrope:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0A0A0B; --ink2:#141416; --line:#26262A; --bone:#EDE8DF; --mute:#9A958D; --dim:#6B6862; --red:#C8102E; --red2:#E0223F;
+  --serif:'Cormorant Garamond', 'Times New Roman', serif;
+  --cond:'Oswald', 'Arial Narrow', sans-serif;
+  --sans:'Manrope', system-ui, sans-serif;
+  --mono:'IBM Plex Mono', ui-monospace, monospace;
+  --pad:clamp(20px, 5vw, 64px);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{margin:0;background:var(--ink);color:var(--bone);font-family:var(--sans);font-size:17px;line-height:1.6;overflow-x:hidden}
+img{max-width:100%;display:block}
+a{color:inherit}
+.wrap{max-width:1280px;margin:0 auto;padding-left:var(--pad);padding-right:var(--pad)}
+.label{font-family:var(--mono);font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--red)}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:54px;padding:0 30px;font-family:var(--sans);font-weight:700;font-size:15px;letter-spacing:.04em;text-decoration:none;border:1px solid var(--bone);color:var(--bone);transition:background .2s,color .2s}
+.btn:hover{background:var(--bone);color:var(--ink)}
+.btn.red{background:var(--red);border-color:var(--red);color:#fff}
+.btn.red:hover{background:var(--red2);border-color:var(--red2)}
+
+/* NAV */
+header{position:sticky;top:0;z-index:20;background:rgba(10,10,11,.86);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.nav{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:68px}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none}
+.brand b{font-family:var(--cond);font-weight:600;font-size:22px;letter-spacing:.36em;margin-right:-.36em}
+.nav nav{display:flex;align-items:center;gap:28px;font-size:14px}
+.nav nav a{text-decoration:none;color:var(--mute)}
+.nav nav a:hover{color:var(--bone)}
+.nav .btn{min-height:44px;padding:0 20px;font-size:13px}
+
+/* HERO */
+.hero{position:relative;padding:clamp(56px,10vw,120px) 0 clamp(64px,10vw,120px);overflow:hidden}
+.hero .grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:48px;align-items:center}
+.hero h1{margin:22px 0 0;font-family:var(--serif);font-weight:300;font-size:clamp(64px,11vw,168px);line-height:.86;letter-spacing:-.02em}
+.hero h1 .it{font-style:italic;font-weight:400;color:var(--red)}
+.hero h1 .sm{display:block;font-family:var(--cond);font-weight:500;font-style:normal;font-size:clamp(15px,1.6vw,20px);letter-spacing:.42em;color:var(--mute);margin-bottom:18px}
+.hero p.lead{max-width:540px;margin:34px 0 38px;font-size:clamp(17px,1.5vw,19px);color:#C9C4BB}
+.hero .ctas{display:flex;flex-wrap:wrap;gap:12px}
+.eclipse{width:min(100%,440px);aspect-ratio:1;margin-left:auto;position:relative}
+.eclipse svg{width:100%;height:100%;overflow:visible}
+.eclipse .glow{position:absolute;inset:12%;border-radius:50%;box-shadow:0 60px 120px -20px rgba(200,16,46,.45);pointer-events:none}
+@keyframes breathe{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.eclipse .disc{animation:breathe 7s ease-in-out infinite}
+.hero .tag{position:absolute;right:var(--pad);bottom:28px;font-family:var(--mono);font-size:11px;letter-spacing:.2em;color:var(--dim)}
+
+/* MARQUEE */
+.marquee{border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden;white-space:nowrap;padding:22px 0;background:var(--ink2)}
+.marquee .run{display:inline-block;animation:run 38s linear infinite;font-family:var(--serif);font-style:italic;font-weight:300;font-size:clamp(28px,4vw,46px);color:var(--bone)}
+.marquee .run span{color:var(--red);font-style:normal;margin:0 28px;font-family:var(--cond);font-size:.5em;vertical-align:middle;letter-spacing:.3em}
+@keyframes run{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* SECTIONS */
+section{padding:clamp(72px,10vw,128px) 0}
+.h2{margin:18px 0 0;font-family:var(--serif);font-weight:300;font-size:clamp(42px,6.4vw,92px);line-height:.95;letter-spacing:-.01em}
+.h2 em{font-style:italic;color:var(--red);font-weight:400}
+.intro{max-width:620px;color:#C9C4BB;margin:26px 0 0}
+
+/* MANIFESTO */
+.manifesto{background:var(--bone);color:var(--ink)}
+.manifesto blockquote{margin:0;font-family:var(--serif);font-weight:300;font-size:clamp(34px,5.4vw,78px);line-height:1.02;letter-spacing:-.01em}
+.manifesto blockquote em{font-style:italic;color:var(--red)}
+.manifesto .sig{margin-top:36px;display:flex;align-items:center;gap:14px;font-family:var(--mono);font-size:12px;letter-spacing:.2em;color:#5A5650}
+.manifesto .sig i{display:inline-block;width:46px;height:1px;background:var(--red)}
+
+/* TRIAD */
+.triad{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;margin-top:64px;border-top:1px solid var(--line)}
+.triad article{padding:40px 36px 8px 0;border-right:1px solid var(--line)}
+.triad article+article{padding-left:36px}
+.triad article:last-child{border-right:0}
+.triad .num{font-family:var(--mono);font-size:12px;color:var(--dim);letter-spacing:.2em}
+.triad h3{margin:18px 0 14px;font-family:var(--serif);font-style:italic;font-weight:400;font-size:clamp(40px,4.4vw,60px);line-height:1;color:var(--bone)}
+.triad h3::after{content:'.';color:var(--red)}
+.triad p{margin:0;color:#B9B4AB}
+.ethic{margin-top:56px;padding:26px 30px;border:1px solid var(--line);border-left:3px solid var(--red);max-width:760px;color:#C9C4BB}
+.ethic b{color:var(--bone)}
+
+/* PROGRAM */
+.program{background:var(--ink2);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.mods{margin-top:56px;border-top:1px solid var(--line)}
+.mod{display:grid;grid-template-columns:90px minmax(0,1fr) minmax(0,1.1fr);gap:24px;align-items:baseline;padding:30px 0;border-bottom:1px solid var(--line)}
+.mod .n{font-family:var(--serif);font-style:italic;font-size:44px;line-height:1;color:var(--red)}
+.mod h3{margin:0;font-family:var(--cond);font-weight:500;font-size:clamp(20px,2vw,26px);letter-spacing:.06em;text-transform:uppercase}
+.mod p{margin:0;color:#B9B4AB;font-size:16px}
+.mod .final{font-family:var(--mono);font-size:11px;letter-spacing:.18em;color:var(--red);display:block;margin-top:8px}
+
+/* WHO */
+.who{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px;margin-top:56px}
+.who div{padding:30px 26px;border:1px solid var(--line);background:var(--ink2)}
+.who b{display:block;font-family:var(--serif);font-style:italic;font-weight:400;font-size:30px;line-height:1.05;margin-bottom:12px}
+.who span{color:#B9B4AB;font-size:15px}
+
+/* FORMATS */
+.formats{background:var(--bone);color:var(--ink)}
+.formats .h2{color:var(--ink)}
+.formats .intro{color:#4A4741}
+.plans{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:#CFC8BC;border:1px solid #CFC8BC;margin-top:56px}
+.plan{background:var(--bone);padding:36px 28px;display:flex;flex-direction:column;gap:14px}
+.plan.feat{background:var(--ink);color:var(--bone)}
+.plan .k{font-family:var(--mono);font-size:11px;letter-spacing:.2em;color:var(--red)}
+.plan h3{margin:0;font-family:var(--serif);font-weight:400;font-size:34px;line-height:1.05}
+.plan .price{font-family:var(--cond);font-weight:600;font-size:34px;letter-spacing:.02em}
+.plan .price small{font-family:var(--sans);font-weight:500;font-size:14px;letter-spacing:0;opacity:.7}
+.plan ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;font-size:15px}
+.plan li{display:flex;gap:10px}
+.plan li::before{content:'—';color:var(--red)}
+.plan .btn{margin-top:auto;border-color:currentColor;color:inherit}
+.plan.feat .btn{background:var(--red);border-color:var(--red);color:#fff}
+.note{margin-top:22px;font-size:14px;color:#5A5650}
+
+/* AUTHOR */
+.author .grid{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:clamp(36px,6vw,90px);align-items:center}
+.author figure{margin:0;position:relative}
+.author figure img{width:100%;height:auto;filter:grayscale(.25) contrast(1.05)}
+.author figure::after{content:'';position:absolute;left:-14px;top:-14px;width:96px;height:96px;border-left:2px solid var(--red);border-top:2px solid var(--red)}
+.author .q{margin:26px 0 30px;font-family:var(--serif);font-style:italic;font-weight:300;font-size:clamp(30px,3.6vw,48px);line-height:1.1}
+.facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px 36px;border-top:1px solid var(--line);padding-top:28px}
+.facts b{display:block;font-family:var(--cond);font-weight:500;letter-spacing:.06em;font-size:18px;text-transform:uppercase}
+.facts span{color:var(--mute);font-size:15px}
+
+/* FAQ */
+.faq{background:var(--ink2);border-top:1px solid var(--line)}
+.faq .list{margin-top:48px;max-width:900px}
+details{border-top:1px solid var(--line)}
+details:last-child{border-bottom:1px solid var(--line)}
+summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:20px;min-height:72px;font-family:var(--serif);font-size:clamp(22px,2.4vw,30px);font-weight:400}
+summary::-webkit-details-marker{display:none}
+summary i{font-style:normal;color:var(--red);font-family:var(--sans);font-size:26px;transition:transform .2s}
+details[open] summary i{transform:rotate(45deg)}
+details p{margin:0 0 26px;color:#B9B4AB;max-width:760px}
+
+/* CTA */
+.cta{text-align:center;position:relative;overflow:hidden}
+.cta .big{font-family:var(--serif);font-weight:300;font-size:clamp(64px,13vw,200px);line-height:.85;letter-spacing:-.02em;margin:22px 0 0}
+.cta .big em{font-style:italic;color:var(--red)}
+.cta p{max-width:560px;margin:30px auto 36px;color:#C9C4BB}
+.cta .ctas{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+
+footer{border-top:1px solid var(--line);padding:30px 0;color:var(--dim);font-size:14px}
+footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:16px;align-items:center}
+footer a{color:var(--mute);text-decoration:none;margin-left:22px}
+footer a:first-child{margin-left:0}
+
+
+/* WIDGETS */
+button.btn{-webkit-appearance:none;appearance:none;background:transparent;cursor:pointer;border-radius:0}
+#trainer,#test{scroll-margin-top:80px}
+.game{scroll-margin-top:90px}
+.game{display:grid;grid-template-columns:minmax(0,1fr);gap:0;margin-top:48px;border:1px solid var(--line);background:var(--ink2)}
+.game .bar{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 24px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:12px;letter-spacing:.16em;color:var(--dim)}
+.game .bar b{color:var(--red);font-weight:500}
+.game .body{padding:clamp(24px,4vw,48px)}
+.game .phrase{margin:0 0 30px;font-family:var(--serif);font-style:italic;font-weight:300;font-size:clamp(28px,3.6vw,46px);line-height:1.12}
+.game .q{margin:0 0 26px;font-family:var(--serif);font-weight:400;font-size:clamp(26px,3vw,38px);line-height:1.15}
+.opts{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;max-width:760px}
+.opt{all:unset;box-sizing:border-box;cursor:pointer;display:flex;gap:16px;align-items:flex-start;min-height:56px;padding:15px 18px;border:1px solid var(--line);background:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.45;color:var(--bone);transition:border-color .2s,background .2s}
+.opt:hover,.opt:focus-visible{border-color:var(--bone)}
+.opt i{font-style:normal;font-family:var(--mono);font-size:12px;color:var(--dim);padding-top:3px;min-width:16px}
+.opt.ok{border-color:var(--red);background:rgba(200,16,46,.14)}
+.opt.no{opacity:.45}
+.reveal{margin-top:26px;padding:22px 24px;border-left:3px solid var(--red);background:var(--ink);max-width:760px}
+.reveal .k{font-family:var(--mono);font-size:11px;letter-spacing:.2em;color:var(--red)}
+.reveal h4{margin:8px 0 10px;font-family:var(--cond);font-weight:500;font-size:22px;letter-spacing:.06em;text-transform:uppercase}
+.reveal p{margin:0;color:#C9C4BB}
+.reveal p b{color:var(--bone)}
+.game .next{margin-top:24px}
+.result h3{margin:6px 0 4px;font-family:var(--serif);font-style:italic;font-weight:400;font-size:clamp(56px,8vw,110px);line-height:.95;color:var(--red)}
+.result .sub{font-family:var(--cond);letter-spacing:.3em;font-size:14px;color:var(--mute);text-transform:uppercase}
+.result .desc{margin:24px 0 26px;max-width:720px;font-size:18px;color:#D6D1C8}
+.result .cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin-bottom:30px}
+.result .cols div{border-top:1px solid var(--line);padding-top:16px}
+.result .cols b{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.2em;color:var(--red);margin-bottom:8px;font-weight:500}
+.result .cols span{color:#C9C4BB;font-size:15px}
+.result .row{display:flex;flex-wrap:wrap;gap:12px}
+.dots{display:flex;gap:6px}
+.dots span{width:18px;height:3px;background:var(--line)}
+.dots span.on{background:var(--red)}
+@media (max-width:820px){.result .cols{grid-template-columns:minmax(0,1fr)}.game .bar.mix{flex-direction:column;align-items:flex-start;gap:6px;line-height:1.6}.result .row .btn{flex:1 1 100%}}
+
+/* RESPONSIVE */
+@media (max-width:1000px){
+  .plans{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .who{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:820px){
+  .nav nav a:not(.btn){display:none}
+  .hero .grid{grid-template-columns:minmax(0,1fr)}
+  .eclipse{width:min(78%,320px);margin:8px auto 0;order:-1}
+  .hero .tag{display:none}
+  .triad{grid-template-columns:minmax(0,1fr)}
+  .triad article,.triad article+article{padding:32px 0 28px;border-right:0;border-bottom:1px solid var(--line)}
+  .mod{grid-template-columns:56px minmax(0,1fr);gap:8px 16px}
+  .mod .n{font-size:34px;grid-row:span 2}
+  .author .grid{grid-template-columns:minmax(0,1fr)}
+  .author figure{max-width:420px}
+}
+@media (max-width:560px){
+  .plans,.who,.facts{grid-template-columns:minmax(0,1fr)}
+  .hero .ctas .btn,.cta .ctas .btn{width:100%}
+  footer a{margin-left:0;margin-right:18px}
+}
+@media (prefers-reduced-motion:reduce){.marquee .run,.eclipse .disc{animation:none}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#top" aria-label="UMBRA — на главную">
+      <svg width="30" height="30" viewBox="0 0 260 260" aria-hidden="true"><defs><clipPath id="c0"><circle cx="130" cy="130" r="108"/></clipPath></defs><circle cx="130" cy="130" r="108" fill="#C8102E"/><circle cx="130" cy="104" r="112" fill="#0A0A0B" clip-path="url(#c0)"/><circle cx="130" cy="130" r="108" fill="none" stroke="#EDE8DF" stroke-width="10"/></svg>
+      <b>UMBRA</b>
+    </a>
+    <nav aria-label="Основное меню">
+      <a href="#method">Метод</a>
+      <a href="#program">Программа</a>
+      <a href="#test">Тест</a>
+      <a href="#formats">Форматы</a>
+      <a href="#author">Автор</a>
+      <a class="btn red" href="#join">Записаться</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- HERO -->
+<div class="hero">
+  <div class="wrap grid">
+    <div>
+      <div class="label">Школа чёрной риторики · Алматы</div>
+      <h1><span class="sm">UMBRA · ИСКУССТВО ВЛИЯНИЯ</span>Слово —<br>это <span class="it">власть.</span></h1>
+      <p class="lead">Учим видеть приёмы влияния, держать удар в споре и говорить так, чтобы вас не перебивали. Риторика, которую не преподают вслух.</p>
+      <div class="ctas">
+        <a class="btn red" href="#join">Записаться на курс</a>
+        <a class="btn" href="#test">Какой вы оратор? Тест</a>
+      </div>
+    </div>
+    <div class="eclipse" aria-hidden="true">
+      <div class="glow"></div>
+      <svg viewBox="0 0 260 260">
+        <defs><clipPath id="c1"><circle cx="130" cy="130" r="108"/></clipPath></defs>
+        <circle cx="130" cy="130" r="108" fill="#C8102E"/>
+        <g clip-path="url(#c1)"><circle class="disc" cx="130" cy="104" r="112" fill="#0A0A0B"/></g>
+        <circle cx="130" cy="130" r="108" fill="none" stroke="#EDE8DF" stroke-width="1.2"/>
+        <circle cx="130" cy="130" r="124" fill="none" stroke="#26262A" stroke-width=".8"/>
+      </svg>
+    </div>
+  </div>
+  <div class="tag">UMBRA (лат.) — ТЕНЬ</div>
+</div>
+
+<!-- MARQUEE -->
+<div class="marquee" aria-hidden="true">
+  <div class="run">Видеть приём <span>●</span> Держать удар <span>●</span> Вести разговор <span>●</span> Говорить последним <span>●</span> Молчать вовремя <span>●</span> Видеть приём <span>●</span> Держать удар <span>●</span> Вести разговор <span>●</span> Говорить последним <span>●</span> Молчать вовремя <span>●</span></div>
+</div>
+
+<!-- MANIFESTO -->
+<section class="manifesto">
+  <div class="wrap">
+    <div class="label">Манифест</div>
+    <blockquote style="margin-top:26px">Вас уже пытаются убедить — начальник, партнёр, близкие. <em>Вопрос лишь в том,</em> замечаете ли вы это.</blockquote>
+    <div class="sig"><i></i>Рамина Курбанова, основатель UMBRA</div>
+  </div>
+</section>
+
+<!-- METHOD -->
+<section id="method">
+  <div class="wrap">
+    <div class="label">Что такое чёрная риторика</div>
+    <h2 class="h2">Три умения, которые <em>не дают</em> на тренингах уверенности</h2>
+    <p class="intro">Классическая риторика учит красиво говорить. Чёрная — понимать, что на самом деле происходит в разговоре, и управлять этим.</p>
+    <div class="triad">
+      <article><div class="num">01</div><h3>Видеть</h3><p>Распознавать манипуляции, подмену тезиса, давление авторитетом, ложный выбор и другие уловки — в тот момент, когда их применяют к вам.</p></article>
+      <article><div class="num">02</div><h3>Держать</h3><p>Не теряться под напором, отвечать на провокации и неудобные вопросы спокойно, коротко и так, чтобы атака не сработала.</p></article>
+      <article><div class="num">03</div><h3>Влиять</h3><p>Выстраивать аргумент, держать паузу, задавать рамку разговора и вести собеседника к решению — открыто и уверенно.</p></article>
+    </div>
+    <div class="ethic"><b>Мы не учим обманывать.</b> Мы учим не быть обманутым и говорить сильнее. Каждый приём разбираем в двух ролях: как его применяют к вам и как на него ответить.</div>
+  </div>
+</section>
+
+
+<!-- TRAINER -->
+<section id="trainer" class="program">
+  <div class="wrap">
+    <div class="label">Тренажёр · 1 минута</div>
+    <h2 class="h2">Распознайте <em>приём</em></h2>
+    <p class="intro">Пять реплик, которые вы наверняка слышали. Угадайте, какая уловка в них спрятана, — и получите готовый ответ.</p>
+    <div class="game" id="tr" aria-live="polite"></div>
+  </div>
+</section>
+
+<!-- PROGRAM -->
+<section id="program" class="program">
+  <div class="wrap">
+    <div class="label">Программа · 16 уроков</div>
+    <h2 class="h2">Восемь модулей. <em>Один</em> поединок в финале.</h2>
+    <div class="mods">
+      <div class="mod"><div class="n">I</div><h3>Психология давления</h3><p>Почему мы теряемся в споре и как вернуть себе контроль над состоянием за секунды.</p></div>
+      <div class="mod"><div class="n">II</div><h3>Голос как инструмент власти</h3><p>Темп, тембр и громкость, которые заставляют слушать. Дыхание, которое не выдаёт волнения.</p></div>
+      <div class="mod"><div class="n">III</div><h3>Архитектура аргумента</h3><p>Логос, пафос, этос: как строится убеждение и почему одних слушают, а других нет.</p></div>
+      <div class="mod"><div class="n">IV</div><h3>Приёмы и уловки</h3><p>Каталог манипуляций в споре и переговорах: как их распознать и назвать вслух.</p></div>
+      <div class="mod"><div class="n">V</div><h3>Ответ на атаку</h3><p>Провокации, перебивания, неудобные вопросы, переход на личности. Короткие ответы, которые гасят атаку.</p></div>
+      <div class="mod"><div class="n">VI</div><h3>Тело и пауза</h3><p>Невербальное доминирование: взгляд, поза, жесты и пауза, которая говорит больше слов.</p></div>
+      <div class="mod"><div class="n">VII</div><h3>Рамки и истории</h3><p>Как управлять вниманием, задавать рамку разговора и превращать факты в историю, которую запоминают.</p></div>
+      <div class="mod"><div class="n">VIII</div><h3>Публичная дуэль</h3><p>Спор, переговоры и выступление под давлением. Ваш личный стиль влияния.<span class="final">Финал — поединок перед группой</span></p></div>
+    </div>
+  </div>
+</section>
+
+<!-- WHO -->
+<section>
+  <div class="wrap">
+    <div class="label">Для кого</div>
+    <h2 class="h2">Для тех, кого <em>слишком часто</em> переубеждают</h2>
+    <div class="who">
+      <div><b>На работе</b><span>Разговор с начальником, защита идеи, переговоры о деньгах и условиях.</span></div>
+      <div><b>В споре</b><span>Когда вас перебивают, давят или выставляют неправым при всех.</span></div>
+      <div><b>В близких отношениях</b><span>Семья, друзья, партнёр — где манипуляции самые незаметные.</span></div>
+      <div><b>На сцене</b><span>Выступления, эфиры, презентации, где важно держать зал.</span></div>
+    </div>
+  </div>
+</section>
+
+
+<!-- TEST -->
+<section id="test">
+  <div class="wrap">
+    <div class="label">Тест · 6 ситуаций</div>
+    <h2 class="h2">Какой вы <em>оратор?</em></h2>
+    <p class="intro">Отвечайте так, как поступили бы на самом деле, а не как правильно. В конце — ваш тип, сильная сторона и слепая зона.</p>
+    <div class="game" id="qz" aria-live="polite"></div>
+  </div>
+</section>
+
+<!-- FORMATS -->
+<section id="formats" class="formats">
+  <div class="wrap">
+    <div class="label">Форматы и стоимость</div>
+    <h2 class="h2">Выберите, <em>как</em> учиться</h2>
+    <p class="intro">Во всех форматах — одна программа и сертификат об окончании.</p>
+    <div class="plans">
+      <div class="plan"><div class="k">ЭКСПРЕСС</div><h3>Курс в записи</h3><div class="price">30 000 <small>₸</small></div><ul><li>16 уроков по 25–30 минут</li><li>Доступ на платформе</li><li>Учитесь в своём темпе</li></ul><a class="btn" href="#join">Записаться</a></div>
+      <div class="plan feat"><div class="k">ОНЛАЙН</div><h3>С преподавателем</h3><div class="price">100 000 <small>₸</small></div><ul><li>2 месяца, 16 уроков</li><li>Домашние задания с разбором</li><li>Живая практика онлайн</li></ul><a class="btn" href="#join">Записаться</a></div>
+      <div class="plan"><div class="k">ОФЛАЙН</div><h3>Группа в Алматы</h3><div class="price">150 000 <small>₸</small></div><ul><li>2 месяца, 16 встреч</li><li>Практика в группе</li><li>Финальная дуэль вживую</li></ul><a class="btn" href="#join">Записаться</a></div>
+      <div class="plan"><div class="k">ЛИЧНО</div><h3>Индивидуально</h3><div class="price">300 000 <small>₸</small></div><ul><li>Программа под вашу задачу</li><li>Разбор реальных ситуаций</li><li>Гибкий график</li></ul><a class="btn" href="#join">Записаться</a></div>
+    </div>
+    <p class="note">Корпоративное обучение для команд — по запросу.</p>
+  </div>
+</section>
+
+<!-- AUTHOR -->
+<section id="author" class="author">
+  <div class="wrap grid">
+    <figure><img src="ramina_portrait.jpg" alt="Рамина Курбанова, основатель UMBRA" width="1200" height="1800"></figure>
+    <div>
+      <div class="label">Автор курса</div>
+      <h2 class="h2">Рамина <em>Курбанова</em></h2>
+      <p class="q">«Когда-то у меня был тихий голос. Теперь меня слушают на переговорах с собственниками».</p>
+      <div class="facts">
+        <div><b>2 место</b><span>в конкурсе ораторского искусства</span></div>
+        <div><b>100+ сессий</b><span>стратегических сессий с собственниками и руководителями</span></div>
+        <div><b>Stirling University, UK</b><span>Master's Degree, Business Management</span></div>
+        <div><b>Logos RA</b><span>основатель, управленческий консалтинг</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="faq">
+  <div class="wrap">
+    <div class="label">Вопросы</div>
+    <h2 class="h2">Прежде чем <em>решиться</em></h2>
+    <div class="list">
+      <details><summary>Чёрная риторика — это этично?<i>+</i></summary><p>Да. Мы разбираем приёмы, которые применяют к вам каждый день, чтобы вы их распознавали и умели ответить. Цель — защита и сильная речь, а не обман.</p></details>
+      <details><summary>Нужен ли опыт выступлений?<i>+</i></summary><p>Нет. Программа начинается с работы с волнением и голосом. Многие приходят как раз потому, что теряются в споре.</p></details>
+      <details><summary>Чем отличаются форматы?<i>+</i></summary><p>Программа одна. В записи вы учитесь самостоятельно, онлайн и офлайн — с преподавателем, домашними заданиями и практикой в группе, индивидуально — под вашу конкретную задачу.</p></details>
+      <details><summary>Будет ли сертификат?<i>+</i></summary><p>Да, после окончания курса вы получаете сертификат UMBRA.</p></details>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section id="join" class="cta">
+  <div class="wrap">
+    <div class="label">Запись</div>
+    <div class="big">Слово —<br><em>за вами.</em></div>
+    <p>Напишите нам — расскажем о ближайшем потоке и поможем выбрать формат.</p>
+    <div class="ctas">
+      <a class="btn red" href="https://wa.me/77080088807">Написать в WhatsApp</a>
+      <a class="btn" href="tel:+77080088807">+7 708 008 8807</a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div>UMBRA · Искусство влияния · Алматы</div>
+    <div><a href="https://wa.me/77080088807">WhatsApp</a><a href="#top">Наверх ↑</a></div>
+  </div>
+</footer>
+
+
+<script>
+(function(){
+var esc=function(t){return t;};
+/* ---------- TRAINER ---------- */
+var T=[
+ {p:'«Все нормальные люди давно так делают — только вы сомневаетесь».',o:['Апелляция к большинству','Ложная дилемма','Давление авторитетом'],a:0,
+  why:'Вам предлагают решать не по сути, а потому что «так делают все». Сомнение выставлено ненормальным.',ans:'«Мне важно не что делают все, а подходит ли это нам. Давайте по сути».'},
+ {p:'«Либо вы подписываете сегодня, либо мы работаем с другими».',o:['Переход на личность','Ложная дилемма','Подмена тезиса'],a:1,
+  why:'Вам оставляют только два варианта и искусственно торопят, хотя вариантов больше.',ans:'«Я вижу больше двух вариантов. Давайте обсудим условия, при которых решение возможно».'},
+ {p:'«Вы ещё слишком молоды, чтобы в этом разбираться».',o:['Переход на личность','Апелляция к большинству','Ложная дилемма'],a:0,
+  why:'Спорят не с вашим аргументом, а с вами: возраст, статус, внешность вместо фактов.',ans:'«Возраст — не аргумент. Что именно в моём предложении вас не устраивает?»'},
+ {p:'«То есть вы хотите сказать, что вся наша работа ничего не стоит?»',o:['Давление авторитетом','Подмена тезиса','Ложная дилемма'],a:1,
+  why:'Ваши слова искажают до крайности и спорят уже с этой карикатурой, а не с тем, что вы сказали.',ans:'«Я этого не говорил. Я сказал другое — давайте вернёмся к моим словам».'},
+ {p:'«Я двадцать лет в профессии и говорю вам: это не сработает».',o:['Подмена тезиса','Переход на личность','Давление авторитетом'],a:2,
+  why:'Вместо доводов — стаж и статус. Опыт ценен, но сам по себе он не доказательство.',ans:'«Ваш опыт ценен. На каких фактах основан этот вывод?»'}
+];
+var tr=document.getElementById('tr'),ti=0,score=0;
+function trRender(){
+  if(ti>=T.length){
+    var msg=score===5?'Вас сложно провести. Осталось научиться так же уверенно отвечать вслух.':score>=3?'Вы видите большинство уловок. На курсе научимся отвечать на них спокойно и коротко.':'Уловки работают на вас чаще, чем кажется. Хорошая новость: это тренируется.';
+    tr.innerHTML='<div class="bar"><span>РЕЗУЛЬТАТ</span><b>'+score+' / '+T.length+'</b></div><div class="body result"><div class="sub">Вы распознали</div><h3>'+score+' из '+T.length+'</h3><p class="desc">'+msg+'</p><div class="row"><a class="btn red" href="#join">Научиться отвечать</a><button type="button" class="btn" id="trAgain">Пройти ещё раз</button></div></div>';
+    document.getElementById('trAgain').onclick=function(){ti=0;score=0;trRender();};
+    return;
+  }
+  var c=T[ti],dots='';for(var k=0;k<T.length;k++)dots+='<span'+(k<=ti?' class="on"':'')+'></span>';
+  var h='<div class="bar"><span>РЕПЛИКА '+(ti+1)+' / '+T.length+'</span><div class="dots">'+dots+'</div></div><div class="body"><p class="phrase">'+c.p+'</p><div class="opts">';
+  c.o.forEach(function(o,j){h+='<button type="button" class="opt" data-j="'+j+'"><i>'+String.fromCharCode(65+j)+'</i><span>'+o+'</span></button>';});
+  h+='</div><div id="trRev"></div></div>';
+  tr.innerHTML=h;
+  [].forEach.call(tr.querySelectorAll('.opt'),function(b){b.onclick=function(){
+    var j=+b.dataset.j; if(j===c.a)score++;
+    [].forEach.call(tr.querySelectorAll('.opt'),function(x){x.disabled=true;x.classList.add(+x.dataset.j===c.a?'ok':'no');});
+    document.getElementById('trRev').innerHTML='<div class="reveal"><div class="k">'+(j===c.a?'ВЕРНО':'НЕ СОВСЕМ')+'</div><h4>'+c.o[c.a]+'</h4><p>'+c.why+'</p><p style="margin-top:12px"><b>Как ответить:</b> '+c.ans+'</p></div><button type="button" class="btn next" id="trNext">'+(ti<T.length-1?'Следующая реплика':'Узнать результат')+'</button>';
+    document.getElementById('trNext').onclick=function(){ti++;trRender();tr.scrollIntoView({block:'start',behavior:'smooth'});};
+  };});
+}
+trRender();
+
+/* ---------- ORATOR TEST ---------- */
+var Q=[
+ {q:'На совещании вашу идею перебили на полуслове. Вы…',o:['Ждёте паузы и возвращаете разговор фактами','Перебиваете в ответ — громче и твёрже','Шутите и перетягиваете внимание на себя','Молчите, а возвращаетесь к теме позже, когда все устанут']},
+ {q:'Перед важным разговором вы прежде всего…',o:['Готовите аргументы и цифры','Настраиваетесь на победу','Думаете, как расположить собеседника','Изучаете собеседника: что ему важно и чего он боится']},
+ {q:'Что сильнее всего раздражает в чужих выступлениях?',o:['Нелогичность','Вялость и неуверенность','Холодность и скука','Пустая болтовня']},
+ {q:'Вас несправедливо обвиняют при всех. Вы…',o:['Разбираете обвинение по пунктам','Атакуете в ответ','Переводите всё в шутку и снимаете напряжение','Задаёте вопрос, после которого обвинитель сам путается']},
+ {q:'Что о вас чаще всего говорят окружающие?',o:['«С тобой сложно спорить»','«В тебе столько энергии»','«С тобой легко и приятно»','«Ты всё замечаешь»']},
+ {q:'Идеальный финал спора для вас — это…',o:['Оппонент признаёт, что вы правы','Зал на вашей стороне','Вы расстаётесь друзьями, но решение — ваше','Оппонент сам приходит к вашему выводу и считает его своим']}
+];
+var R=[
+ {n:'Стратег',s:'ЛОГОС · СИЛА АРГУМЕНТА',d:'Вы убеждаете логикой и фактами. Вас трудно сбить с мысли, а ваши доводы выдерживают проверку.',st:'Чёткая структура и точные доводы.',bl:'Факты не всегда трогают людей: вас могут переиграть эмоцией и харизмой.',m:'Модуль VII · Рамки и истории'},
+ {n:'Воин',s:'НАПОР · СИЛА ДАВЛЕНИЯ',d:'Вы идёте в разговор как в бой и редко отступаете. Энергия и уверенность заряжают зал.',st:'Энергия, решительность, умение держать удар.',bl:'Напор легко принять за агрессию, а на провокацию вас проще всего вывести.',m:'Модуль VI · Тело и пауза'},
+ {n:'Чародей',s:'ПАФОС · СИЛА ОБАЯНИЯ',d:'Вы влияете через эмоции и расположение. Люди соглашаются с вами, потому что им с вами приятно.',st:'Харизма, юмор, умение снять напряжение.',bl:'Под жёстким давлением обаяние не спасает: нужен аргумент и умение держать позицию.',m:'Модуль V · Ответ на атаку'},
+ {n:'Тень',s:'НАБЛЮДЕНИЕ · СИЛА ВОПРОСА',d:'Вы говорите меньше всех, но точнее. Видите мотивы людей и бьёте вопросом, а не словом.',st:'Проницательность, выдержка, точный удар в нужный момент.',bl:'Вас могут не услышать: тихий голос и молчание иногда принимают за слабость.',m:'Модуль II · Голос как инструмент власти'}
+];
+var qz=document.getElementById('qz'),qi=0,pts=[0,0,0,0];
+function qzRender(){
+  if(qi>=Q.length){
+    var max=Math.max.apply(null,pts),w=pts.indexOf(max),r=R[w];
+    var mix=pts.map(function(v,i){return R[i].n+' '+Math.round(v/Q.length*100)+'%';}).join(' · ');
+    qz.innerHTML='<div class="bar mix"><span>ВАШ ПРОФИЛЬ</span><b>'+mix+'</b></div><div class="body result"><div class="sub">'+r.s+'</div><h3>'+r.n+'</h3><p class="desc">'+r.d+'</p><div class="cols"><div><b>СИЛА</b><span>'+r.st+'</span></div><div><b>СЛЕПАЯ ЗОНА</b><span>'+r.bl+'</span></div><div><b>ВАМ НУЖНЕЕ ВСЕГО</b><span>'+r.m+'</span></div></div><div class="row"><a class="btn red" href="#join">Разобрать мой тип на курсе</a><button type="button" class="btn" id="qzAgain">Пройти заново</button></div></div>';
+    document.getElementById('qzAgain').onclick=function(){qi=0;pts=[0,0,0,0];qzRender();};
+    return;
+  }
+  var c=Q[qi],dots='';for(var k=0;k<Q.length;k++)dots+='<span'+(k<=qi?' class="on"':'')+'></span>';
+  var order=[0,1,2,3].sort(function(){return Math.random()-.5;});
+  var h='<div class="bar"><span>СИТУАЦИЯ '+(qi+1)+' / '+Q.length+'</span><div class="dots">'+dots+'</div></div><div class="body"><p class="q">'+c.q+'</p><div class="opts">';
+  order.forEach(function(j,n){h+='<button type="button" class="opt" data-j="'+j+'"><i>'+String.fromCharCode(65+n)+'</i><span>'+c.o[j]+'</span></button>';});
+  qz.innerHTML=h+'</div></div>';
+  [].forEach.call(qz.querySelectorAll('.opt'),function(b){b.onclick=function(){pts[+b.dataset.j]++;qi++;qzRender();qz.scrollIntoView({block:'start',behavior:'smooth'});};});
+}
+qzRender();
+})();
+</script>
+</body>
+</html>
+
+</body></html>

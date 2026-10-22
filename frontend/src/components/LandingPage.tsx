@@ -1,3 +1,5 @@
+import { UmbraLanding } from "./umbra/UmbraLanding";
+import { LogoutConfirmDialog } from "./LogoutConfirmDialog";
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import {
@@ -31,6 +33,8 @@ import type { Notification } from "../entities/notification/notification";
 import type { TranslationKey } from "../i18n";
 import { NotificationBell } from "./NotificationBell";
 import { PreloadScreen } from "./PreloadScreen";
+import { BunnyHlsPlayer } from "./BunnyHlsPlayer";
+import { bunnyStorageCdnBaseUrl, bunnyStreamCdnBaseUrl } from "../config/media";
 import { useAssetPreload } from "../utils/preload";
 import newAboutCourseImage from "../../assets/images/new_about_course.png";
 import affectionIcon from "../../assets/images/affection.png";
@@ -44,6 +48,7 @@ import markIcon from "../../assets/images/mark.png";
 import pdfIcon from "../../assets/images/pdf_icon.png";
 
 type LandingPageProps = {
+  legacy?: boolean;
   error: string;
   t: (key: TranslationKey) => string;
   onLogin: (email: string, password: string) => Promise<void>;
@@ -57,6 +62,7 @@ type LandingPageProps = {
 };
 
 export function LandingPage({
+  legacy = false,
   error,
   t,
   onLogin,
@@ -75,6 +81,7 @@ export function LandingPage({
   const [accessError, setAccessError] = useState("");
   const [mode, setMode] = useState<"login" | "register">("login");
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [registerFullName, setRegisterFullName] = useState("");
@@ -95,8 +102,8 @@ export function LandingPage({
   const [authNoticeDialogOpen, setAuthNoticeDialogOpen] = useState(false);
   const [courseStartConfirmOpen, setCourseStartConfirmOpen] = useState(false);
   const [programSections, setProgramSections] = useState<CourseProgramSection[]>([]);
-  const criticalAssetsReady = useAssetPreload(landingCriticalImages, {
-    minDelayMs: 450,
+  const criticalAssetsReady = useAssetPreload(legacy ? landingCriticalImages : [], {
+    minDelayMs: legacy ? 450 : 0,
     timeoutMs: 3500
   });
 
@@ -210,6 +217,8 @@ export function LandingPage({
     try {
       await onLogin(dialogEmail, dialogPassword);
       setLoginDialogOpen(false);
+    } catch {
+      // The parent supplies the translated error; keep the dialog open to retry.
     } finally {
       setSubmitting(false);
     }
@@ -283,7 +292,7 @@ export function LandingPage({
     onClearError?.();
     setLoginDialogOpen(false);
     window.setTimeout(() => {
-      highlightSection("program");
+      highlightSection(legacy ? "program" : "join");
     }, 0);
   }
 
@@ -304,8 +313,8 @@ export function LandingPage({
   const authError = authNotice || formatUserFacingError(error);
   const accessDisplayError = formatUserFacingError(accessError);
 
-  if (!criticalAssetsReady) {
-    return <PreloadScreen label="Загрузка сайта" />;
+  if (legacy && !criticalAssetsReady) {
+    return <PreloadScreen label="Загрузка сайта" legacy={legacy} />;
   }
 
   const authForm = (
@@ -467,154 +476,183 @@ export function LandingPage({
         {t("continueWithGoogle")}
       </a>
       <button className="landing-auth-switch" type="button" onClick={scrollToProgramFromLogin}>
-        Еще нет доступа? Посмотрите программу курса
+        {legacy ? "Еще нет доступа? Посмотрите программу курса" : "Ещё нет доступа? Записаться на курс"}
       </button>
       {authError ? <AuthAlert message={authError} /> : null}
     </>
   );
 
-  return (
-    <main className="landing-page">
-      <header className="landing-nav">
-        <a className="landing-brand" href="#top" aria-label="Logos Voice">
-          <img src={logosVoiceLogo} alt="" />
-          <span>
-            <strong>LOGOS</strong>
-            <small>VOICE</small>
-          </span>
-        </a>
-
-        <nav className="landing-menu" aria-label="Разделы лендинга">
-          <button type="button" onClick={() => highlightSection("about")}>
-            О курсе
-          </button>
-          <button type="button" onClick={() => highlightSection("program")}>
-            Программа
-          </button>
-        </nav>
-
-        <div className="landing-nav-actions">
-          {currentUser ? (
-            <>
-              <NotificationBell emptyLabel={t("noNotifications")} onNotificationOpen={onNotificationOpen} />
-              {onAdminOpen ? (
-                <button className="landing-nav-button landing-icon-button" type="button" onClick={onAdminOpen} aria-label={t("adminPanel")}>
-                  <Gauge size={18} strokeWidth={1.9} />
-                  <span>{t("adminPanel")}</span>
-                </button>
-              ) : null}
-              {onProfileOpen ? (
-                <button className="landing-nav-button landing-icon-button" type="button" onClick={onProfileOpen} aria-label="Профиль">
-                  <UserRound size={18} strokeWidth={1.9} />
-                  <span>Профиль</span>
-                </button>
-              ) : null}
-            </>
-          ) : null}
-          {!currentUser ? (
+  const accountActions = (
+    <div className="landing-nav-actions">
+      {currentUser ? (
+        <>
+          {!legacy ? (
             <button
-              className="landing-nav-button"
+              className="landing-nav-button umbra-course-button"
               type="button"
-              aria-label={t("signIn")}
-              onClick={() => {
-                setLoginDialogOpen(true);
-              }}
+              onClick={handleOpenCourse}
+              disabled={accessLoading}
             >
-              <LogIn size={18} strokeWidth={1.9} />
-              <span>{t("signIn")}</span>
+              К курсу
             </button>
           ) : null}
-          {currentUser && onLogout ? (
-            <button className="landing-nav-button landing-icon-button dark" type="button" onClick={onLogout} aria-label={t("logout")}>
-              <LogOut size={18} strokeWidth={1.9} />
-              <span>{t("logout")}</span>
+          {onAdminOpen ? (
+            <button className="landing-nav-button landing-icon-button umbra-admin-button" type="button" onClick={onAdminOpen} aria-label={t("adminPanel")} title={t("adminPanel")}>
+              <Gauge size={18} strokeWidth={1.9} />
+              <span>{t("adminPanel")}</span>
             </button>
           ) : null}
-        </div>
-      </header>
+          <NotificationBell emptyLabel={t("noNotifications")} onNotificationOpen={onNotificationOpen} />
+          {onProfileOpen ? (
+            <button className="landing-nav-button landing-icon-button umbra-utility-button" type="button" onClick={onProfileOpen} aria-label="Профиль" title="Профиль">
+              <UserRound size={18} strokeWidth={1.9} />
+              <span>Профиль</span>
+            </button>
+          ) : null}
+        </>
+      ) : null}
+      {!currentUser ? (
+        <button
+          className="landing-nav-button"
+          type="button"
+          aria-label={t("signIn")}
+          onClick={() => {
+            setLoginDialogOpen(true);
+          }}
+        >
+          <LogIn size={18} strokeWidth={1.9} />
+          <span>{t("signIn")}</span>
+        </button>
+      ) : null}
+      {currentUser && onLogout ? (
+        <button className="landing-nav-button landing-icon-button dark umbra-utility-button" type="button" onClick={() => setLogoutConfirmOpen(true)} aria-label={t("logout")} title={t("logout")}>
+          <LogOut size={18} strokeWidth={1.9} />
+          <span>{t("logout")}</span>
+        </button>
+      ) : null}
+    </div>
+  );
 
-      <section className="landing-hero" id="top">
-        <div className="landing-copy">
-          <span className="landing-kicker">Онлайн-курс</span>
-          <h1>{courseTitle}</h1>
-          <p>{courseDescription}</p>
-
-          <div className="landing-hero-metrics">
-            {heroMetrics.map((item) => (
-              <div key={item.title}>
-                <img src={item.icon} alt="" />
-                <span>{item.title}</span>
-              </div>
-            ))}
+  const accountStatus = currentUser ? (
+    <section className="landing-auth landing-status-card" id="landing-application">
+      {isAdminUser(currentUser) ? (
+        <>
+          <div className="landing-auth-header">
+            <span>{currentUser.email}</span>
+            <strong>{t("adminPanel")}</strong>
           </div>
-        </div>
 
-        <div className="landing-hero-art" aria-hidden="true">
-          <img src={logosVoiceLogo} alt="" />
-        </div>
+          <div className="landing-status-actions">
+            <button type="button" onClick={onAdminOpen}>
+              {t("adminPanel")}
+            </button>
+            <button className="secondary" type="button" onClick={handleOpenCourse}>
+              {t("enterCourse")}
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="landing-auth-header">
+            <span>{currentUser.email}</span>
+            <strong>{enrollment ? enrollmentLabel(enrollment.status, t) : t("accessRequestTitle")}</strong>
+          </div>
 
-        {currentUser ? (
-          <section className="landing-auth landing-status-card" id="landing-application">
-            {isAdminUser(currentUser) ? (
-              <>
-                <div className="landing-auth-header">
-                  <span>{currentUser.email}</span>
-                  <strong>{t("adminPanel")}</strong>
-                </div>
+          <p>{enrollment ? enrollmentText(enrollment.status, t) : t("accessRequestText")}</p>
 
-                <div className="landing-status-actions">
-                  <button type="button" onClick={onAdminOpen}>
-                    {t("adminPanel")}
-                  </button>
-                  <button className="secondary" type="button" onClick={handleOpenCourse}>
-                    {t("enterCourse")}
-                  </button>
-                </div>
-              </>
+          <div className="landing-status-actions">
+            {enrollment?.status === "approved" ? (
+              <button type="button" onClick={handleOpenCourse}>
+                {t("enterCourse")}
+              </button>
+            ) : null}
+            {/*
+            Public request button is disabled. Access is granted through invitation codes.
+            {!enrollment ? (
+              <button type="button" onClick={handleRequestAccess} disabled={accessSubmitting || accessLoading}>
+                {accessSubmitting ? t("wait") : t("requestAccess")}
+              </button>
+            ) : null}
+            */}
+            {enrollment?.status !== "approved" && enrollment ? (
+              <button className="secondary" type="button" onClick={handleOpenCourse}>
+                {t("details")}
+              </button>
+            ) : null}
+          </div>
+        </>
+      )}
+
+      {accessDisplayError ? <AuthAlert message={accessDisplayError} /> : null}
+    </section>
+  ) : null;
+
+  const PageContainer = legacy ? "main" : "div";
+
+  return (
+    <PageContainer className={legacy ? "landing-page" : "umbra-page"}>
+      {logoutConfirmOpen && currentUser && onLogout ? (
+        <LogoutConfirmDialog legacy={legacy} onCancel={() => setLogoutConfirmOpen(false)} onConfirm={onLogout} />
+      ) : null}
+      {!legacy ? <UmbraLanding actions={accountActions} authenticated={!!currentUser} /> : null}
+      {legacy ? (
+        <>
+          <header className="landing-nav">
+            <a className="landing-brand" href="#top" aria-label="Logos Voice">
+              <img src={logosVoiceLogo} alt="" />
+              <span>
+                <strong>LOGOS</strong>
+                <small>VOICE</small>
+              </span>
+            </a>
+
+            <nav className="landing-menu" aria-label="Разделы лендинга">
+              <button type="button" onClick={() => highlightSection("about")}>
+                О курсе
+              </button>
+              <button type="button" onClick={() => highlightSection("program")}>
+                Программа
+              </button>
+            </nav>
+
+            {accountActions}
+          </header>
+
+          <section className="landing-hero" id="top">
+            <div className="landing-copy">
+              <span className="landing-kicker">Онлайн-курс</span>
+              <h1>{courseTitle}</h1>
+              <p>{courseDescription}</p>
+
+              <div className="landing-hero-metrics">
+                {heroMetrics.map((item) => (
+                  <div key={item.title}>
+                    <img src={item.icon} alt="" />
+                    <span>{item.title}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="landing-hero-art" aria-hidden="true">
+              <img src={logosVoiceLogo} alt="" />
+            </div>
+
+            {currentUser ? (
+              accountStatus
             ) : (
-              <>
-                <div className="landing-auth-header">
-                  <span>{currentUser.email}</span>
-                  <strong>{enrollment ? enrollmentLabel(enrollment.status, t) : t("accessRequestTitle")}</strong>
-                </div>
-
-                <p>{enrollment ? enrollmentText(enrollment.status, t) : t("accessRequestText")}</p>
-
-                <div className="landing-status-actions">
-                  {enrollment?.status === "approved" ? (
-                    <button type="button" onClick={handleOpenCourse}>
-                      {t("enterCourse")}
-                    </button>
-                  ) : null}
-                  {/*
-                  Public request button is disabled. Access is granted through invitation codes.
-                  {!enrollment ? (
-                    <button type="button" onClick={handleRequestAccess} disabled={accessSubmitting || accessLoading}>
-                      {accessSubmitting ? t("wait") : t("requestAccess")}
-                    </button>
-                  ) : null}
-                  */}
-                  {enrollment?.status !== "approved" && enrollment ? (
-                    <button className="secondary" type="button" onClick={handleOpenCourse}>
-                      {t("details")}
-                    </button>
-                  ) : null}
-                </div>
-              </>
+              <form
+                className={`landing-auth ${mode === "register" ? "register" : "login"}`}
+                id="landing-application"
+                onSubmit={handleSubmit}
+              >
+                {authForm}
+              </form>
             )}
-
-            {accessDisplayError ? <AuthAlert message={accessDisplayError} /> : null}
           </section>
-        ) : (
-          <form
-            className={`landing-auth ${mode === "register" ? "register" : "login"}`}
-            id="landing-application"
-            onSubmit={handleSubmit}
-          >
-            {authForm}
-          </form>
-        )}
-      </section>
+
+        </>
+      ) : null}
 
       {!currentUser && loginDialogOpen ? (
         <div className="landing-auth-dialog-backdrop" onMouseDown={() => setLoginDialogOpen(false)}>
@@ -727,103 +765,105 @@ export function LandingPage({
         </div>
       ) : null}
 
-      <section className="landing-benefits" aria-label="Преимущества курса">
-        {benefits.map((item) => (
-          <article key={item.title}>
-            <img src={item.icon} alt="" />
-            <div>
-              <h2>{item.title}</h2>
-              <p>{item.text}</p>
+      {legacy ? (
+        <>
+          <section className="landing-benefits" aria-label="Преимущества курса">
+            {benefits.map((item) => (
+              <article key={item.title}>
+                <img src={item.icon} alt="" />
+                <div>
+                  <h2>{item.title}</h2>
+                  <p>{item.text}</p>
+                </div>
+              </article>
+            ))}
+          </section>
+
+          <section className="landing-about-panel" id="about">
+            <div className="landing-about-copy">
+              <span className="landing-kicker">О курсе</span>
+              <h2 data-section-heading>Практика. Обратная связь. Реальный результат.</h2>
+              <p>
+                Курс построен на практике: каждую неделю вы будете выступать, получать обратную связь и улучшать навыки.
+                Формат сочетает живые вебинары, разборы и домашние задания.
+              </p>
+              <ul className="landing-check-list">
+                {["Индивидуальные занятия", "Разбор выступлений и обратная связь", "Поддержка куратора и сообщества"].map(
+                  (item) => (
+                    <li key={item}>
+                      <img src={markIcon} alt="" />
+                      {item}
+                    </li>
+                  )
+                )}
+              </ul>
             </div>
-          </article>
-        ))}
-      </section>
+            <figure className="landing-about-video-card">
+              <div className="landing-about-video-frame">
+                <BunnyHlsPlayer
+                  playlistUrl={aboutCoursePlaylistUrl}
+                  title="Пример выступления автора курса"
+                  lazy
+                />
+              </div>
+              <figcaption>Пример выступления автора курса</figcaption>
+              <CoursePresentationLink variant="compact" />
+            </figure>
+            {/*
+            <div className="landing-about-art" aria-hidden="true">
+              <img src={aboutProgramImage} alt="" />
+            </div>
+            */}
+          </section>
 
-      <section className="landing-about-panel" id="about">
-        <div className="landing-about-copy">
-          <span className="landing-kicker">О курсе</span>
-          <h2 data-section-heading>Практика. Обратная связь. Реальный результат.</h2>
-          <p>
-            Курс построен на практике: каждую неделю вы будете выступать, получать обратную связь и улучшать навыки.
-            Формат сочетает живые вебинары, разборы и домашние задания.
-          </p>
-          <ul className="landing-check-list">
-            {["Индивидуальные занятия", "Разбор выступлений и обратная связь", "Поддержка куратора и сообщества"].map(
-              (item) => (
-                <li key={item}>
-                  <img src={markIcon} alt="" />
-                  {item}
-                </li>
-              )
-            )}
-          </ul>
-        </div>
-        <figure className="landing-about-video-card">
-          <div className="landing-about-video-frame">
-            <iframe
-              src={aboutCourseVideoUrl}
-              title="Пример выступления автора курса"
-              loading="lazy"
-              allow="accelerometer; gyroscope; encrypted-media; picture-in-picture"
-              allowFullScreen
-            />
-          </div>
-          <figcaption>Пример выступления автора курса</figcaption>
-          <CoursePresentationLink variant="compact" />
-        </figure>
-        {/*
-        <div className="landing-about-art" aria-hidden="true">
-          <img src={aboutProgramImage} alt="" />
-        </div>
-        */}
-      </section>
+          <section
+            className="landing-program-showcase"
+            id="program"
+          >
+            <div className="landing-program-content">
+              <span className="landing-kicker">Программа</span>
+              <h2 data-section-heading>Получите подробную программу курса</h2>
+              <p>
+                Мы отправим программу в WhatsApp: формат занятий, расписание, стоимость и условия участия. Также
+                подскажем, подойдет ли курс под ваш уровень и цель.
+              </p>
 
-      <section
-        className="landing-program-showcase"
-        id="program"
-      >
-        <div className="landing-program-content">
-          <span className="landing-kicker">Программа</span>
-          <h2 data-section-heading>Получите подробную программу курса</h2>
-          <p>
-            Мы отправим программу в WhatsApp: формат занятий, расписание, стоимость и условия участия. Также
-            подскажем, подойдет ли курс под ваш уровень и цель.
-          </p>
+              <a className="landing-program-whatsapp" href="https://wa.me/77080088807" target="_blank" rel="noreferrer">
+                <MessageCircle size={28} strokeWidth={1.9} />
+                <span>Получить программу в WhatsApp</span>
+              </a>
+              <CoursePresentationLink />
+              <small>Ответим на ваши вопросы и отправим детали</small>
+            </div>
 
-          <a className="landing-program-whatsapp" href="https://wa.me/77080088807" target="_blank" rel="noreferrer">
-            <MessageCircle size={28} strokeWidth={1.9} />
-            <span>Получить программу в WhatsApp</span>
-          </a>
-          <CoursePresentationLink />
-          <small>Ответим на ваши вопросы и отправим детали</small>
-        </div>
+            {/*
+            <div className="landing-program-intro">
+              <h2 data-section-heading>Программа курса</h2>
+            </div>
+            <p className="landing-program-empty">Узнать подробнее</p>
+            */}
+          </section>
 
-        {/*
-        <div className="landing-program-intro">
-          <h2 data-section-heading>Программа курса</h2>
-        </div>
-        <p className="landing-program-empty">Узнать подробнее</p>
-        */}
-      </section>
-
-      <footer className="landing-contact">
-        <div>
-          <span className="landing-kicker">Связь</span>
-          <h2>Напишите нам, если остались вопросы</h2>
-          <p>Logos Voice, {currentYear}. Обучение голосу, речи и уверенным выступлениям.</p>
-        </div>
-        <div className="landing-contact-links">
-          <a href="https://www.instagram.com/logosvoice.kz/" target="_blank" rel="noreferrer">
-            <Instagram size={18} strokeWidth={1.8} />
-            Instagram
-          </a>
-          <a href="https://wa.me/77080088807" target="_blank" rel="noreferrer">
-            <MessageCircle size={18} strokeWidth={1.8} />
-            WhatsApp
-          </a>
-        </div>
-      </footer>
-    </main>
+          <footer className="landing-contact">
+            <div>
+              <span className="landing-kicker">Связь</span>
+              <h2>Напишите нам, если остались вопросы</h2>
+              <p>Logos Voice, {currentYear}. Обучение голосу, речи и уверенным выступлениям.</p>
+            </div>
+            <div className="landing-contact-links">
+              <a href="https://www.instagram.com/logosvoice.kz/" target="_blank" rel="noreferrer">
+                <Instagram size={18} strokeWidth={1.8} />
+                Instagram
+              </a>
+              <a href="https://wa.me/77080088807" target="_blank" rel="noreferrer">
+                <MessageCircle size={18} strokeWidth={1.8} />
+                WhatsApp
+              </a>
+            </div>
+          </footer>
+        </>
+      ) : null}
+    </PageContainer>
   );
 }
 
@@ -867,8 +907,8 @@ const landingCriticalImages = [
   markIcon
 ];
 
-const aboutCourseVideoUrl = "https://player.mediadelivery.net/play/673250/519e82d9-d077-433e-a4ee-8cbd6466cae9?primaryColor=%23D89B2D";
-const coursePresentationUrl = "https://logos-voice.b-cdn.net/landing/%D0%9F%D1%80%D0%B5%D0%B7%D0%B5%D0%BD%D1%82%D0%B0%D1%86%D0%B8%D1%8F%20Logos%20Voice.pdf";
+const aboutCoursePlaylistUrl = `${bunnyStreamCdnBaseUrl}/519e82d9-d077-433e-a4ee-8cbd6466cae9/playlist.m3u8`;
+const coursePresentationUrl = `${bunnyStorageCdnBaseUrl}/landing/${encodeURIComponent("Презентация Logos Voice.pdf")}`;
 
 const benefits = [
   {

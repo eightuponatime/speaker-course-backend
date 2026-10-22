@@ -17,6 +17,7 @@ export type MediaAsset = {
 export type StreamUploadCredentials = {
   video_id: string;
   library_id: string;
+  complete_api_version?: number;
   expiration_time: number;
   signature: string;
   tus_endpoint: string;
@@ -30,6 +31,7 @@ export type StreamVideoStatus = {
   encode_progress: number;
   playable: boolean;
   failed: boolean;
+  error_message?: string;
   embed_url: string;
   available_quality?: string;
 };

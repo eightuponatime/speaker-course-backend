@@ -13,6 +13,7 @@ import { CoursePreviewPage } from "./CoursePreviewPage";
 import { PreloadScreen } from "./PreloadScreen";
 
 type CourseAccessPageProps = {
+  theme?: "umbra" | "legacy";
   currentUser: User;
   t: (key: TranslationKey) => string;
   onLogout: () => void;
@@ -23,6 +24,7 @@ type CourseAccessPageProps = {
 };
 
 export function CourseAccessPage({
+  theme = "umbra",
   currentUser,
   t,
   onLogout,
@@ -46,14 +48,13 @@ export function CourseAccessPage({
       setError("");
 
       try {
-        const nextCourse = await getPrimaryCourse();
+        const [nextCourse, nextEnrollment] = await Promise.all([
+          getPrimaryCourse(),
+          getMyPrimaryCourseEnrollment()
+        ]);
         if (cancelled) return;
 
         setCourse(nextCourse);
-
-        const nextEnrollment = await getMyPrimaryCourseEnrollment();
-        if (cancelled) return;
-
         setEnrollment(nextEnrollment);
 
         if (nextEnrollment?.status === "approved") {
@@ -104,6 +105,7 @@ export function CourseAccessPage({
   if (curriculum && enrollment?.status === "approved") {
     return (
       <CoursePreviewPage
+        theme={theme}
         curriculum={curriculum}
         initialLessonId={initialLessonId}
         t={t}
@@ -143,7 +145,7 @@ export function CourseAccessPage({
           : t("accessRequestText");
 
   return (
-    <main className="course-access-page">
+    <main className={`course-access-page${theme === "umbra" ? " umbra-course-access" : ""}`}>
       <AccessHeader t={t} onLogout={onLogout} onLandingOpen={onLandingOpen} onProfileOpen={onProfileOpen} />
       <section className="course-access-card">
         <div>

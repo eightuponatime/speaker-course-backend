@@ -39,6 +39,7 @@ export function AssignmentSubmissionsPanel({ courseId, onUnreadCountChange }: As
   const [attachmentMenuOpen, setAttachmentMenuOpen] = useState(false);
   const [uploadingLabel, setUploadingLabel] = useState("");
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [uploadError, setUploadError] = useState("");
   const [busy, setBusy] = useState(false);
   const unreadCount = useMemo(() => items.filter((item) => item.is_unread_for_admin).length, [items]);
   const hasAdminReply = commentBody.trim().length > 0 || commentAttachments.length > 0;
@@ -79,6 +80,7 @@ export function AssignmentSubmissionsPanel({ courseId, onUnreadCountChange }: As
     setAttachmentMenuOpen(false);
     if (!file || !selected) return;
     setUploadingLabel(file.name);
+    setUploadError("");
     setUploadProgress(0);
     const assetKind = file.type.startsWith("image/") ? "image" : file.type.startsWith("video/") ? "video" : "file";
     try {
@@ -97,6 +99,8 @@ export function AssignmentSubmissionsPanel({ courseId, onUnreadCountChange }: As
         mime_type: asset.mime_type,
         size_bytes: asset.size_bytes
       }]);
+    } catch (error) {
+      setUploadError(`Не удалось загрузить файл: ${error instanceof Error ? error.message : "проверьте соединение и повторите попытку"}`);
     } finally {
       setUploadingLabel("");
       setUploadProgress(null);
@@ -251,6 +255,7 @@ export function AssignmentSubmissionsPanel({ courseId, onUnreadCountChange }: As
                 onRemove={(index) => setCommentAttachments((current) => current.filter((_, itemIndex) => itemIndex !== index))}
               />
               {uploadingLabel ? <UploadProgress label={uploadingLabel} progress={uploadProgress} /> : null}
+              {uploadError ? <p role="alert" className="admin-media-error">{uploadError}</p> : null}
               <div className="assignment-actions">
                 <div className="assignment-attach-menu">
                   <button type="button" onClick={() => setAttachmentMenuOpen((open) => !open)} disabled={busy}>
@@ -398,7 +403,8 @@ function AttachmentList({ attachments, onRemove }: { attachments: SubmissionAtta
     <div className="admin-assignment-attachments">
       {attachments.map((attachment, index) => (
         <a className={`attachment-preview ${attachmentPreviewKind(attachment)}`} href={attachment.url} target="_blank" rel="noreferrer" key={`${attachment.url}-${index}`}>
-          {attachmentPreviewKind(attachment) === "image" ? <img src={attachment.url} alt="" /> : null}
+          {attachmentPreviewKind(attachment) === "image" ? <img src={attachment.url} alt="" onError={(event) => { event.currentTarget.hidden = true; const fallback = event.currentTarget.nextElementSibling as HTMLElement | null; if (fallback) fallback.hidden = false; }} /> : null}
+          {attachmentPreviewKind(attachment) === "image" ? <span role="alert" hidden>Изображение недоступно</span> : null}
           {attachmentPreviewKind(attachment) === "video" ? (
             <span className="attachment-preview-icon"><Video size={18} /></span>
           ) : null}

@@ -100,11 +100,11 @@ export function LessonWorkspace({
           )}
           {lesson && (
             <div className="lesson-title-actions">
-              <button onClick={onUndo} type="button" title="Отменить действие" disabled={!canUndo}>
+              <button onClick={onUndo} type="button" title="Отменить действие" aria-label="Отменить действие" disabled={!canUndo}>
                 <Undo2 size={17} />
                 <span>Отменить действие</span>
               </button>
-              <button onClick={onRedo} type="button" title="Повторить действие" disabled={!canRedo}>
+              <button onClick={onRedo} type="button" title="Повторить действие" aria-label="Повторить действие" disabled={!canRedo}>
                 <Redo2 size={17} />
                 <span>Повторить действие</span>
               </button>

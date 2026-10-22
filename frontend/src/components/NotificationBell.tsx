@@ -95,7 +95,7 @@ export function NotificationBell({ emptyLabel, onNotificationOpen }: Notificatio
 
   return (
     <div className="notification-root" ref={rootRef}>
-      <button className="notification-trigger" type="button" onClick={handleOpen} aria-label="Notifications">
+      <button className="notification-trigger" type="button" onClick={handleOpen} aria-label="Уведомления" title="Уведомления" aria-expanded={open}>
         <Bell size={18} />
         {unreadCount > 0 ? <span>{unreadCount > 99 ? "99+" : unreadCount}</span> : null}
       </button>
@@ -122,7 +122,8 @@ export function NotificationBell({ emptyLabel, onNotificationOpen }: Notificatio
                   event.stopPropagation();
                   void handleDelete(notification.id);
                 }}
-                aria-label="Delete notification"
+                aria-label="Удалить уведомление"
+                title="Удалить уведомление"
               >
                 <Trash2 size={16} />
               </button>

@@ -1,8 +1,17 @@
+import { createElement } from "react";
+import { createRoot, type Root } from "react-dom/client";
+import { BunnyHlsPlayer } from "../components/BunnyHlsPlayer";
+import { bunnyHlsUrl } from "../utils/mediaUrls";
+import { bunnyStreamLibraryId } from "../config/media";
+import { getStreamVideoStatus } from "../api/mediaDatasource";
+import { isBunnyHlsReady } from "../utils/bunnyHlsReadiness";
+
 type MediaToolData = {
   url?: string;
   caption?: string;
   uploading?: boolean;
   width?: number;
+  error?: string;
 };
 
 type ImageUploadResult = {
@@ -25,6 +34,7 @@ type VideoUploadState = {
   phase: "uploading" | "processing";
   progress: number;
   label: string;
+  url?: string;
 };
 
 type VideoToolData = {
@@ -34,6 +44,7 @@ type VideoToolData = {
   processing?: boolean;
   progress?: number;
   statusLabel?: string;
+  error?: string;
 };
 
 type UrlToolData = {
@@ -46,6 +57,7 @@ type PdfToolData = {
   name?: string;
   sizeBytes?: number;
   uploading?: boolean;
+  error?: string;
 };
 
 type QuizToolData = {
@@ -120,6 +132,9 @@ export class VideoUrlTool {
   private onDebug?: (message: string) => void;
   private onChange?: () => void;
   private wrapper?: HTMLDivElement;
+  private videoRoot?: Root;
+  private removalObserver?: MutationObserver;
+  private wasConnected = false;
 
   static get toolbox() {
     return {
@@ -147,15 +162,18 @@ export class VideoUrlTool {
     return {
       url: this.data.url ?? "",
       name: this.data.name ?? "",
-      uploading: false,
-      processing: false,
-      progress: 100
+      uploading: this.data.uploading === true,
+      processing: this.data.processing === true,
+      progress: this.data.progress ?? 0,
+      statusLabel: this.data.statusLabel,
+      error: this.data.error
     };
   }
 
   private renderContent() {
     if (!this.wrapper) return;
 
+    this.disposePlayer();
     this.wrapper.innerHTML = "";
 
     if (this.data.uploading || this.data.processing) {
@@ -175,13 +193,16 @@ export class VideoUrlTool {
       const progressText = document.createElement("span");
       const label = this.data.statusLabel ?? (this.data.processing ? "Encoding video" : "Uploading video");
       const progressValue = Math.round(this.data.progress ?? 0);
-      progressText.textContent = this.data.processing && progressValue <= 1
-        ? `${label}. This can take a few minutes.`
-        : `${label}: ${progressValue}%`;
+      progressText.textContent = `${label}: ${progressValue}%`;
 
       const progress = document.createElement("div");
       progress.className = "video-tool-progress";
-      progress.style.setProperty("--video-progress", `${Math.round(this.data.progress ?? 0)}%`);
+      progress.style.setProperty("--video-progress", `${progressValue}%`);
+      progress.setAttribute("role", "progressbar");
+      progress.setAttribute("aria-label", label);
+      progress.setAttribute("aria-valuemin", "0");
+      progress.setAttribute("aria-valuemax", "100");
+      progress.setAttribute("aria-valuenow", String(progressValue));
 
       meta.append(name, progressText, progress);
       card.append(icon, meta);
@@ -201,23 +222,85 @@ export class VideoUrlTool {
       };
 
       const hint = document.createElement("span");
-      hint.textContent = "Upload MP4 or MOV";
+      hint.textContent = this.data.error || "Upload MP4 or MOV";
+      if (this.data.error) hint.setAttribute("role", "alert");
 
       emptyState.append(button, hint);
+      const recover = document.createElement("div");
+      recover.className = "video-tool-recover";
+      const videoInput = document.createElement("input");
+      videoInput.type = "text";
+      videoInput.placeholder = "Video ID или Bunny URL";
+      videoInput.setAttribute("aria-label", "Video ID или Bunny URL");
+      const attach = document.createElement("button");
+      attach.type = "button";
+      attach.textContent = "Привязать видео";
+      attach.onclick = () => {
+        const value = videoInput.value.trim();
+        const source = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(value)
+          ? `https://iframe.mediadelivery.net/embed/${bunnyStreamLibraryId}/${value}`
+          : value;
+        if (!bunnyHlsUrl(source)) {
+          hint.textContent = "Укажите Video ID или ссылку Bunny Stream из этой библиотеки.";
+          hint.setAttribute("role", "alert");
+          return;
+        }
+        this.data = {
+          url: source,
+          name: (this.data.name || "Видео Bunny").replace(/ - upload failed$/, ""),
+          uploading: false,
+          processing: false,
+          progress: 100
+        };
+        this.renderContent();
+        this.notifyChange();
+      };
+      recover.append(videoInput, attach);
+      emptyState.append(recover);
       this.wrapper.append(emptyState);
+      return;
+    }
+
+    if (this.data.error) {
+      const card = document.createElement("div");
+      card.className = "video-tool-upload-card video-tool-recovery-card";
+      const details = document.createElement("div");
+      details.className = "video-tool-meta";
+      const name = document.createElement("strong");
+      name.textContent = this.data.name || "Видео Bunny";
+      const message = document.createElement("span");
+      message.className = "video-tool-error";
+      message.setAttribute("role", "alert");
+      message.textContent = this.data.error;
+      const retry = document.createElement("button");
+      retry.type = "button";
+      retry.textContent = "Проверить видео";
+      retry.onclick = () => { void this.checkVideoStatus(retry, message); };
+      details.append(name, message, retry);
+      card.append(details);
+      this.wrapper.append(card);
       return;
     }
 
     const frame = document.createElement("div");
     frame.className = "video-tool-frame";
 
-    const iframe = document.createElement("iframe");
-    iframe.src = disableVideoAutoplay(this.data.url ?? "");
-    iframe.title = this.data.name ?? "Lesson video";
-    iframe.allow = "accelerometer; gyroscope; encrypted-media; picture-in-picture";
-    iframe.allowFullscreen = true;
-
-    frame.append(iframe);
+    const playlistUrl = bunnyHlsUrl(this.data.url);
+    if (playlistUrl) {
+      this.videoRoot = createRoot(frame);
+      this.videoRoot.render(createElement(BunnyHlsPlayer, {
+        playlistUrl,
+        title: this.data.name || "Lesson video",
+        lazy: true
+      }));
+    } else {
+      const iframe = document.createElement("iframe");
+      iframe.src = disableVideoAutoplay(this.data.url ?? "");
+      iframe.title = this.data.name ?? "Lesson video";
+      iframe.allow = "accelerometer; gyroscope; encrypted-media; picture-in-picture";
+      iframe.allowFullscreen = true;
+      frame.append(iframe);
+    }
 
     if (this.data.name) {
       const title = document.createElement("strong");
@@ -227,6 +310,56 @@ export class VideoUrlTool {
     }
 
     this.wrapper.append(frame);
+    if (this.data.error) {
+      const message = document.createElement("span");
+      message.className = "video-tool-error";
+      message.setAttribute("role", "alert");
+      message.textContent = this.data.error;
+      this.wrapper.append(message);
+    }
+    if (this.videoRoot) {
+      this.removalObserver = new MutationObserver(() => {
+        if (this.wrapper?.isConnected) this.wasConnected = true;
+        else if (this.wasConnected) this.disposePlayer();
+      });
+      this.removalObserver.observe(document.documentElement, { childList: true, subtree: true });
+    }
+  }
+
+  destroy() {
+    this.disposePlayer();
+  }
+
+  private async checkVideoStatus(button: HTMLButtonElement, message: HTMLSpanElement) {
+    const videoId = this.data.url?.match(/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}/i)?.[0];
+    if (!videoId) return;
+    button.disabled = true;
+    try {
+      const status = await getStreamVideoStatus(videoId);
+      if (status.playable && await isBunnyHlsReady(status.embed_url)) {
+        this.data = { ...this.data, error: undefined, processing: false, progress: 100 };
+        this.renderContent();
+        this.notifyChange();
+      } else {
+        message.textContent = status.failed
+          ? `Bunny не смог обработать видео: ${status.error_message || status.status_label}`
+          : status.playable
+            ? "Bunny завершил обработку, но плейлист ещё публикуется на CDN. Проверьте позже."
+            : `Bunny ещё обрабатывает видео: ${status.status_label} (${status.encode_progress}%). Проверьте позже.`;
+      }
+    } catch (error) {
+      message.textContent = `Не удалось проверить видео: ${formatToolError(error)}`;
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  private disposePlayer() {
+    this.removalObserver?.disconnect();
+    this.removalObserver = undefined;
+    this.videoRoot?.unmount();
+    this.videoRoot = undefined;
+    this.wasConnected = false;
   }
 
   private async selectAndUploadVideo() {
@@ -254,7 +387,9 @@ export class VideoUrlTool {
           uploading: state.phase === "uploading",
           processing: state.phase === "processing",
           progress: state.progress,
-          statusLabel: state.label
+          statusLabel: state.label,
+          url: state.url ?? this.data.url,
+          error: undefined
         };
         this.renderContent();
       });
@@ -269,10 +404,12 @@ export class VideoUrlTool {
       this.onDebug?.(`video tool upload done: ${file.name}`);
     } catch (err) {
       this.data = {
-        name: `${file.name} - upload failed`,
+        url: this.data.url,
+        name: this.data.url ? file.name : `${file.name} - upload failed`,
         uploading: false,
         processing: false,
-        progress: 0
+        progress: 0,
+        error: `Не удалось загрузить видео: ${formatToolError(err)}`
       };
       this.onDebug?.(`video tool upload failed: ${formatToolError(err)}`);
     }
@@ -349,6 +486,14 @@ export class ImageUrlTool {
       image.className = "image-tool-preview";
       image.src = this.data.url;
       image.alt = this.data.caption ?? "";
+      image.onerror = () => {
+        image.hidden = true;
+        const message = document.createElement("span");
+        message.className = "image-tool-load-error";
+        message.setAttribute("role", "alert");
+        message.textContent = "Не удалось загрузить изображение. Проверьте доступ к CDN и обновите страницу.";
+        frame.append(message);
+      };
       frame.append(image);
     } else {
       const emptyState = document.createElement("div");
@@ -383,6 +528,14 @@ export class ImageUrlTool {
       handle.contentEditable = "false";
       handle.onpointerdown = (event) => this.startResize(event, width);
       frame.append(handle);
+    }
+
+    if (this.data.error) {
+      const message = document.createElement("span");
+      message.className = "image-tool-load-error";
+      message.setAttribute("role", "alert");
+      message.textContent = this.data.error;
+      frame.append(message);
     }
 
     this.wrapper.append(frame);
@@ -455,15 +608,18 @@ export class ImageUrlTool {
         ...this.data,
         url: result.url,
         caption: result.caption ?? file.name,
-        uploading: false
+        uploading: false,
+        error: undefined
       };
       this.onDebug?.(`image tool upload done: ${file.name}`);
     } catch (err) {
+      URL.revokeObjectURL(previewURL);
       this.data = {
         ...this.data,
-        url: previewURL,
+        url: "",
         caption: `${file.name} - upload failed`,
-        uploading: false
+        uploading: false,
+        error: `Не удалось загрузить изображение: ${formatToolError(err)}`
       };
       this.onDebug?.(`image tool upload failed: ${formatToolError(err)}`);
     }
@@ -532,7 +688,8 @@ export class PdfUrlTool {
       };
 
       const hint = document.createElement("span");
-      hint.textContent = "Upload PDF, EPUB, DOCX, PPTX or any course file";
+      hint.textContent = this.data.error || "Upload PDF, EPUB, DOCX, PPTX or any course file";
+      if (this.data.error) hint.setAttribute("role", "alert");
 
       emptyState.append(button, hint);
       this.wrapper.append(emptyState);
@@ -610,7 +767,8 @@ export class PdfUrlTool {
       this.data = {
         name: `${file.name} - upload failed`,
         sizeBytes: file.size,
-        uploading: false
+        uploading: false,
+        error: `Не удалось загрузить файл: ${formatToolError(err)}`
       };
       this.onDebug?.(`pdf tool upload failed: ${formatToolError(err)}`);
     }

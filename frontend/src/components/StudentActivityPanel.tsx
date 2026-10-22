@@ -134,7 +134,6 @@ export function StudentActivityPanel({ courseId, totalLessons, t }: StudentActiv
       <div className="student-activity-table">
         <div className="student-activity-head">
           <span>Ученик</span>
-          <span>Статус</span>
           <span>Последний открытый урок</span>
           <span>Прогресс</span>
           <span>Доступ</span>
@@ -145,13 +144,13 @@ export function StudentActivityPanel({ courseId, totalLessons, t }: StudentActiv
         {filteredItems.map((item) => (
           <div className="student-activity-row" key={item.user_id}>
             <div>
-              <strong title={item.user_full_name || item.user_email}>{item.user_full_name || item.user_email}</strong>
+              <div className="student-activity-identity">
+                <strong title={item.user_full_name || item.user_email}>{item.user_full_name || item.user_email}</strong>
+                <span className={item.is_online ? "activity-status online" : "activity-status"}>
+                  {item.is_online ? "В сети" : "Не в сети"}
+                </span>
+              </div>
               <span title={item.user_email}>{item.user_email}</span>
-            </div>
-            <div>
-              <span className={item.is_online ? "activity-status online" : "activity-status"}>
-                {item.is_online ? "В сети" : "Не в сети"}
-              </span>
             </div>
             <div>
               <strong title={item.current_lesson_title || "Еще не открывал"}>{item.current_lesson_title || "Еще не открывал"}</strong>

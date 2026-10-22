@@ -1,0 +1,258 @@
+/* UMBRA course theme. The original course-preview.css remains the legacy theme. */
+.umbra-course {
+  --uc-bg:#0a0a0b;
+  --uc-panel:#141416;
+  --uc-raised:#1d1d20;
+  --uc-line:#36363a;
+  --uc-text:#ede8df;
+  --uc-muted:#b9b4ab;
+  --uc-dim:#9a958d;
+  --uc-red:#c8102e;
+  min-height:100vh;
+  background:var(--uc-bg);
+  color:var(--uc-text);
+  font-family:"Manrope",system-ui,sans-serif;
+  scrollbar-color:#48484c #0a0a0b;
+}
+.umbra-course .preview-nav {
+  min-height:76px;
+  border-color:#26262a;
+  background:rgba(10,10,11,.94);
+  backdrop-filter:blur(12px);
+}
+.umbra-course .preview-brand {
+  width:auto;
+  height:auto;
+  gap:12px;
+  padding:0;
+  border:0;
+  color:var(--uc-text);
+  background:transparent;
+}
+.umbra-course .preview-brand svg { flex:0 0 auto; }
+.umbra-course .preview-brand b {
+  font-family:"Oswald","Arial Narrow",sans-serif;
+  font-size:24px;
+  font-weight:600;
+  line-height:1;
+  letter-spacing:.32em;
+}
+.umbra-course .preview-nav button:not(.preview-brand),
+.umbra-course .preview-curriculum-toggle,
+.umbra-course .preview-curriculum-close {
+  border:1px solid #48484c;
+  border-radius:0;
+  background:transparent;
+  color:var(--uc-text);
+  font-weight:600;
+}
+.umbra-course .preview-nav-actions > button:last-child {
+  border-color:var(--uc-red);
+  background:var(--uc-red);
+  color:#fff;
+}
+.umbra-course .preview-nav button:not(.preview-brand):hover,
+.umbra-course .preview-curriculum-toggle:hover,
+.umbra-course .preview-curriculum-close:hover { border-color:#9a958d; background:#303034; }
+.umbra-course .preview-nav-actions > button:last-child:hover { border-color:#e0223f; background:#e0223f; }
+.umbra-course .preview-nav button:focus-visible,
+.umbra-course button:focus-visible,
+.umbra-course a:focus-visible { outline:2px solid var(--uc-text); outline-offset:3px; }
+.umbra-course .preview-access-popover,
+.umbra-course .notification-panel {
+  border:1px solid #48484c;
+  border-radius:0;
+  background:var(--uc-panel);
+  color:var(--uc-text);
+  box-shadow:0 18px 48px #0008;
+}
+.umbra-course .preview-access-popover::before { border-color:#48484c; background:var(--uc-panel); }
+.umbra-course .preview-access-popover span,
+.umbra-course .preview-access-popover small { color:var(--uc-muted); }
+.umbra-course .notification-item { border-color:var(--uc-line); background:var(--uc-panel); }
+.umbra-course .notification-item.unread { border-left-color:var(--uc-red); background:#23151a; box-shadow:none; }
+.umbra-course .notification-item:not(.unread) { opacity:1; }
+.umbra-course .notification-item:hover { background:#252528; }
+.umbra-course .notification-item strong { color:var(--uc-text); }
+.umbra-course .notification-item p { color:var(--uc-muted); }
+.umbra-course .notification-item span,
+.umbra-course .notification-empty { color:var(--uc-dim); }
+.umbra-course .notification-panel .notification-item > button { color:var(--uc-muted); }
+.umbra-course .notification-panel .notification-item > button:hover { color:#ffb5c1; background:#40202a; }
+.umbra-course .preview-mode-banner { border-color:#69404a; border-radius:0; background:#26181c; color:var(--uc-text); }
+.umbra-course .preview-mode-banner span { color:var(--uc-muted); }
+
+.umbra-course .preview-course-shell { width:min(1320px,calc(100% - 48px)); gap:24px; grid-template-columns:300px minmax(0,1fr); }
+.umbra-course .preview-curriculum,
+.umbra-course .preview-lesson {
+  border:1px solid var(--uc-line);
+  border-radius:0;
+  background:var(--uc-panel);
+  box-shadow:none;
+}
+.umbra-course .preview-curriculum { top:98px; width:300px; scrollbar-color:#48484c var(--uc-panel); }
+.umbra-course .preview-curriculum::-webkit-scrollbar-track { background:var(--uc-panel); }
+.umbra-course .preview-curriculum::-webkit-scrollbar-thumb { border-color:var(--uc-panel); background:#48484c; }
+.umbra-course .preview-lesson { padding:clamp(26px,4vw,58px); }
+.umbra-course .preview-course-summary,
+.umbra-course .preview-section,
+.umbra-course .preview-lesson-navigation.bottom { border-color:var(--uc-line); }
+.umbra-course .preview-course-summary span,
+.umbra-course .preview-section h2 span,
+.umbra-course .preview-kicker,
+.umbra-course .preview-lesson-navigation span,
+.umbra-course .preview-quiz > span,
+.umbra-course .lesson-assignment header span,
+.umbra-course .lesson-assignment h4 {
+  color:#e65a70;
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:11px;
+  font-weight:500;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+}
+.umbra-course .preview-course-summary strong,
+.umbra-course .preview-section h2,
+.umbra-course .preview-lesson h2,
+.umbra-course .preview-blocks h3,
+.umbra-course .preview-quiz strong {
+  color:var(--uc-text);
+  font-family:"Cormorant Garamond",Georgia,serif;
+  font-weight:400;
+}
+.umbra-course .preview-course-summary strong { font-size:29px; }
+.umbra-course .preview-section h2 { font-size:24px; }
+.umbra-course .preview-lesson h2 { font-size:clamp(42px,5vw,68px); line-height:1; }
+.umbra-course .preview-blocks h3 { font-size:33px; }
+.umbra-course .preview-section button {
+  border-radius:0;
+  color:var(--uc-muted);
+  font-weight:500;
+}
+.umbra-course .preview-section button::before { background:var(--uc-dim); }
+.umbra-course .preview-section button:hover { border-color:#68686e; background:#252528; color:var(--uc-text); }
+.umbra-course .preview-section button.active {
+  border-color:#88404e;
+  background:#2a171d;
+  color:var(--uc-text);
+  box-shadow:inset 3px 0 0 var(--uc-red);
+  font-weight:700;
+}
+.umbra-course .preview-blocks { color:#d7d2ca; line-height:1.75; }
+.umbra-course .preview-blocks a:not(.preview-file) { color:#ff9aae; text-underline-offset:3px; }
+.umbra-course .preview-image img,
+.umbra-course .preview-video { border-color:var(--uc-line); border-radius:0; }
+.umbra-course .preview-file,
+.umbra-course .preview-quiz,
+.umbra-course .preview-checklist div,
+.umbra-course .preview-quiz-option > button,
+.umbra-course .preview-lesson-navigation button,
+.umbra-course .lesson-step-nav button {
+  border:1px solid var(--uc-line);
+  border-radius:0;
+  background:var(--uc-raised);
+  color:var(--uc-text);
+  box-shadow:none;
+}
+.umbra-course .preview-lesson-navigation strong,
+.umbra-course .lesson-step-nav button strong { color:var(--uc-text); }
+.umbra-course .lesson-step-nav button small,
+.umbra-course .preview-quiz-option > button em,
+.umbra-course .preview-quiz-votes-toggle { color:var(--uc-muted); }
+.umbra-course .lesson-step-nav button:hover,
+.umbra-course .preview-lesson-navigation button:hover:not(:disabled),
+.umbra-course .preview-quiz-option > button:hover { border-color:#9a958d; background:#2a2a2e; }
+.umbra-course .lesson-step-nav i { background:var(--uc-line); }
+.umbra-course .lesson-step-nav button span,
+.umbra-course .preview-quiz-option > button i { border-color:#68686e; background:var(--uc-bg); color:var(--uc-text); }
+.umbra-course .preview-quiz-option > button.selected { border-color:var(--uc-red); background:#2a171d; box-shadow:inset 3px 0 0 var(--uc-red); }
+.umbra-course .preview-quiz-meter { background:var(--uc-line); }
+.umbra-course .preview-quiz-meter span { background:var(--uc-red); }
+
+.umbra-course .lesson-assignment,
+.umbra-course .assignment-comments {
+  border:1px solid var(--uc-line);
+  border-radius:0;
+  background:var(--uc-panel);
+  box-shadow:none;
+}
+.umbra-course .lesson-assignment header p,
+.umbra-course .assignment-muted,
+.umbra-course .assignment-comments article time { color:var(--uc-muted); }
+.umbra-course .lesson-assignment textarea {
+  border:1px solid #68686e;
+  border-radius:0;
+  background:var(--uc-bg);
+  color:var(--uc-text);
+}
+.umbra-course .lesson-assignment textarea:focus-visible { outline:2px solid #e65a70; outline-offset:2px; }
+.umbra-course .assignment-actions button,
+.umbra-course .assignment-attachments a,
+.umbra-course .assignment-upload-progress,
+.umbra-course .assignment-comments article {
+  border:1px solid var(--uc-line);
+  border-radius:0;
+  background:var(--uc-raised);
+  color:var(--uc-text);
+}
+.umbra-course .assignment-actions button.dark { border-color:var(--uc-red); background:var(--uc-red); color:#fff; }
+.umbra-course .assignment-actions button.dark:hover { background:#e0223f; }
+.umbra-course .assignment-actions button.soft-danger { border-color:#88404e; background:#2a171d; color:#ffb5c1; }
+.umbra-course .assignment-attach-popover { border-color:#48484c; border-radius:0; background:var(--uc-raised); }
+.umbra-course .assignment-actions .assignment-attach-popover button { border:0; background:transparent; color:var(--uc-text); }
+.umbra-course .assignment-actions .assignment-attach-popover button:hover { background:#303034; }
+.umbra-course .assignment-edit-note,
+.umbra-course .assignment-status { border-radius:0; background:#3a2a16; color:#f5d49b; }
+.umbra-course .assignment-status.accepted { background:#173323; color:#a5dfb7; }
+.umbra-course .assignment-status.needs_revision { background:#3a2022; color:#ffc1bf; }
+.umbra-course .assignment-comments article { border-left:3px solid var(--uc-red); }
+.umbra-course .assignment-comments article.teacher { border-left-color:#a8a2c8; }
+.umbra-course .assignment-attachments a.attachment-preview.video { background:#20262d; }
+.umbra-course .assignment-attachments button { color:var(--uc-muted); }
+.umbra-course .preview-toast { border-color:var(--uc-line); border-radius:0; background:var(--uc-raised); color:var(--uc-text); }
+.umbra-course .preview-confirm-backdrop,
+.umbra-course .quiz-voters-dialog-backdrop { background:rgba(0,0,0,.72); }
+.umbra-course .preview-confirm-dialog,
+.umbra-course .quiz-voters-dialog { border-color:var(--uc-line); border-radius:0; background:var(--uc-panel); color:var(--uc-text); }
+.umbra-course .preview-confirm-dialog p,
+.umbra-course .quiz-voters-dialog-list p,
+.umbra-course .quiz-voters-dialog-list article span,
+.umbra-course .quiz-voters-dialog-list article small { color:var(--uc-muted); }
+.umbra-course .preview-confirm-dialog button,
+.umbra-course .quiz-voters-dialog header button { border-color:#68686e; border-radius:0; color:var(--uc-text); }
+.umbra-course .preview-confirm-dialog button.danger { border-color:var(--uc-red); background:var(--uc-red); color:#fff; }
+.umbra-course .quiz-voters-dialog header { border-color:var(--uc-line); }
+.umbra-course .quiz-voters-dialog header strong,
+.umbra-course .quiz-voters-dialog-list article strong { color:var(--uc-text); }
+.umbra-course .quiz-voters-dialog-list article { border-color:var(--uc-line); border-radius:0; background:var(--uc-raised); }
+@media(max-width:920px) {
+  .umbra-course .preview-course-shell { grid-template-columns:1fr; }
+  .umbra-course .preview-curriculum { position:fixed; top:0; width:min(380px,calc(100vw - 40px)); max-height:100dvh; }
+  .umbra-course .preview-curriculum-toggle { background:var(--uc-panel); color:var(--uc-text); border-color:var(--uc-line); }
+}
+@media(max-width:640px) {
+  .umbra-course .preview-course-shell { width:calc(100% - 24px); }
+  .umbra-course .preview-nav { display:flex; flex-wrap:wrap; gap:8px; padding:10px 12px; }
+  .umbra-course .preview-nav-actions { width:100%; justify-content:flex-end; }
+  .umbra-course .preview-brand b { font-size:18px; }
+  .umbra-course .preview-curriculum-toggle { top:122px; }
+  .umbra-course .preview-lesson { padding:24px 18px; }
+  .umbra-course .preview-lesson h2 { font-size:clamp(36px,10vw,52px); }
+}
+
+.umbra-course-access { background:var(--uc-bg,#0a0a0b); color:#ede8df; font-family:"Manrope",system-ui,sans-serif; }
+.umbra-course-access .course-access-nav { border-color:#26262a; }
+.umbra-course-access .course-access-nav button,
+.umbra-course-access .course-access-card > button { border-color:#c8102e; border-radius:0; background:#c8102e; color:#fff; }
+.umbra-course-access .course-access-card { border-color:#36363a; background:#141416; box-shadow:none; }
+.umbra-course-access .course-access-card span { color:#e65a70; }
+.umbra-course-access .course-access-card h1 { color:#ede8df; font-family:"Cormorant Garamond",Georgia,serif; }
+.umbra-course-access .course-access-card p,
+.umbra-course-access .course-access-card small { color:#b9b4ab; }
+.cdn-image-error {
+  display: inline-block;
+  padding: 1rem;
+  color: #f1e9e1;
+  background: #23191c;
+  border: 1px solid #6f303f;
+}

@@ -598,7 +598,7 @@ export function LandingPage({
       {legacy ? (
         <>
           <header className="landing-nav">
-            <a className="landing-brand" href="#top" aria-label="Logos Voice">
+            <a className="landing-brand" href="#top" aria-label="Umbra">
               <img src={logosVoiceLogo} alt="" />
               <span>
                 <strong>LOGOS</strong>
@@ -848,7 +848,7 @@ export function LandingPage({
             <div>
               <span className="landing-kicker">Связь</span>
               <h2>Напишите нам, если остались вопросы</h2>
-              <p>Logos Voice, {currentYear}. Обучение голосу, речи и уверенным выступлениям.</p>
+              <p>Umbra, {currentYear}. Обучение голосу, речи и уверенным выступлениям.</p>
             </div>
             <div className="landing-contact-links">
               <a href="https://www.instagram.com/logosvoice.kz/" target="_blank" rel="noreferrer">
@@ -908,7 +908,7 @@ const landingCriticalImages = [
 ];
 
 const aboutCoursePlaylistUrl = `${bunnyStreamCdnBaseUrl}/519e82d9-d077-433e-a4ee-8cbd6466cae9/playlist.m3u8`;
-const coursePresentationUrl = `${bunnyStorageCdnBaseUrl}/landing/${encodeURIComponent("Презентация Logos Voice.pdf")}`;
+const coursePresentationUrl = `${bunnyStorageCdnBaseUrl}/landing/${encodeURIComponent("Презентация Umbra.pdf")}`;
 
 const benefits = [
   {

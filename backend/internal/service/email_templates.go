@@ -60,7 +60,7 @@ const baseEmailTemplate = `<!doctype html>
           </tr>
           <tr>
             <td style="padding:16px 30px 22px;border-top:1px solid #e3d8cb;color:#8b8177;font-size:12px;line-height:1.5;">
-              Это автоматическое письмо от Logos Voice. Если вы не отправляли заявку, просто проигнорируйте его.
+              Это автоматическое письмо от Umbra. Если вы не отправляли заявку, просто проигнорируйте его.
             </td>
           </tr>
         </table>
@@ -151,7 +151,7 @@ func CourseAccessExtendedEmail(to string, fullName string, courseTitle string, a
 }
 
 func TemporaryPasswordEmail(to string, fullName string, temporaryPassword string) SendEmailInput {
-	body := "Мы создали временный пароль для входа в кабинет Logos Voice."
+	body := "Мы создали временный пароль для входа в кабинет Umbra."
 	return templatedEmail(to, emailTemplateData{
 		Subject:   uniqueEmailSubject("Временный пароль", fullName, to),
 		Title:     "Временный пароль для входа",
@@ -302,7 +302,7 @@ func plainTextEmail(data emailTemplateData) string {
 	if data.Note != "" {
 		parts = append(parts, data.Note)
 	}
-	parts = append(parts, "Logos Voice")
+	parts = append(parts, "Umbra")
 	return strings.Join(parts, "\n\n")
 }
 

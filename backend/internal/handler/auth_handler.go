@@ -804,7 +804,7 @@ func (h *AuthHandler) notifyAdminsAboutEnrollmentRequest(
 }
 
 func randomTemporaryPassword() (string, error) {
-	bytes := make([]byte, 15)
+	bytes := make([]byte, 6)
 	if _, err := rand.Read(bytes); err != nil {
 		return "", err
 	}

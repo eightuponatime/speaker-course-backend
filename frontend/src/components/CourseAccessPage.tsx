@@ -128,28 +128,28 @@ export function CourseAccessPage({
       ? t("accessPendingTitle")
       : status === "approved" && error
         ? "Срок доступа истек"
-      : status === "rejected"
-        ? t("accessRejectedTitle")
-        : status === "revoked"
-          ? t("accessRevokedTitle")
-          : t("accessRequestTitle");
+        : status === "rejected"
+          ? t("accessRejectedTitle")
+          : status === "revoked"
+            ? t("accessRevokedTitle")
+            : t("accessRequestTitle");
   const text =
     status === "pending"
       ? t("accessPendingText")
       : status === "approved" && error
         ? "Доступ к материалам курса открыт на 1 месяц с первого входа в курс."
-      : status === "rejected"
-        ? t("accessRejectedText")
-        : status === "revoked"
-          ? t("accessRevokedText")
-          : t("accessRequestText");
+        : status === "rejected"
+          ? t("accessRejectedText")
+          : status === "revoked"
+            ? t("accessRevokedText")
+            : t("accessRequestText");
 
   return (
     <main className={`course-access-page${theme === "umbra" ? " umbra-course-access" : ""}`}>
       <AccessHeader t={t} onLogout={onLogout} onLandingOpen={onLandingOpen} onProfileOpen={onProfileOpen} />
       <section className="course-access-card">
         <div>
-          <span>{course?.title || "Logos Voice"}</span>
+          <span>{course?.title || "Umbra"}</span>
           <h1>{title}</h1>
           <p>{text}</p>
           <small>{currentUser.email}</small>

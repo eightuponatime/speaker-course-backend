@@ -17,7 +17,7 @@ type SignupPageProps = {
   onLoginOpen?: () => void;
 };
 
-export function SignupPage({}: SignupPageProps) {
+export function SignupPage({ }: SignupPageProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -99,7 +99,7 @@ export function SignupPage({}: SignupPageProps) {
   return (
     <main className="signup-page" style={{ "--signup-bg": `url(${signUpBackground})` } as CSSProperties}>
       <header className="signup-header">
-        <a className="signup-brand" href="/" aria-label="Logos Voice">
+        <a className="signup-brand" href="/" aria-label="Umbra">
           <img src={logosVoiceLogo} alt="" />
           <span>
             <strong>LOGOS</strong>
@@ -122,71 +122,71 @@ export function SignupPage({}: SignupPageProps) {
             </div>
           </div>
         ) : (
-        <form className="signup-card" onSubmit={handleSubmit}>
-          <div className="signup-card-mark" aria-hidden="true" />
-          <div className="signup-card-heading">
-            <h1>Регистрация по приглашению</h1>
-            <p>Заполните данные, чтобы активировать доступ к курсу</p>
-          </div>
+          <form className="signup-card" onSubmit={handleSubmit}>
+            <div className="signup-card-mark" aria-hidden="true" />
+            <div className="signup-card-heading">
+              <h1>Регистрация по приглашению</h1>
+              <p>Заполните данные, чтобы активировать доступ к курсу</p>
+            </div>
 
-          <div className="signup-fields">
-            <label>
-              <span>Email</span>
-              <input
-                autoComplete="email"
-                placeholder="Введите ваш email"
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-              />
-            </label>
-
-            <label>
-              <span>Пароль</span>
-              <span className="signup-password-field">
+            <div className="signup-fields">
+              <label>
+                <span>Email</span>
                 <input
-                  autoComplete="new-password"
-                  placeholder="Введите пароль"
-                  type={passwordVisible ? "text" : "password"}
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
+                  autoComplete="email"
+                  placeholder="Введите ваш email"
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
                 />
-                <button
-                  type="button"
-                  aria-label={passwordVisible ? "Скрыть пароль" : "Показать пароль"}
-                  onClick={() => setPasswordVisible((value) => !value)}
-                >
-                  {passwordVisible ? <EyeOff size={19} strokeWidth={1.8} /> : <Eye size={19} strokeWidth={1.8} />}
-                </button>
-              </span>
-            </label>
+              </label>
 
-            <label>
-              <span>Имя</span>
-              <input
-                autoComplete="name"
-                placeholder="Введите ваше имя"
-                value={fullName}
-                onChange={(event) => setFullName(event.target.value)}
-              />
-            </label>
-          </div>
+              <label>
+                <span>Пароль</span>
+                <span className="signup-password-field">
+                  <input
+                    autoComplete="new-password"
+                    placeholder="Введите пароль"
+                    type={passwordVisible ? "text" : "password"}
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                  />
+                  <button
+                    type="button"
+                    aria-label={passwordVisible ? "Скрыть пароль" : "Показать пароль"}
+                    onClick={() => setPasswordVisible((value) => !value)}
+                  >
+                    {passwordVisible ? <EyeOff size={19} strokeWidth={1.8} /> : <Eye size={19} strokeWidth={1.8} />}
+                  </button>
+                </span>
+              </label>
 
-          <button className="signup-submit" type="submit" disabled={submitting || !canSubmit}>
-            {submitting ? "Подождите..." : "Завершить регистрацию"}
-          </button>
+              <label>
+                <span>Имя</span>
+                <input
+                  autoComplete="name"
+                  placeholder="Введите ваше имя"
+                  value={fullName}
+                  onChange={(event) => setFullName(event.target.value)}
+                />
+              </label>
+            </div>
 
-          <a className="signup-google" href={googleSignupUrl}>
-            <GoogleIcon />
-            <span>Зарегистрироваться через Google</span>
-          </a>
+            <button className="signup-submit" type="submit" disabled={submitting || !canSubmit}>
+              {submitting ? "Подождите..." : "Завершить регистрацию"}
+            </button>
 
-          <div className="signup-invite-note">
-            <ShieldCheck size={20} strokeWidth={1.7} />
-            <span>{inviteCode ? "Персональная ссылка • доступна для 1 регистрации" : "Нужна персональная ссылка с кодом"}</span>
-          </div>
-          {message ? <p className="signup-message">{message}</p> : null}
-        </form>
+            <a className="signup-google" href={googleSignupUrl}>
+              <GoogleIcon />
+              <span>Зарегистрироваться через Google</span>
+            </a>
+
+            <div className="signup-invite-note">
+              <ShieldCheck size={20} strokeWidth={1.7} />
+              <span>{inviteCode ? "Персональная ссылка • доступна для 1 регистрации" : "Нужна персональная ссылка с кодом"}</span>
+            </div>
+            {message ? <p className="signup-message">{message}</p> : null}
+          </form>
         )}
       </section>
     </main>

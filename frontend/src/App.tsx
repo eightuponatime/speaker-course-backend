@@ -77,6 +77,7 @@ export default function App() {
   const [activeLessonId, setActiveLessonId] = useState("");
   const [error, setError] = useState(() => readAuthErrorFromURL());
   const [authChecked, setAuthChecked] = useState(false);
+  const [initialSplashComplete, setInitialSplashComplete] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -115,6 +116,11 @@ export default function App() {
     console.log(`[course-builder] ${message}`);
   }, []);
   const t = useCallback((key: Parameters<typeof translate>[1]) => translate("ru", key), []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setInitialSplashComplete(true), 800);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (isPreviewing) return;
@@ -1341,7 +1347,7 @@ export default function App() {
     }
   }
 
-  if (!authChecked) {
+  if (!authChecked || !initialSplashComplete) {
     return <PreloadScreen label="Загрузка сайта" legacy={path === "/legacy"} />;
   }
 

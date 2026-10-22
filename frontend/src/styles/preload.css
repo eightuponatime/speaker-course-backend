@@ -37,7 +37,7 @@
   height:3px;
   overflow:hidden;
   border-radius:999px;
-  background:rgba(45,41,36,.12);
+  background:#36363a;
 }
 .umbra-preload-bar::before {
   content:"";

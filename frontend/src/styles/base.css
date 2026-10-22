@@ -49,3 +49,38 @@ button {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(134, 122, 111, 0.82);
 }
+
+/* The viewport scrollbar belongs to html in Firefox and to the root scroller in Chrome. */
+html:has(:is(.umbra-page, .umbra-course, .umbra-admin-shell)) {
+  background: #0a0a0b;
+  color-scheme: dark;
+  scrollbar-color: #55555b #0a0a0b;
+  scrollbar-width: auto;
+}
+
+html:has(:is(.umbra-page, .umbra-course, .umbra-admin-shell)) body {
+  scrollbar-color: #55555b #0a0a0b;
+  scrollbar-width: auto;
+}
+
+html:has(:is(.umbra-page, .umbra-course, .umbra-admin-shell))::-webkit-scrollbar,
+html:has(:is(.umbra-page, .umbra-course, .umbra-admin-shell)) body::-webkit-scrollbar {
+  width: 12px;
+}
+
+html:has(:is(.umbra-page, .umbra-course, .umbra-admin-shell))::-webkit-scrollbar-track,
+html:has(:is(.umbra-page, .umbra-course, .umbra-admin-shell)) body::-webkit-scrollbar-track {
+  background: #0a0a0b;
+}
+
+html:has(:is(.umbra-page, .umbra-course, .umbra-admin-shell))::-webkit-scrollbar-thumb,
+html:has(:is(.umbra-page, .umbra-course, .umbra-admin-shell)) body::-webkit-scrollbar-thumb {
+  border: 2px solid #0a0a0b;
+  border-radius: 999px;
+  background: #55555b;
+}
+
+html:has(:is(.umbra-page, .umbra-course, .umbra-admin-shell))::-webkit-scrollbar-thumb:hover,
+html:has(:is(.umbra-page, .umbra-course, .umbra-admin-shell)) body::-webkit-scrollbar-thumb:hover {
+  background: #79797f;
+}

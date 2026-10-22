@@ -25,42 +25,47 @@ const baseEmailTemplate = `<!doctype html>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{.Title}}</title>
 </head>
-<body style="margin:0;padding:0;background:#f2eee7;color:#2b2723;font-family:Arial,'Helvetica Neue',sans-serif;">
+<body style="margin:0;padding:0;background:#0a0a0b;color:#ede8df;font-family:Arial,'Helvetica Neue',sans-serif;">
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">{{.Preheader}}</div>
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f2eee7;padding:28px 14px;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" bgcolor="#0a0a0b" style="background:#0a0a0b;padding:32px 14px;">
     <tr>
       <td align="center">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:#fffaf4;border:1px solid #d9cdbf;border-radius:14px;overflow:hidden;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" bgcolor="#141416" style="max-width:560px;background:#141416;border:1px solid #36363a;">
           <tr>
-            <td style="padding:26px 30px 18px;border-bottom:1px solid #e3d8cb;">
-              <div style="font-family:Georgia,'Times New Roman',serif;color:#2b2723;line-height:1;">
-                <div style="font-size:19px;letter-spacing:10px;text-transform:uppercase;">LOGOS</div>
-                <div style="margin-top:6px;font-size:10px;letter-spacing:8px;text-transform:uppercase;color:#8b8177;">VOICE</div>
-              </div>
-              <h1 style="margin:12px 0 0;font-family:Georgia,'Times New Roman',serif;font-size:30px;line-height:1.1;font-weight:400;color:#2b2723;">{{.Title}}</h1>
+            <td style="padding:30px 30px 26px;border-bottom:1px solid #36363a;">
+              <table role="presentation" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td style="padding-right:14px;vertical-align:middle;">
+                    <span style="display:inline-block;width:30px;height:30px;border:2px solid #ede8df;border-bottom-color:#c8102e;border-radius:50%;font-size:1px;line-height:1px;">&nbsp;</span>
+                  </td>
+                  <td style="vertical-align:middle;font-family:Arial,'Helvetica Neue',sans-serif;font-size:21px;font-weight:700;letter-spacing:7px;line-height:1;color:#ede8df;">UMBRA</td>
+                </tr>
+              </table>
+              <p style="margin:22px 0 10px;font-size:11px;letter-spacing:3px;line-height:1.5;text-transform:uppercase;color:#c8102e;">ИСКУССТВО ВЛИЯНИЯ</p>
+              <h1 style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:32px;line-height:1.15;font-weight:400;color:#ede8df;">{{.Title}}</h1>
             </td>
           </tr>
           <tr>
-            <td style="padding:24px 30px 28px;">
-              <p style="margin:0 0 16px;font-size:16px;line-height:1.55;color:#5b534b;">{{.Greeting}}</p>
-              <p style="margin:0 0 22px;font-size:16px;line-height:1.6;color:#5b534b;">{{.Body}}</p>
+            <td style="padding:28px 30px 32px;">
+              <p style="margin:0 0 16px;font-size:16px;line-height:1.55;color:#ede8df;">{{.Greeting}}</p>
+              <p style="margin:0 0 26px;font-size:16px;line-height:1.6;color:#c9c4bb;">{{.Body}}</p>
               {{if .ButtonURL}}
-              <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 0 22px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 0 24px;">
                 <tr>
-                  <td style="background:#24201d;border-radius:10px;">
-                    <a href="{{.ButtonURL}}" style="display:inline-block;padding:14px 22px;color:#fffaf4;text-decoration:none;font-size:15px;font-weight:700;">{{.ButtonLabel}}</a>
+                  <td bgcolor="#c8102e" style="background:#c8102e;">
+                    <a href="{{.ButtonURL}}" style="display:inline-block;padding:15px 24px;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;">{{.ButtonLabel}}</a>
                   </td>
                 </tr>
               </table>
               {{end}}
               {{if .Note}}
-              <p style="margin:0;padding:14px 16px;border:1px solid #e3d8cb;border-radius:10px;background:#f7f1ea;font-size:14px;line-height:1.5;color:#6d6259;">{{.Note}}</p>
+              <p style="margin:0;padding:16px 18px;border:1px solid #48484c;border-left:3px solid #c8102e;background:#0a0a0b;font-size:14px;line-height:1.55;white-space:pre-line;color:#c9c4bb;">{{.Note}}</p>
               {{end}}
             </td>
           </tr>
           <tr>
-            <td style="padding:16px 30px 22px;border-top:1px solid #e3d8cb;color:#8b8177;font-size:12px;line-height:1.5;">
-              Это автоматическое письмо от Umbra. Если вы не отправляли заявку, просто проигнорируйте его.
+            <td style="padding:18px 30px 22px;border-top:1px solid #36363a;color:#9a958d;font-size:12px;line-height:1.5;">
+              Это автоматическое письмо UMBRA. Если оно пришло по ошибке, просто проигнорируйте его.
             </td>
           </tr>
         </table>
@@ -294,7 +299,7 @@ func uniqueEmailSubject(base string, fullName string, email string) string {
 		recipient = "пользователь"
 	}
 
-	return base + " – " + recipient + " – " + time.Now().Format("02.01.2006 15:04")
+	return "UMBRA · " + base + " – " + recipient + " – " + time.Now().Format("02.01.2006 15:04")
 }
 
 func plainTextEmail(data emailTemplateData) string {
@@ -302,7 +307,7 @@ func plainTextEmail(data emailTemplateData) string {
 	if data.Note != "" {
 		parts = append(parts, data.Note)
 	}
-	parts = append(parts, "Umbra")
+	parts = append(parts, "UMBRA · Искусство влияния")
 	return strings.Join(parts, "\n\n")
 }
 

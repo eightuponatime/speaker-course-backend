@@ -7,6 +7,9 @@ import "../../styles/umbra.css";
 
 // Trusted, local design markup. User data is rendered separately by React.
 const markup = content.replace('src="ramina_portrait.jpg"', `src="${portrait}"`);
+// Keep this prop stable: React otherwise rewrites innerHTML after parent state
+// updates and removes the exercise content created by initializeUmbraWidgets.
+const markupProp = { __html: markup };
 
 const navigation = [
   ["method", "Метод"], ["program", "Программа"], ["test", "Тест"],
@@ -62,7 +65,7 @@ export function UmbraLanding({ actions, authenticated }: { actions: ReactNode; a
           </aside>
         ) : null}
       </header>
-      <div ref={contentRef} dangerouslySetInnerHTML={{ __html: markup }} />
+      <div ref={contentRef} dangerouslySetInnerHTML={markupProp} />
     </div>
   );
 }

@@ -1,17 +1,11 @@
 import { useEffect, useState } from "react";
-import type { CSSProperties, FormEvent } from "react";
+import type { FormEvent } from "react";
 import { Eye, EyeOff, ShieldCheck } from "lucide-react";
 
 import { getInvitationCodeStatus, registerWithInvitationCode } from "../api/authDatasource";
 import type { InvitationCodeStatusResponse } from "../api/authDatasource";
 import { apiBaseUrl } from "../api/http";
-import { useAssetPreload } from "../utils/preload";
-import { PreloadScreen } from "./PreloadScreen";
-import logosVoiceLogo from "../../assets/images/transparent_logo.png";
-import signUpBackground from "../../assets/images/sign_up_screen_background.png";
-import signUpUpperLaurel from "../../assets/images/sign_up_upper_laurel.png";
-import laurelLeft from "../../assets/images/laurel-left.png";
-import laurelRight from "../../assets/images/laurel-right.png";
+import { UmbraLogo } from "./umbra/UmbraLogo";
 
 type SignupPageProps = {
   onLoginOpen?: () => void;
@@ -30,10 +24,6 @@ export function SignupPage({ }: SignupPageProps) {
   const inviteIsActive = inviteStatus?.valid === true && inviteStatus.status === "active";
   const canSubmit = inviteIsActive && email.trim().length > 0 && password.length > 0 && fullName.trim().length > 0;
   const googleSignupUrl = `${apiBaseUrl}/auth/google/invitation/start?code=${encodeURIComponent(inviteCode)}`;
-  const criticalAssetsReady = useAssetPreload(signupCriticalImages, {
-    minDelayMs: 300,
-    timeoutMs: 2500
-  });
 
   useEffect(() => {
     let cancelled = false;
@@ -68,10 +58,6 @@ export function SignupPage({ }: SignupPageProps) {
     };
   }, [inviteCode]);
 
-  if (!criticalAssetsReady) {
-    return <PreloadScreen label="Загрузка регистрации" />;
-  }
-
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (!canSubmit) {
@@ -97,13 +83,13 @@ export function SignupPage({ }: SignupPageProps) {
   }
 
   return (
-    <main className="signup-page" style={{ "--signup-bg": `url(${signUpBackground})` } as CSSProperties}>
+    <main className="signup-page">
       <header className="signup-header">
         <a className="signup-brand" href="/" aria-label="Umbra">
-          <img src={logosVoiceLogo} alt="" />
+          <UmbraLogo size={34} />
           <span>
-            <strong>LOGOS</strong>
-            <small>VOICE</small>
+            <strong>UMBRA</strong>
+            <small>Искусство влияния</small>
           </span>
         </a>
       </header>
@@ -192,14 +178,6 @@ export function SignupPage({ }: SignupPageProps) {
     </main>
   );
 }
-
-const signupCriticalImages = [
-  logosVoiceLogo,
-  signUpBackground,
-  signUpUpperLaurel,
-  laurelLeft,
-  laurelRight
-];
 
 function readInviteCode(): string {
   const pathParts = window.location.pathname.split("/").filter(Boolean);
